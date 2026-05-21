@@ -1,0 +1,105 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 100% 98%;
+    --foreground: 222 84% 5%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 84% 5%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 84% 5%;
+    --primary: 211 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 4 86% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 211 100% 50%;
+    --radius: 0.5rem;
+
+    /* CuraDentes tokens */
+    --primary-blue: #007AFF;
+    --primary-blue-hover: #1a8aff;
+    --brand-navy: #0A2A66;
+    --brand-magenta: #E6004C;
+    --bg-base: #FFFFFF;
+    --bg-soft: #E3F2FD;
+    --text-primary: #1C1C1E;
+    --text-secondary: #3A3A3C;
+    --text-muted: #8E8E93;
+    --success: #34C759;
+    --warning: #FF9500;
+    --error: #FF3B30;
+    --divider: rgba(60,60,67,0.12);
+    --glass-fill: rgba(255,255,255,0.55);
+    --glass-fill-strong: rgba(255,255,255,0.70);
+    --glass-border: rgba(255,255,255,0.30);
+    --shadow-sm: 0 2px 6px rgba(16,24,64,0.05);
+    --shadow-md: 0 8px 20px rgba(16,24,64,0.08);
+    --shadow-lg: 0 12px 32px rgba(16,24,64,0.10);
+    --shadow-glow-blue: 0 0 16px rgba(0,122,255,0.35);
+    --shadow-cta: 0 8px 20px rgba(0,122,255,0.25);
+  }
+
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: linear-gradient(160deg, #E3F2FD 0%, #FFFFFF 60%, #FFFFFF 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+@layer utilities {
+  .glass {
+    background: var(--glass-fill);
+    backdrop-filter: blur(24px) saturate(120%);
+    -webkit-backdrop-filter: blur(24px) saturate(120%);
+    border: 0.5px solid var(--glass-border);
+    box-shadow: var(--shadow-md);
+  }
+
+  .glass-strong {
+    background: var(--glass-fill-strong);
+    backdrop-filter: blur(24px) saturate(120%);
+    -webkit-backdrop-filter: blur(24px) saturate(120%);
+    border: 0.5px solid rgba(255,255,255,0.35);
+    box-shadow: var(--shadow-md);
+  }
+
+  .text-navy { color: var(--brand-navy); }
+  .text-magenta { color: var(--brand-magenta); }
+  .text-muted-cd { color: var(--text-muted); }
+  .bg-primary-blue { background-color: var(--primary-blue); }
+
+  .shimmer {
+    background: linear-gradient(90deg, rgba(227,242,253,0.6) 0%, rgba(0,122,255,0.08) 50%, rgba(227,242,253,0.6) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.2s ease-in-out infinite;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+}
