@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   Search,
   MapPin,
@@ -10,6 +10,12 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { FILTER_CHIPS } from "@/constants/data";
+// ============================================================================
+// IMPORTAÇÕES PARA A AUTENTICAÇÃO COM O GOOGLE
+// ============================================================================
+import { useAuth } from "@/hooks/useAuth"; // Nosso hook de controle de login global
+import { useGoogleLogin } from "@react-oauth/google"; // Biblioteca oficial do Google OAuth
+import { toast } from "sonner"; // Biblioteca de alertas/mensagens elegantes na tela (toasts)
 
 // ── Custom SVG icons ────────────────────────────────────────────────────────
 const BracesIcon = ({ size = 14, color = "currentColor" }: { size?: number; color?: string }) => (
@@ -94,6 +100,110 @@ const ICON_MAP: Record<string, AnyIcon> = {
 export default function HeroSection() {
   const [searchValue, setSearchValue] = useState("");
   const [activeChip, setActiveChip] = useState<string | null>(null);
+  
+  // Puxamos os estados globais: "user" (usuário logado) e "login" (função para entrar/cadastrar)
+  const { user, login } = useAuth();
+
+  // ============================================================================
+  // ARMAZENAMENTO TEMPORÁRIO DA LOCALIZAÇÃO (useRef)
+  // ============================================================================
+  // Usamos um "useRef" (uma variável persistente que não reinicia o componente)
+  // para guardar as coordenadas capturadas ANTES de abrir o popup do Google.
+  // Isso é necessário porque o popup do Google pode demorar e a localização
+  // precisa estar pronta para ser salva quando o login finalizar.
+  const coordenadasRef = useRef<{ latitude: number | null; longitude: number | null }>({
+    latitude: null,
+    longitude: null,
+  });
+
+  // ============================================================================
+  // CONFIGURAÇÃO DO FLUXO DE LOGIN COM O GOOGLE
+  // ============================================================================
+  // IMPORTANTE: A localização é capturada ANTES de abrir o popup do Google.
+  // Isso garante que a permissão de localização do navegador seja solicitada
+  // primeiro, e as coordenadas ficam prontas para salvar quando o login finalizar.
+  const handleGoogleLogin = useGoogleLogin({
+    // Disparado quando o usuário escolhe a conta do Google com sucesso na janelinha
+    onSuccess: async (tokenResponse) => {
+      const loadingToast = toast.loading("Autenticando com o Google e criando seu perfil...");
+      try {
+        // 1. Busca nome completo, e-mail e foto de perfil do usuário na API do Google
+        const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
+        });
+
+        if (!res.ok) throw new Error("Erro ao obter dados do Google.");
+
+        const data = await res.json();
+
+        // 2. Usa as coordenadas que já foram capturadas ANTES do popup abrir
+        //    (armazenadas em coordenadasRef pela função iniciarLoginComLocalizacao)
+        const { latitude, longitude } = coordenadasRef.current;
+
+        // 3. Cadastra o cliente com todos os dados (incluindo localização se disponível)
+        const loggedUser = await login({
+          name: data.name,
+          email: data.email,
+          picture: data.picture,
+          latitude,
+          longitude,
+        });
+
+        toast.dismiss(loadingToast);
+
+        const descricaoLocaliz = latitude && longitude
+          ? `Seu cadastro foi registrado com localização (Lat: ${latitude.toFixed(4)}, Lon: ${longitude.toFixed(4)}).`
+          : "Seu cadastro foi criado com sucesso.";
+
+        toast.success(`Olá, ${loggedUser.name}! Login realizado com sucesso.`, {
+          description: descricaoLocaliz,
+          duration: 5000,
+        });
+      } catch (error) {
+        toast.dismiss(loadingToast);
+        toast.error("Falha ao criar o cadastro com o Google. Tente novamente.");
+        console.error("Erro no login do Google:", error);
+      }
+    },
+    onError: (error) => {
+      toast.error("Falha na autenticação com o Google.");
+      console.error("Google Auth Error:", error);
+    },
+  });
+
+  // ============================================================================
+  // FUNÇÃO PRINCIPAL: CAPTURA LOCALIZAÇÃO ANTES DE ABRIR O POPUP DO GOOGLE
+  // ============================================================================
+  // Esta é a função que os overlays de bloqueio chamam quando o usuário clica na busca.
+  // Ela PRIMEIRO pede a localização ao navegador (enquanto a janela ainda está aberta),
+  // DEPOIS abre o popup do Google. Assim as coordenadas ficam prontas.
+  const iniciarLoginComLocalizacao = () => {
+    if (!navigator.geolocation) {
+      // Navegador sem suporte a geolocalização: inicia login direto sem coordenadas
+      coordenadasRef.current = { latitude: null, longitude: null };
+      handleGoogleLogin();
+      return;
+    }
+
+    // Tenta obter a localização. O navegador perguntará ao usuário se pode compartilhá-la.
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        // Sucesso: salva as coordenadas no ref para uso posterior no onSuccess
+        coordenadasRef.current = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        };
+        handleGoogleLogin(); // Abre o popup do Google com coordenadas já prontas
+      },
+      (error) => {
+        // Permissão negada ou erro: registra e inicia login sem localização
+        console.warn("[CuraDentes] Localização não obtida antes do login:", error.message);
+        coordenadasRef.current = { latitude: null, longitude: null };
+        handleGoogleLogin(); // Inicia login mesmo assim, sem coordenadas
+      },
+      { timeout: 6000, enableHighAccuracy: false } // Aguarda até 6 segundos
+    );
+  };
 
   const handleChipClick = (id: string) => {
     setActiveChip(activeChip === id ? null : id);
@@ -105,9 +215,22 @@ export default function HeroSection() {
       <div className="lg:hidden">
         {/* Search bar */}
         <div
-          className="px-4 pt-4 pb-3"
+          className="px-4 pt-4 pb-3 relative"
           style={{ background: "#F2F2F7" }}
         >
+          {/* 
+            BLOQUEIO DE BUSCA (MOBILE): 
+            Se o usuário NÃO estiver logado (!user), renderizamos um escudo invisível sobre a busca.
+            Ao clicar em qualquer campo da busca, o escudo captura o clique e dispara o login do Google.
+          */}
+          {!user && (
+            <div
+              onClick={() => iniciarLoginComLocalizacao()}
+              className="absolute inset-0 z-20 cursor-pointer"
+              role="button"
+              aria-label="Entrar com o Google para buscar"
+            />
+          )}
           <div
             className="flex items-center gap-3 px-4"
             style={{
@@ -203,7 +326,20 @@ export default function HeroSection() {
             </p>
 
             {/* Search Bar */}
-            <div className="max-w-[720px] mx-auto mb-4">
+            <div className="max-w-[720px] mx-auto mb-4 relative">
+              {/* 
+                BLOQUEIO DE BUSCA (DESKTOP): 
+                Se o usuário NÃO estiver logado (!user), renderizamos um escudo invisível sobre a busca.
+                Ao clicar em qualquer campo da busca, o escudo captura o clique e dispara o login do Google.
+              */}
+              {!user && (
+                <div
+                  onClick={() => iniciarLoginComLocalizacao()}
+                  className="absolute inset-0 z-20 cursor-pointer rounded-[16px]"
+                  role="button"
+                  aria-label="Entrar com o Google para buscar"
+                />
+              )}
               <div className="flex items-center gap-2" style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(20px) saturate(120%)", WebkitBackdropFilter: "blur(20px) saturate(120%)", border: "0.5px solid rgba(255,255,255,0.5)", borderRadius: "16px", padding: "6px 6px 6px 16px", minHeight: "56px", boxShadow: "0 8px 20px rgba(16,24,64,0.08)" }}>
                 <Search size={20} style={{ color: "#8E8E93", flexShrink: 0 }} />
                 <input type="text" value={searchValue} onChange={(e) => setSearchValue(e.target.value)} placeholder="Bairro, Cidade" className="flex-1 min-w-0 outline-none bg-transparent" style={{ fontFamily: "Inter, sans-serif", fontSize: "16px", color: "#1C1C1E", minHeight: "44px", border: "none" }} />

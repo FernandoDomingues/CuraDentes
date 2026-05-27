@@ -16,6 +16,12 @@
 import { useState } from "react";
 import { Menu, X, Eye, EyeOff, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+// ============================================================================
+// IMPORTAÇÕES PARA A AUTENTICAÇÃO COM O GOOGLE
+// ============================================================================
+import { useAuth } from "@/hooks/useAuth"; // Hook global que controla quem está logado
+import { useGoogleLogin } from "@react-oauth/google"; // Integração oficial com o Google
+import { toast } from "sonner"; // Notificações amigáveis na tela
 
 import logoComNome from "@/assets/logos/logo-com-nome.png";
 import logoIcon from "@/assets/logos/logo-icon.png";
@@ -49,6 +55,99 @@ function GoogleIcon() {
 // ─── Componente principal ────────────────────────────────────────────────────
 export default function Header() {
   const navigate = useNavigate();
+  
+  // Importamos os estados de login: "user" (usuário ativo), "login" (entrar) e "logout" (sair)
+  const { user, login, logout } = useAuth();
+
+  // ============================================================================
+  // FLUXO DE LOGIN COM GOOGLE UNIFICADO NO HEADER + GEOLOCALIZAÇÃO
+  // ============================================================================
+  // Permite que o usuário faça o login diretamente clicando no botão "Entrar"
+  // do topo da página ou dentro dos modais de login.
+  // AGORA, também captura as coordenadas de localização atuais!
+  const handleGoogleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      const loadingToast = toast.loading("Autenticando com o Google e criando seu perfil...");
+      try {
+        // 1. Busca os dados de perfil da conta do Google
+        const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
+        });
+
+        if (!res.ok) throw new Error("Erro ao obter dados do Google.");
+
+        const data = await res.json();
+        
+        // 2. Tentamos capturar as coordenadas de localização atuais do navegador
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            async (position) => {
+              const { latitude, longitude } = position.coords;
+              
+              // Realiza o cadastro/login no banco de dados incluindo coordenadas
+              const loggedUser = await login({
+                name: data.name,
+                email: data.email,
+                picture: data.picture,
+                latitude,
+                longitude,
+              });
+
+              fecharModal();
+              toast.dismiss(loadingToast);
+              toast.success(`Olá, ${loggedUser.name}! Login realizado com sucesso.`, {
+                description: `Seu cadastro de cliente foi registrado com sua localização (Lat: ${latitude.toFixed(4)}, Lon: ${longitude.toFixed(4)}).`,
+                duration: 5000,
+              });
+            },
+            async (error) => {
+              // Caso o usuário negue a localização, fazemos o cadastro sem localização
+              const loggedUser = await login({
+                name: data.name,
+                email: data.email,
+                picture: data.picture,
+                latitude: null,
+                longitude: null,
+              });
+
+              fecharModal();
+              toast.dismiss(loadingToast);
+              toast.success(`Olá, ${loggedUser.name}! Login realizado com sucesso.`, {
+                description: "Seu cadastro foi criado com sucesso (sem localização).",
+                duration: 5000,
+              });
+              console.warn("Permissão de geolocalização recusada no login:", error.message);
+            },
+            { timeout: 5000 } // Espera no máximo 5 segundos pela localização
+          );
+        } else {
+          // Caso o navegador não tenha suporte a geolocalização
+          const loggedUser = await login({
+            name: data.name,
+            email: data.email,
+            picture: data.picture,
+            latitude: null,
+            longitude: null,
+          });
+
+          fecharModal();
+          toast.dismiss(loadingToast);
+          toast.success(`Olá, ${loggedUser.name}! Login realizado com sucesso.`, {
+            description: "Seu cadastro foi criado (suporte a localização indisponível).",
+            duration: 5000,
+          });
+        }
+      } catch (error) {
+        toast.dismiss(loadingToast);
+        toast.error("Falha ao criar o cadastro com o Google. Tente novamente.");
+        console.error("Erro no login do Google:", error);
+      }
+    },
+    onError: (error) => {
+      toast.error("Falha na autenticação com o Google.");
+      console.error("Google Auth Error:", error);
+    },
+  });
 
   // Controla abertura do menu mobile
   const [menuOpen, setMenuOpen] = useState(false);
@@ -121,6 +220,7 @@ export default function Header() {
 
         {/* Botão de login com Google */}
         <button
+          onClick={() => handleGoogleLogin()}
           className="w-full flex items-center justify-center gap-3 py-3.5 rounded-[14px] font-semibold text-[15px] min-h-[52px] transition-all duration-200"
           style={{
             background: "#fff",
@@ -239,6 +339,7 @@ export default function Header() {
 
         {/* Login com Google */}
         <button
+          onClick={() => handleGoogleLogin()}
           className="w-full flex items-center justify-center gap-3 py-3 rounded-[14px] font-semibold text-[15px] min-h-[48px] transition-all duration-200"
           style={{
             background: "#fff",
@@ -317,15 +418,46 @@ export default function Header() {
             {/* Ações — desktop */}
             <div className="hidden lg:flex items-center gap-3">
               {/* Botão Entrar — abre modal de login do paciente (Google) */}
-              <button
-                onClick={() => setModalAberto("paciente")}
-                className="text-[15px] font-medium px-4 py-2 rounded-xl transition-colors duration-200 min-h-[44px]"
-                style={{ color: "var(--text-primary)" }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "var(--primary-blue)")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-primary)")}
-              >
-                Entrar
-              </button>
+              {user ? (
+                <div className="relative group">
+                  <button className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-black/5 transition-all duration-200">
+                    <img 
+                      src={user.picture} 
+                      alt={user.name} 
+                      className="w-8 h-8 rounded-full border border-gray-200 object-cover" 
+                      referrerPolicy="no-referrer"
+                    />
+                    <span className="text-[14px] font-semibold text-gray-700 hidden xl:inline">{user.name.split(" ")[0]}</span>
+                  </button>
+                  {/* Dropdown Menu */}
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl p-4 shadow-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                    <div className="mb-2 text-left">
+                      <p className="text-[14px] font-bold text-gray-900 truncate">{user.name}</p>
+                      <p className="text-[11px] text-gray-500 truncate">{user.email}</p>
+                    </div>
+                    <div style={{ height: "0.5px", background: "rgba(60,60,67,0.10)", margin: "8px 0" }} />
+                    <button 
+                      onClick={() => {
+                        logout();
+                        toast.success("Sessão encerrada.");
+                      }}
+                      className="w-full text-left text-[13px] font-medium text-red-500 hover:text-red-700 transition-colors"
+                    >
+                      Sair da Conta
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setModalAberto("paciente")}
+                  className="text-[15px] font-medium px-4 py-2 rounded-xl transition-colors duration-200 min-h-[44px]"
+                  style={{ color: "var(--text-primary)" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = "var(--primary-blue)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-primary)")}
+                >
+                  Entrar
+                </button>
+              )}
 
               {/* Botão Acesso do Dentista — abre modal de login/cadastro Pro */}
               <button
@@ -378,13 +510,39 @@ export default function Header() {
 
             <div className="flex flex-col gap-2 mt-3">
               {/* Entrar (mobile) */}
-              <button
-                onClick={() => { setMenuOpen(false); setModalAberto("paciente"); }}
-                className="w-full text-[15px] font-medium py-3 rounded-[14px] min-h-[48px] border transition-colors"
-                style={{ borderColor: "rgba(60,60,67,0.18)", color: "#1C1C1E" }}
-              >
-                Entrar
-              </button>
+              {user ? (
+                <div className="flex flex-col gap-3 p-3 bg-gray-50 rounded-2xl border border-gray-100 text-left">
+                  <div className="flex items-center gap-3">
+                    <img 
+                      src={user.picture} 
+                      alt={user.name} 
+                      className="w-10 h-10 rounded-full border border-gray-200 object-cover" 
+                      referrerPolicy="no-referrer"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-[14px] font-bold text-gray-900 truncate">{user.name}</p>
+                      <p className="text-[12px] text-gray-500 truncate">{user.email}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      logout();
+                      toast.success("Sessão encerrada.");
+                    }}
+                    className="w-full text-[14px] font-semibold py-2.5 rounded-[12px] text-red-500 bg-red-50 border border-red-100 text-center transition-colors"
+                  >
+                    Sair da Conta
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => { setMenuOpen(false); setModalAberto("paciente"); }}
+                  className="w-full text-[15px] font-medium py-3 rounded-[14px] min-h-[48px] border transition-colors"
+                  style={{ borderColor: "rgba(60,60,67,0.18)", color: "#1C1C1E" }}
+                >
+                  Entrar
+                </button>
+              )}
 
               {/* Acesso do Dentista (mobile) */}
               <button

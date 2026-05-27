@@ -22,3 +22,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment Variables
+.env
+.env.*
+
+# Database dumps
+*.sql
+Curadentes_CuradentesPro_texto
+convert_sql.cjs

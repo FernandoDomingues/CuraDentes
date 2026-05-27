@@ -1385,19 +1385,20 @@ export default function NovoCadastro() {
               <label style={labelStyle}>
                 Política de cancelamento
                 <span className="ml-1 text-[11px] font-normal" style={{ color: "#8E8E93" }}>
-                  (máx. 300 caracteres)
+                  (máx. 500 caracteres)
                 </span>
               </label>
               <textarea
                 value={end.politica_cancelamento}
+                maxLength={500}
                 onChange={(e) => {
-                  if (e.target.value.length <= 300) atualizarEndereco(idx, "politica_cancelamento", e.target.value);
+                  if (e.target.value.length <= 500) atualizarEndereco(idx, "politica_cancelamento", e.target.value);
                 }}
                 rows={3}
                 style={{ ...inputStyle, resize: "vertical", lineHeight: 1.6 }}
               />
               <p className="text-[11px] mt-1 text-right" style={{ color: "#8E8E93" }}>
-                {end.politica_cancelamento.length}/300
+                {end.politica_cancelamento.length}/500
               </p>
             </div>
 
@@ -1406,20 +1407,21 @@ export default function NovoCadastro() {
               <label style={labelStyle}>
                 Observações
                 <span className="ml-1 text-[11px] font-normal" style={{ color: "#8E8E93" }}>
-                  (opcional · máx. 300 caracteres)
+                  (opcional · máx. 500 caracteres)
                 </span>
               </label>
               <textarea
                 value={end.observacoes}
+                maxLength={500}
                 onChange={(e) => {
-                  if (e.target.value.length <= 300) atualizarEndereco(idx, "observacoes", e.target.value);
+                  if (e.target.value.length <= 500) atualizarEndereco(idx, "observacoes", e.target.value);
                 }}
                 rows={2}
                 placeholder="Informações adicionais para os pacientes..."
                 style={{ ...inputStyle, resize: "vertical", lineHeight: 1.6 }}
               />
               <p className="text-[11px] mt-1 text-right" style={{ color: "#8E8E93" }}>
-                {end.observacoes.length}/300
+                {end.observacoes.length}/500
               </p>
             </div>
           </div>
@@ -1471,15 +1473,23 @@ export default function NovoCadastro() {
       <div>
         <label style={{ ...labelStyle, marginBottom: "8px" }}>
           Bio (opcional)
+          <span className="ml-1 text-[11px] font-normal" style={{ color: "#8E8E93" }}>
+            (máx. 500 caracteres)
+          </span>
         </label>
         <textarea
           value={bio}
-          onChange={(e) => setBio(e.target.value)}
+          maxLength={500}
+          onChange={(e) => {
+            if (e.target.value.length <= 500) setBio(e.target.value);
+          }}
           rows={6}
           placeholder="Ex: Especialista em odontologia estética com mais de 10 anos de experiência. Formado pela USP, com pós-graduação em Harmonização Orofacial..."
           style={{ ...inputStyle, resize: "vertical", lineHeight: 1.7 }}
         />
-        <p className="text-[12px] mt-1" style={{ color: "#8E8E93" }}>{bio.length} caracteres</p>
+        <p className="text-[12px] mt-1 text-right" style={{ color: "#8E8E93" }}>
+          {bio.length}/500
+        </p>
       </div>
 
       {renderNavegacao(true)}
