@@ -14,8 +14,8 @@ import type { EnderecoClinica } from "@/types/dentist";
 
 /** Representa o dentista autenticado no painel Pro */
 export interface DentistaPro {
-  /** ID interno (mock) */
-  id: number;
+  /** ID interno (Supabase UUID) ou mock */
+  id: string | number;
   /** Login para acesso demo */
   usuario: string;
   /** Senha para acesso demo */

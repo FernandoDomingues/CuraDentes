@@ -34,7 +34,10 @@ import {
   Clock,
   FileText,
   Info,
+  Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/lib/supabase";
 
 import logoProUrl from "@/assets/logos/logo-pro.png";
 
@@ -251,7 +254,7 @@ export default function NovoCadastro() {
     nome.trim() !== "" &&
     emailVerificado &&
     senha.length >= 8 &&
-    telefoneVerificado &&
+    validarTelefone(telefone) &&
     validarCpf(cpf) &&
     validarCro(cro) &&
     enderecos.length > 0 &&
@@ -264,21 +267,48 @@ export default function NovoCadastro() {
   // Função: Simula envio do token de verificação de email
   // Em produção: chamar API de envio de email com token gerado no backend
   // ─────────────────────────────────────────────────────────────────────────
-  function enviarTokenEmail() {
-    const token = Math.floor(100000 + Math.random() * 900000).toString();
-    setTokenEmail(token);
+  async function enviarTokenEmail() {
+    if (senha.length < 8) {
+      toast.error("Por favor, preencha a sua Senha (mínimo 8 caracteres) logo abaixo antes de verificar o e-mail!");
+      return;
+    }
+
+    const toastId = toast.loading("Enviando código...");
+    const { error } = await supabase.auth.signUp({
+      email,
+      password: senha,
+    });
+
+    if (error) {
+      toast.error("Erro ao enviar: " + error.message, { id: toastId });
+      return;
+    }
+
+    toast.success("Código enviado para o seu e-mail!", { id: toastId });
     setAguardandoTokenEmail(true);
-    console.log("[Demo] Token de email:", token); // Remove em produção
   }
 
   // ─────────────────────────────────────────────────────────────────────────
   // Função: Valida o token de email inserido pelo usuário
   // ─────────────────────────────────────────────────────────────────────────
-  function validarTokenEmail() {
-    if (tokenEmailInput === tokenEmail) {
-      setEmailVerificado(true);
-      setAguardandoTokenEmail(false);
+  async function validarTokenEmail() {
+    if (tokenEmailInput.length !== 8) return;
+    
+    const toastId = toast.loading("Validando código...");
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token: tokenEmailInput,
+      type: "signup"
+    });
+
+    if (error) {
+      toast.error("Código inválido ou expirado. Tente novamente.", { id: toastId });
+      return;
     }
+
+    toast.success("E-mail verificado com sucesso!", { id: toastId });
+    setEmailVerificado(true);
+    setAguardandoTokenEmail(false);
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -300,6 +330,14 @@ export default function NovoCadastro() {
       setTelefoneVerificado(true);
       setAguardandoTokenTel(false);
     }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Função: Formata o CEP (#####-###)
+  // ─────────────────────────────────────────────────────────────────────────
+  function formatarCep(valor: string) {
+    const numeros = valor.replace(/\D/g, "").slice(0, 8);
+    return numeros.replace(/(\d{5})(\d{1,3})/, "$1-$2");
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -398,15 +436,79 @@ export default function NovoCadastro() {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Função: Finaliza o cadastro e redireciona ao dashboard
+  // Função: Finaliza o cadastro e salva no banco de dados
   // ─────────────────────────────────────────────────────────────────────────
-  function finalizarCadastro() {
+  async function finalizarCadastro() {
     if (!cadastroCompleto) {
       setExibirModalIncompleto(true);
       return;
     }
-    // Em produção: salvar no banco via Supabase e redirecionar
-    navigate("/pro/dashboard");
+
+    const toastId = toast.loading("Salvando seus dados...");
+
+    try {
+      // 1. Obter usuário logado atual
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error("Sessão não encontrada. Por favor, valide seu e-mail novamente na Etapa 1.");
+      }
+
+      // 2. Inserir perfil na tabela curadentespro
+      const { error: errorPro } = await supabase.from('curadentespro').upsert({
+        id: user.id,
+        nome: nome,
+        email: email,
+        telefone: telefone,
+        telefone_verificado: validarTelefone(telefone),
+        cpf: cpf,
+        cro: cro,
+        ano_formacao: anoFormacao ? parseInt(anoFormacao) : null,
+        foto_url: fotoUrl || null,
+        bio: bio,
+        lgpd_aceito: lgpdAceito
+      });
+
+      if (errorPro) throw errorPro;
+
+      // 3. Inserir endereços na tabela curadentespro_enderecos
+      for (const end of enderecos) {
+        const { error: errorEnd } = await supabase.from('curadentespro_enderecos').insert({
+          curadentespro_id: user.id,
+          nome_clinica: end.nome_clinica,
+          logradouro: end.logradouro,
+          numero: end.numero,
+          complemento: end.complemento,
+          bairro: end.bairro,
+          cidade: end.cidade,
+          estado: end.estado,
+          cep: end.cep,
+          telefone: end.telefone,
+          whatsapp: end.whatsapp,
+          atende_urgencias: end.atende_urgencias,
+          aceita_urgencia_termo: end.aceita_urgencia_termo,
+          politica_cancelamento: end.politica_cancelamento,
+          observacoes: end.observacoes,
+          atividades: end.atividades,
+          convenios: end.convenios,
+          formas_pagamento: end.formas_pagamento,
+          agenda: end.agenda
+        });
+
+        if (errorEnd) throw errorEnd;
+      }
+
+      toast.success("Cadastro concluído com sucesso!", { id: toastId });
+      
+      // Limpa rascunho
+      localStorage.removeItem("curadentes_pro_cadastro_rascunho");
+      
+      navigate("/pro/dashboard");
+
+    } catch (error: any) {
+      console.error("Erro ao salvar cadastro:", error);
+      toast.error(error.message || "Ocorreu um erro ao salvar o cadastro.", { id: toastId });
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -729,28 +831,29 @@ export default function NovoCadastro() {
         {aguardandoTokenEmail && !emailVerificado && (
           <div className="mt-3 p-4 rounded-[12px] flex flex-col gap-3" style={{ background: "rgba(0,122,255,0.06)", border: "0.5px solid rgba(0,122,255,0.15)" }}>
             <p className="text-[13px]" style={{ color: "#007AFF" }}>
-              Enviamos um código de 6 dígitos para <strong>{email}</strong>. Verifique sua caixa de entrada.
+              Enviamos um código de 8 dígitos para <strong>{email}</strong>. Verifique sua caixa de entrada.
             </p>
             <div className="flex gap-2">
               <input
                 type="text"
                 value={tokenEmailInput}
-                onChange={(e) => setTokenEmailInput(e.target.value.slice(0, 6))}
-                placeholder="000000"
-                maxLength={6}
+                onChange={(e) => setTokenEmailInput(e.target.value.slice(0, 8))}
+                placeholder="00000000"
+                maxLength={8}
                 className="text-center text-[20px] font-bold tracking-[0.3em]"
                 style={{ ...inputStyle, flex: 1, letterSpacing: "0.3em" }}
               />
               <button
                 onClick={validarTokenEmail}
-                className="px-4 py-3 rounded-[12px] font-semibold text-[13px] text-white flex-shrink-0"
-                style={{ background: "#34C759" }}
+                disabled={tokenEmailInput.length !== 8}
+                className="px-4 py-3 rounded-[12px] font-semibold text-[13px] text-white flex-shrink-0 transition-all duration-200"
+                style={{ background: tokenEmailInput.length === 8 ? "#34C759" : "rgba(52,199,89,0.4)", cursor: tokenEmailInput.length === 8 ? "pointer" : "not-allowed" }}
               >
                 Confirmar
               </button>
             </div>
             <p className="text-[11px]" style={{ color: "#8E8E93" }}>
-              Modo demo: o código aparece no console do navegador (F12).
+              Caso não encontre, verifique sua pasta de Spam ou Lixo Eletrônico.
             </p>
           </div>
         )}
@@ -877,9 +980,9 @@ export default function NovoCadastro() {
           <span className="flex items-center gap-1.5">
             <Phone size={13} />
             Número de telefone *
-            {telefoneVerificado && (
+            {validarTelefone(telefone) && (
               <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: "rgba(52,199,89,0.10)", color: "#34C759" }}>
-                <Check size={10} /> Verificado
+                <Check size={10} /> Válido
               </span>
             )}
           </span>
@@ -889,11 +992,9 @@ export default function NovoCadastro() {
           value={telefone}
           onChange={(e) => setTelefone(formatarTelefone(e.target.value))}
           placeholder="(11) 99999-9999"
-          disabled={telefoneVerificado}
           maxLength={15}
           style={{
             ...inputStyle,
-            opacity: telefoneVerificado ? 0.6 : 1,
             borderColor: telefone.replace(/\D/g, "").length === 11 && !validarTelefone(telefone) ? "#FF3B30" : "rgba(60,60,67,0.18)",
           }}
         />
@@ -905,7 +1006,7 @@ export default function NovoCadastro() {
         <p className="text-[12px] mt-1" style={{ color: "#8E8E93" }}>Digite o DDD e o número: (11) 99999-9999</p>
       </div>
 
-      {/* Modo de verificação: SMS ou WhatsApp */}
+      {/* Modo de verificação: SMS ou WhatsApp (Comentado para implementações futuras)
       {!telefoneVerificado && (
         <>
           <div>
@@ -943,7 +1044,6 @@ export default function NovoCadastro() {
         </>
       )}
 
-      {/* Campo do token de telefone */}
       {aguardandoTokenTel && !telefoneVerificado && (
         <div className="p-4 rounded-[12px] flex flex-col gap-3" style={{ background: "rgba(52,199,89,0.06)", border: "0.5px solid rgba(52,199,89,0.20)" }}>
           <p className="text-[13px]" style={{ color: "#34C759" }}>
@@ -972,8 +1072,9 @@ export default function NovoCadastro() {
           </p>
         </div>
       )}
+      */}
 
-      {renderNavegacao(telefoneVerificado)}
+      {renderNavegacao(validarTelefone(telefone))}
     </div>
   );
 
@@ -1193,8 +1294,8 @@ export default function NovoCadastro() {
                 <input type="text" value={end.bairro} onChange={(e) => atualizarEndereco(idx, "bairro", e.target.value)} placeholder="Centro" style={inputStyle} />
               </div>
               <div>
-                <label style={labelStyle}>CEP</label>
-                <input type="text" value={end.cep} onChange={(e) => atualizarEndereco(idx, "cep", e.target.value)} placeholder="00000-000" style={inputStyle} />
+                <label style={labelStyle}>CEP (somente números)</label>
+                <input type="text" value={end.cep} onChange={(e) => atualizarEndereco(idx, "cep", formatarCep(e.target.value))} placeholder="00000-000" maxLength={9} style={inputStyle} />
               </div>
               <div>
                 <label style={labelStyle}>Cidade *</label>

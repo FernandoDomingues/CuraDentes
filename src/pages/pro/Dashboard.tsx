@@ -12,8 +12,11 @@
 // Em produção: substituir dados mock pelo retorno do banco via Supabase.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { uploadFotoDentista } from "@/lib/uploadService";
+import { supabase } from "@/lib/supabase";
 import {
   LogOut,
   Settings,
@@ -37,6 +40,7 @@ import {
   Zap,
   Trophy,
   Check,
+  Loader2,
 } from "lucide-react";
 import { DEMO_DENTISTAS } from "@/constants/demoDentists";
 import type { DentistaPro } from "@/constants/demoDentists";
@@ -326,39 +330,143 @@ export default function Dashboard() {
   // ─ Estado de autenticação (login demo) ────────────────────────────────────
   const [dentista, setDentista] = useState<DentistaPro | null>(null);
   const [loginUsuario, setLoginUsuario] = useState("");
-  const [loginSenha, setLoginSenha]     = useState("");
-  const [loginErro, setLoginErro]       = useState("");
+  const [loginSenha, setLoginSenha] = useState("");
+  const [loginErro, setLoginErro] = useState("");
 
   // ─ Modal de configurações (bio e excluir perfil) ──────────────────────────
-  const [modalConfig, setModalConfig]   = useState(false);
-  const [editandoBio, setEditandoBio]   = useState(false);
-  const [bioEditada, setBioEditada]     = useState("");
+  const [modalConfig, setModalConfig] = useState(false);
+  const [editandoBio, setEditandoBio] = useState(false);
+  const [bioEditada, setBioEditada] = useState("");
 
   // ─ Modal de confirmação de exclusão de perfil ─────────────────────────────
   const [modalExcluir, setModalExcluir] = useState(false);
 
+  // ─ Upload de Foto ─────────────────────────────────────────────────────────
+  const [isUploadingFoto, setIsUploadingFoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleFotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !dentista) return;
+
+    try {
+      setIsUploadingFoto(true);
+      const toastId = toast.loading("Enviando foto...");
+
+      // Em produção, o ID virá do banco de dados (UUID real).
+      // Aqui usamos o ID do mock convertendo para string.
+      const dentistaId = dentista.id.toString();
+      const publicUrl = await uploadFotoDentista(file, dentistaId);
+
+      // Atualiza a interface
+      setDentista({ ...dentista, foto_url: publicUrl });
+      toast.success("Foto atualizada com sucesso!", { id: toastId });
+    } catch (error: any) {
+      toast.error(error.message, { id: toastId });
+    } finally {
+      setIsUploadingFoto(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  }
+
+  // ─ Efeito para carregar sessão existente ────────────────────────────────
+  useEffect(() => {
+    async function carregarSessao() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        carregarDadosDentista(session.user.id);
+      }
+    }
+    carregarSessao();
+  }, []);
+
+  async function carregarDadosDentista(userId: string) {
+    try {
+      const { data: perfil, error: perfilError } = await supabase
+        .from('curadentespro')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (perfilError) throw perfilError;
+
+      const { data: enderecosData } = await supabase
+        .from('curadentespro_enderecos')
+        .select('*')
+        .eq('curadentespro_id', userId);
+
+      const dentistaLogado: DentistaPro = {
+        id: perfil.id,
+        usuario: perfil.email || "",
+        senha: "",
+        nome_completo: perfil.nome,
+        email: perfil.email || "",
+        telefone: perfil.telefone || "",
+        foto_url: perfil.foto_url || "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=400&fit=crop&auto=format&q=80",
+        cro: perfil.cro,
+        cpf: perfil.cpf || "",
+        ano_formacao: perfil.ano_formacao || 0,
+        bio: perfil.bio || "",
+        cadastro_completo: true,
+        posicao_geral: 1,
+        avaliacoes: { media_geral: 0, total_avaliacoes: 0, por_atividade: [] },
+        enderecos: (enderecosData || []).map((e) => ({
+          id: e.id,
+          nome_clinica: e.nome_clinica,
+          logradouro: e.logradouro,
+          numero: e.numero || "",
+          complemento: e.complemento || "",
+          bairro: e.bairro,
+          cidade: e.cidade,
+          estado: e.estado,
+          cep: e.cep || "",
+          telefone: e.telefone || "",
+          whatsapp: e.whatsapp || "",
+          maps_url: "",
+          atividades: e.atividades || [],
+          agenda: e.agenda || [],
+          formas_pagamento: e.formas_pagamento || [],
+          convenios: e.convenios ? e.convenios.map((c: string) => ({ id: c, nome: c })) : []
+        }))
+      };
+
+      setDentista(dentistaLogado);
+      setBioEditada(dentistaLogado.bio);
+    } catch (error) {
+      console.error("Erro ao carregar perfil:", error);
+    }
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
-  // Função: Autentica o dentista com usuário e senha demo
-  // Em produção: substituir por signInWithPassword do Supabase Auth
+  // Função: Autentica o dentista com usuário e senha
   // ─────────────────────────────────────────────────────────────────────────
-  function fazerLogin() {
-    const encontrado = DEMO_DENTISTAS.find(
-      (d) => d.usuario === loginUsuario && d.senha === loginSenha
-    );
-    if (encontrado) {
-      setDentista(encontrado);
-      setBioEditada(encontrado.bio);
-      setLoginErro("");
-    } else {
-      setLoginErro("Usuário ou senha incorretos. Use Usuário1/Senha1! ou Usuário2/Senha2!");
+  async function fazerLogin() {
+    setLoginErro("");
+    const toastId = toast.loading("Entrando...");
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: loginUsuario,
+        password: loginSenha
+      });
+      if (error) {
+        throw new Error("E-mail ou senha incorretos.");
+      }
+      
+      await carregarDadosDentista(data.user.id);
+      toast.success("Bem-vindo ao painel!", { id: toastId });
+    } catch (error: any) {
+      setLoginErro(error.message);
+      toast.error(error.message, { id: toastId });
     }
   }
 
   // ─────────────────────────────────────────────────────────────────────────
   // Função: Encerra a sessão do dentista
-  // Em produção: chamar supabase.auth.signOut()
   // ─────────────────────────────────────────────────────────────────────────
-  function fazerLogoff() {
+  async function fazerLogoff() {
+    await supabase.auth.signOut();
     setDentista(null);
     setLoginUsuario("");
     setLoginSenha("");
@@ -402,13 +510,13 @@ export default function Dashboard() {
           <div className="flex flex-col gap-4">
             <div>
               <label className="block text-[13px] font-semibold mb-1.5" style={{ color: "#3A3A3C" }}>
-                Usuário
+                E-mail
               </label>
               <input
-                type="text"
+                type="email"
                 value={loginUsuario}
                 onChange={(e) => setLoginUsuario(e.target.value)}
-                placeholder="Usuário1"
+                placeholder="seuemail@exemplo.com"
                 className="w-full px-4 py-3 rounded-[12px] text-[15px] outline-none"
                 style={{ border: "1px solid rgba(60,60,67,0.18)", color: "#1C1C1E" }}
                 onKeyDown={(e) => e.key === "Enter" && fazerLogin()}
@@ -422,7 +530,7 @@ export default function Dashboard() {
                 type="password"
                 value={loginSenha}
                 onChange={(e) => setLoginSenha(e.target.value)}
-                placeholder="Senha1!"
+                placeholder="Sua senha"
                 className="w-full px-4 py-3 rounded-[12px] text-[15px] outline-none"
                 style={{ border: "1px solid rgba(60,60,67,0.18)", color: "#1C1C1E" }}
                 onKeyDown={(e) => e.key === "Enter" && fazerLogin()}
@@ -446,20 +554,6 @@ export default function Dashboard() {
             >
               Entrar no painel
             </button>
-          </div>
-
-          {/* Dica de demo */}
-          <div
-            className="p-3 rounded-[12px] flex flex-col gap-1.5"
-            style={{ background: "rgba(0,122,255,0.06)", border: "0.5px solid rgba(0,122,255,0.15)" }}
-          >
-            <p className="text-[12px] font-semibold" style={{ color: "#007AFF" }}>Usuários de demonstração</p>
-            <p className="text-[12px]" style={{ color: "#3A3A3C" }}>
-              Completo: <strong>Usuário1</strong> / <strong>Senha1!</strong>
-            </p>
-            <p className="text-[12px]" style={{ color: "#3A3A3C" }}>
-              Incompleto: <strong>Usuário2</strong> / <strong>Senha2!</strong>
-            </p>
           </div>
 
           <button
@@ -550,8 +644,9 @@ export default function Dashboard() {
 
               {/* Foto com overlay de edição ao hover */}
               <div
-                className="relative flex-shrink-0 cursor-pointer group"
+                className={`relative flex-shrink-0 group ${isUploadingFoto ? "opacity-80 pointer-events-none" : "cursor-pointer"}`}
                 style={{ width: "90px", height: "90px" }}
+                onClick={() => fileInputRef.current?.click()}
               >
                 <div
                   className="w-full h-full overflow-hidden"
@@ -568,14 +663,28 @@ export default function Dashboard() {
                   />
                 </div>
 
-                {/* Overlay de edição — aparece ao hover */}
+                {/* Overlay de edição — aparece ao hover ou carregando */}
                 <div
-                  className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                  className={`absolute inset-0 flex flex-col items-center justify-center transition-opacity duration-200 ${isUploadingFoto ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
                   style={{ borderRadius: "50%", background: "rgba(0,0,0,0.55)" }}
                 >
-                  <Camera size={18} style={{ color: "#fff" }} />
-                  <span className="text-[10px] text-white font-semibold mt-1">Editar</span>
+                  {isUploadingFoto ? (
+                    <Loader2 className="animate-spin" size={18} style={{ color: "#fff" }} />
+                  ) : (
+                    <>
+                      <Camera size={18} style={{ color: "#fff" }} />
+                      <span className="text-[10px] text-white font-semibold mt-1">Editar</span>
+                    </>
+                  )}
                 </div>
+
+                <input
+                  type="file"
+                  accept="image/jpeg, image/png, image/webp"
+                  ref={fileInputRef}
+                  style={{ display: "none" }}
+                  onChange={handleFotoUpload}
+                />
               </div>
 
               {/* Mensagem de boas-vindas e informações do perfil */}
