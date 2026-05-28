@@ -13,7 +13,7 @@
 import Header from "@/components/layout/Header";
 import HeroSection from "@/components/features/HeroSection";
 import HowItWorks from "@/components/features/HowItWorks";
-import FeaturedDentists from "@/components/features/FeaturedDentists";
+import LatestDentists from "@/components/features/LatestDentists";
 import Specialties from "@/components/features/Specialties";
 import CtaBanner from "@/components/features/CtaBanner";
 import AboutSection from "@/components/features/AboutSection";
@@ -49,8 +49,8 @@ const Index = () => {
         {/* Explicação das 3 etapas para agendar */}
         <HowItWorks />
 
-        {/* Ranking Top 10 da cidade — recolhido por padrão */}
-        <FeaturedDentists />
+        {/* Últimos 15 Dentistas Cadastrados */}
+        <LatestDentists />
 
         {/* Grade de especialidades disponíveis */}
         <Specialties />

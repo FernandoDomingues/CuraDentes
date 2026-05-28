@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Search,
   MapPin,
@@ -100,6 +101,7 @@ const ICON_MAP: Record<string, AnyIcon> = {
 export default function HeroSection() {
   const [searchValue, setSearchValue] = useState("");
   const [activeChip, setActiveChip] = useState<string | null>(null);
+  const navigate = useNavigate();
   
   // Puxamos os estados globais: "user" (usuário logado) e "login" (função para entrar/cadastrar)
   const { user, login } = useAuth();
@@ -209,6 +211,13 @@ export default function HeroSection() {
     setActiveChip(activeChip === id ? null : id);
   };
 
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchValue.trim()) {
+      navigate(`/pesquisa?q=${encodeURIComponent(searchValue)}`);
+    }
+  };
+
   return (
     <>
       {/* ── MOBILE layout (< lg) ─────────────────────────────────────────── */}
@@ -231,7 +240,8 @@ export default function HeroSection() {
               aria-label="Entrar com o Google para buscar"
             />
           )}
-          <div
+          <form
+            onSubmit={handleSearchSubmit}
             className="flex items-center gap-3 px-4"
             style={{
               background: "#fff",
@@ -249,7 +259,7 @@ export default function HeroSection() {
               className="flex-1 outline-none bg-transparent text-[16px]"
               style={{ color: "#1C1C1E", minHeight: "48px", border: "none" }}
             />
-          </div>
+          </form>
         </div>
 
         {/* "O QUE VOCÊ PRECISA?" label + chips */}
@@ -340,17 +350,17 @@ export default function HeroSection() {
                   aria-label="Entrar com o Google para buscar"
                 />
               )}
-              <div className="flex items-center gap-2" style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(20px) saturate(120%)", WebkitBackdropFilter: "blur(20px) saturate(120%)", border: "0.5px solid rgba(255,255,255,0.5)", borderRadius: "16px", padding: "6px 6px 6px 16px", minHeight: "56px", boxShadow: "0 8px 20px rgba(16,24,64,0.08)" }}>
+              <form onSubmit={handleSearchSubmit} className="flex items-center gap-2" style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(20px) saturate(120%)", WebkitBackdropFilter: "blur(20px) saturate(120%)", border: "0.5px solid rgba(255,255,255,0.5)", borderRadius: "16px", padding: "6px 6px 6px 16px", minHeight: "56px", boxShadow: "0 8px 20px rgba(16,24,64,0.08)" }}>
                 <Search size={20} style={{ color: "#8E8E93", flexShrink: 0 }} />
                 <input type="text" value={searchValue} onChange={(e) => setSearchValue(e.target.value)} placeholder="Bairro, Cidade" className="flex-1 min-w-0 outline-none bg-transparent" style={{ fontFamily: "Inter, sans-serif", fontSize: "16px", color: "#1C1C1E", minHeight: "44px", border: "none" }} />
-                <button className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[13px] font-semibold min-h-[40px] flex-shrink-0 transition-all duration-200" style={{ background: "rgba(0,122,255,0.08)", color: "#007AFF", border: "0.5px solid rgba(0,122,255,0.18)" }}>
+                <button type="button" className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[13px] font-semibold min-h-[40px] flex-shrink-0 transition-all duration-200" style={{ background: "rgba(0,122,255,0.08)", color: "#007AFF", border: "0.5px solid rgba(0,122,255,0.18)" }}>
                   <MapPin size={14} />
                   Usar minha Localização
                 </button>
-                <button className="flex items-center gap-2 px-5 py-3 rounded-[12px] text-white font-semibold text-[15px] min-h-[44px] flex-shrink-0 transition-all duration-200" style={{ background: "#007AFF", boxShadow: "0 8px 20px rgba(0,122,255,0.25)" }}>
+                <button type="submit" className="flex items-center gap-2 px-5 py-3 rounded-[12px] text-white font-semibold text-[15px] min-h-[44px] flex-shrink-0 transition-all duration-200" style={{ background: "#007AFF", boxShadow: "0 8px 20px rgba(0,122,255,0.25)" }}>
                   Buscar
                 </button>
-              </div>
+              </form>
             </div>
 
             {/* Specialty Chips */}

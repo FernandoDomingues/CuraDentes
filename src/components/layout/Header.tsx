@@ -22,6 +22,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth"; // Hook global que controla quem está logado
 import { useGoogleLogin } from "@react-oauth/google"; // Integração oficial com o Google
 import { toast } from "sonner"; // Notificações amigáveis na tela
+import { supabase } from "@/lib/supabase";
 
 import logoComNome from "@/assets/logos/logo-com-nome.png";
 import logoIcon from "@/assets/logos/logo-icon.png";
@@ -174,9 +175,30 @@ export default function Header() {
   // Função: Redireciona para o painel do dentista
   // Em produção: validar credenciais antes via Supabase Auth
   // ─────────────────────────────────────────────────────────────────────────
-  function loginDentista() {
-    fecharModal();
-    navigate("/pro/dashboard");
+  async function loginDentista() {
+    if (!emailLogin || !senhaLogin) {
+      toast.error("Por favor, preencha e-mail e senha.");
+      return;
+    }
+
+    const toastId = toast.loading("Verificando credenciais...");
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: emailLogin,
+        password: senhaLogin,
+      });
+
+      if (error) {
+        throw new Error("E-mail ou senha incorretos.");
+      }
+
+      toast.success("Login realizado com sucesso!", { id: toastId });
+      fecharModal();
+      navigate("/pro/perfil");
+    } catch (error: any) {
+      toast.error(error.message, { id: toastId });
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -326,7 +348,7 @@ export default function Header() {
             onMouseEnter={(e) => { e.currentTarget.style.background = "#0d3480"; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = "#0A2A66"; }}
           >
-            Entrar no painel
+            Entrar no Painel
           </button>
         </div>
 

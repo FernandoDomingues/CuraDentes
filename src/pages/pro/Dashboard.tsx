@@ -24,6 +24,7 @@ import {
   Star,
   Building2,
   Clock,
+  User,
   CreditCard,
   Shield,
   ChevronDown,
@@ -456,6 +457,7 @@ export default function Dashboard() {
       
       await carregarDadosDentista(data.user.id);
       toast.success("Bem-vindo ao painel!", { id: toastId });
+      navigate("/pro/perfil");
     } catch (error: any) {
       setLoginErro(error.message);
       toast.error(error.message, { id: toastId });
@@ -552,7 +554,7 @@ export default function Dashboard() {
               className="w-full py-3 rounded-[14px] font-semibold text-[15px] min-h-[48px] text-white transition-all duration-200"
               style={{ background: "#007AFF", boxShadow: "0 4px 16px rgba(0,122,255,0.28)" }}
             >
-              Entrar no painel
+              Entrar no Painel
             </button>
           </div>
 
@@ -598,6 +600,19 @@ export default function Dashboard() {
 
             {/* Menu do canto superior direito */}
             <div className="flex items-center gap-2">
+              {/* Botão Meu Perfil */}
+              <button
+                onClick={() => navigate("/pro/perfil")}
+                className="flex items-center gap-2 px-3 py-2 rounded-[12px] transition-all duration-200"
+                style={{ color: "#8E8E93", background: "rgba(60,60,67,0.06)" }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = "#007AFF"; e.currentTarget.style.background = "rgba(0,122,255,0.08)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = "#8E8E93"; e.currentTarget.style.background = "rgba(60,60,67,0.06)"; }}
+                title="Meu Perfil"
+              >
+                <User size={16} />
+                <span className="text-[13px] font-medium hidden sm:inline">Meu Perfil</span>
+              </button>
+
               {/* Botão de configurações */}
               <button
                 onClick={() => setModalConfig(true)}

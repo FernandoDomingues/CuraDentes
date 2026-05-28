@@ -1,0 +1,175 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/lib/supabase";
+import { MapPin, Star, Building2, ChevronRight, Sparkles, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import logoProAltUrl from "@/assets/logos/logo-pro-alt.png";
+
+interface DentistaRecente {
+  id: string;
+  nome: string;
+  foto_url: string;
+  bio: string;
+  cro: string;
+  endereco: {
+    nome_clinica: string;
+    logradouro: string;
+    numero: string;
+    bairro: string;
+    cidade: string;
+  } | null;
+  criado_em: string;
+}
+
+export default function LatestDentists() {
+  const navigate = useNavigate();
+  const [dentistas, setDentistas] = useState<DentistaRecente[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expandido, setExpandido] = useState(false);
+
+  useEffect(() => {
+    async function fetchLatest() {
+      try {
+        setLoading(true);
+        // Busca os últimos 15 dentistas criados
+        const { data: pros, error } = await supabase
+          .from("curadentespro")
+          .select("id, nome, foto_url, bio, cro, criado_em")
+          .order("criado_em", { ascending: false })
+          .limit(15);
+
+        if (error) throw error;
+
+        // Para cada um, buscar 1 endereço (o principal) para exibir
+        if (pros && pros.length > 0) {
+          const comEnderecos = await Promise.all(
+            pros.map(async (p) => {
+              const { data: end } = await supabase
+                .from("curadentespro_enderecos")
+                .select("nome_clinica, logradouro, numero, bairro, cidade")
+                .eq("curadentespro_id", p.id)
+                .limit(1)
+                .maybeSingle();
+
+              return { ...p, endereco: end };
+            })
+          );
+          setDentistas(comEnderecos);
+        }
+      } catch (err) {
+        console.error("Erro ao buscar últimos dentistas:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchLatest();
+  }, []);
+
+  if (loading) {
+    return (
+      <section className="py-12 bg-[#F2F2F7] flex flex-col items-center">
+        <Loader2 className="animate-spin text-[#007AFF] mb-4" size={32} />
+        <p className="text-gray-500 font-medium text-[14px]">Carregando novos dentistas...</p>
+      </section>
+    );
+  }
+
+  if (dentistas.length === 0) return null;
+
+  return (
+    <section className="py-12 lg:py-16 bg-[#F2F2F7]">
+      <div className="container mx-auto px-4 md:px-8 max-w-[1200px]">
+        {/* Header Clickable para Expandir/Recolher */}
+        <button 
+          onClick={() => setExpandido(!expandido)}
+          className={`w-full flex flex-col md:flex-row md:items-center justify-between gap-4 text-left cursor-pointer group transition-all duration-300 ${
+            expandido 
+              ? "mb-4" 
+              : "bg-white p-6 md:px-8 rounded-[24px] shadow-sm border border-gray-100 hover:shadow-md"
+          }`}
+        >
+          <div>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-100/50 border border-blue-200 text-blue-700 text-[12px] font-bold mb-3">
+              <Sparkles size={14} className="text-blue-600" /> Novidades
+            </div>
+            <div className="flex items-center gap-3">
+              <h2 className="text-[24px] md:text-[28px] font-bold text-[#0A2A66] leading-tight group-hover:text-[#007AFF] transition-colors">
+                Novos Dentistas <br className="md:hidden" /> no CuraDentes
+              </h2>
+              {expandido ? (
+                <ChevronUp size={24} className="text-[#E6004C] md:hidden" />
+              ) : (
+                <ChevronDown size={24} className="text-[#E6004C] md:hidden" />
+              )}
+            </div>
+          </div>
+          <div className="flex items-center justify-between md:justify-end gap-6 w-full md:w-auto">
+            <p className="text-[13px] text-gray-500 max-w-xs md:max-w-[280px]">
+              Conheça os profissionais que acabaram de chegar na plataforma e encontre o seu especialista.
+            </p>
+            <div className={`hidden md:flex items-center justify-center w-12 h-12 rounded-full border transition-colors ${
+              expandido 
+                ? "bg-white border-gray-200 group-hover:bg-[#FFF0F5] group-hover:border-[#E6004C]/30" 
+                : "bg-[#FFF0F5] border-[#E6004C]/20"
+            }`}>
+              {expandido ? (
+                <ChevronUp size={24} className="text-[#E6004C]" />
+              ) : (
+                <ChevronDown size={24} className="text-[#E6004C]" />
+              )}
+            </div>
+          </div>
+        </button>
+
+        {/* Conteúdo Expansível */}
+        {expandido && (
+          <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-6 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-2 lg:grid-cols-3 mt-6 animate-in slide-in-from-top-4 fade-in duration-300">
+            {dentistas.map((dentista) => (
+            <div
+              key={dentista.id}
+              onClick={() => navigate(`/dentista/${dentista.id}`)}
+              className="snap-start snap-always shrink-0 w-[280px] md:w-auto bg-white rounded-[24px] p-5 border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer flex flex-col group relative"
+            >
+              <div className="absolute top-4 right-4 bg-green-50 text-green-600 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">
+                Novo
+              </div>
+
+              <div className="flex items-start gap-4 mb-4">
+                <img
+                  src={dentista.foto_url || logoProAltUrl}
+                  alt={dentista.nome}
+                  className="w-14 h-14 rounded-full object-cover border-2 border-gray-50 bg-gray-50"
+                />
+                <div className="flex-1 mt-1">
+                  <h3 className="font-bold text-[16px] text-[#1C1C1E] leading-tight line-clamp-1 group-hover:text-[#007AFF] transition-colors">
+                    {dentista.nome}
+                  </h3>
+                  <p className="text-[12px] text-gray-400 mt-0.5 font-medium">
+                    {dentista.cro}
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-[13px] text-gray-500 mb-4 line-clamp-2 min-h-[38px]">
+                {dentista.bio || "Dentista clínico geral focado em oferecer o melhor atendimento para o seu sorriso."}
+              </p>
+
+              {dentista.endereco && (
+                <div className="mt-auto bg-blue-50/50 rounded-[12px] p-3 flex flex-col gap-2">
+                  <div className="flex items-start gap-2 text-[12px] text-[#0A2A66]">
+                    <Building2 size={14} className="mt-0.5 shrink-0 text-blue-400" />
+                    <span className="font-medium line-clamp-2 leading-snug">
+                      {dentista.endereco.nome_clinica ? `${dentista.endereco.nome_clinica} - ` : ""}
+                      {dentista.endereco.bairro}, {dentista.endereco.cidade}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        )}
+      </div>
+    </section>
+  );
+}

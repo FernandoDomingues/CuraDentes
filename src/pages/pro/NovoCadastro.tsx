@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
+import { getCoordenadas } from "@/lib/geocoding";
 
 import logoProUrl from "@/assets/logos/logo-pro.png";
 
@@ -473,6 +474,19 @@ export default function NovoCadastro() {
 
       // 3. Inserir endereços na tabela curadentespro_enderecos
       for (const end of enderecos) {
+        let lat = null;
+        let lng = null;
+        
+        // Evitar chamadas desnecessárias se os dados base não estiverem preenchidos
+        if (end.logradouro && end.bairro && end.cidade) {
+          const enderecoBusca = `${end.logradouro}, ${end.numero}, ${end.bairro}, ${end.cidade}, ${end.estado}`;
+          const coord = await getCoordenadas(enderecoBusca);
+          if (coord) {
+            lat = coord.latitude;
+            lng = coord.longitude;
+          }
+        }
+
         const { error: errorEnd } = await supabase.from('curadentespro_enderecos').insert({
           curadentespro_id: user.id,
           nome_clinica: end.nome_clinica,
@@ -492,7 +506,9 @@ export default function NovoCadastro() {
           atividades: end.atividades,
           convenios: end.convenios,
           formas_pagamento: end.formas_pagamento,
-          agenda: end.agenda
+          agenda: end.agenda,
+          latitude: lat,
+          longitude: lng
         });
 
         if (errorEnd) throw errorEnd;
