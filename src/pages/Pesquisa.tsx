@@ -67,29 +67,28 @@ export default function Pesquisa() {
   const [selectedPagamentos, setSelectedPagamentos] = useState<string[]>([]);
 
   useEffect(() => {
-    console.log("Pesquisa: useEffect triggered!", { query, lat: searchParams.get("lat"), lng: searchParams.get("lng"), raio, userLat: user?.latitude, userLng: user?.longitude });
     async function buscar() {
       const urlLat = searchParams.get("lat");
       const urlLng = searchParams.get("lng");
 
+      console.log("[Pesquisa] 🔍 Iniciando busca. Params:", { query, urlLat, urlLng, raio });
+
       if (!query && (!urlLat || !urlLng)) {
-        console.log("Pesquisa: buscar - no query and no coords, skipping search");
+        console.log("[Pesquisa] Sem query ou coordenadas na URL. Parando busca.");
         setLoading(false);
         return;
       }
 
       try {
-        console.log("Pesquisa: buscar - setting loading true");
         setLoading(true);
         let finalLat: number | null = null;
         let finalLng: number | null = null;
 
         // 1. Inicia a Busca Textual no banco (roda em paralelo com a API de mapas)
-        // Nota: usamos múltiplos .or() em colunas da própria tabela para compatibilidade com o join
         let textSearchPromise: Promise<{ data: any[] | null; error: any }> = Promise.resolve({ data: null, error: null });
         if (query) {
           const q = query.trim();
-          console.log("Pesquisa: buscar - launching text search for:", q);
+          console.log("[Pesquisa] [Passo 1] Disparando busca textual por:", q);
           textSearchPromise = supabase
             .from("curadentespro_enderecos")
             .select(`
@@ -110,16 +109,20 @@ export default function Pesquisa() {
         if (urlLat && urlLng) {
           finalLat = parseFloat(urlLat);
           finalLng = parseFloat(urlLng);
-          console.log("Pesquisa: buscar - using URL coords:", finalLat, finalLng);
+          console.log("[Pesquisa] [Passo 2] Coordenadas vindas diretamente da URL:", { finalLat, finalLng });
         } else if (query) {
-          console.log("Pesquisa: buscar - launching geocoding for:", query);
+          console.log("[Pesquisa] [Passo 2] Disparando geocodificação para obter lat/lng...");
           coordPromise = getCoordenadas(query, user?.latitude, user?.longitude);
         }
 
         // AGUARDA AS DUAS BUSCAS TERMINAREM JUNTAS (Corta o tempo pela metade!)
-        console.log("Pesquisa: buscar - awaiting Promise.all");
+        console.log("[Pesquisa] Aguardando Promise.all (busca textual + geocodificação)...");
         const [textResult, coordResult] = await Promise.all([textSearchPromise, coordPromise]);
-        console.log("Pesquisa: buscar - Promise.all resolved", { textHasData: !!textResult.data, textError: textResult.error, coordResult });
+        console.log("[Pesquisa] Promise.all resolvida!", { 
+          temTextResult: !!textResult.data, 
+          textError: textResult.error, 
+          coordResult 
+        });
 
         if (coordResult) {
           finalLat = coordResult.latitude;
@@ -129,18 +132,21 @@ export default function Pesquisa() {
         // 3. Busca Geográfica pelo mapa (get_dentistas_proximos)
         let mapResults: DentistaResultado[] = [];
         if (finalLat !== null && finalLng !== null) {
-          console.log("Pesquisa: buscar - launching RPC get_dentistas_proximos at:", finalLat, finalLng, "raio:", raio);
+          console.log("[Pesquisa] [Passo 3] Disparando RPC get_dentistas_proximos com coordenadas:", { finalLat, finalLng, raio });
           const { data, error } = await supabase.rpc("get_dentistas_proximos", {
             lat: finalLat,
             lng: finalLng,
             raio_km: raio
           });
+          
           if (!error && data) {
-            console.log("Pesquisa: buscar - RPC success, count:", data.length);
+            console.log("[Pesquisa] RPC get_dentistas_proximos retornou:", data.length, "dentistas");
             mapResults = data;
           } else {
-            console.error("Erro na busca por raio:", error);
+            console.error("[Pesquisa] Erro na busca por raio RPC:", error);
           }
+        } else {
+          console.log("[Pesquisa] [Passo 3] Pulando RPC geográfica porque lat/lng são nulos.");
         }
 
         // 4. Processa a Busca Textual que rodou lá no passo 1
@@ -149,51 +155,59 @@ export default function Pesquisa() {
           const { data: textData, error: textError } = textResult;
 
           if (textData) {
-            console.log("Pesquisa: buscar - process text results, count:", textData.length);
-            textResults = textData.map((d: any) => {
-              const pro = Array.isArray(d.curadentespro) ? d.curadentespro[0] : (d.curadentespro || {});
-              
-              let dist = 0;
-              if (finalLat !== null && finalLng !== null && d.latitude && d.longitude) {
-                dist = calculateDistance(finalLat, finalLng, d.latitude, d.longitude);
-              }
+            console.log("[Pesquisa] [Passo 4] Processando", textData.length, "registros textuais...");
+            textResults = textData
+              .filter((d: any) => {
+                const pro = Array.isArray(d.curadentespro) ? d.curadentespro[0] : d.curadentespro;
+                const temPro = !!(pro && pro.id);
+                if (!temPro) {
+                  console.warn("[Pesquisa] Endereço sem profissional vinculado descartado:", d.id);
+                }
+                return temPro;
+              })
+              .map((d: any) => {
+                const pro = Array.isArray(d.curadentespro) ? d.curadentespro[0] : (d.curadentespro || {});
+                
+                let dist = 0;
+                if (finalLat !== null && finalLng !== null && d.latitude && d.longitude) {
+                  dist = calculateDistance(finalLat, finalLng, d.latitude, d.longitude);
+                }
 
-              return {
-                dentista_id: pro.id,
-                dentista_nome: pro.nome,
-                dentista_foto: pro.foto_url,
-                dentista_bio: pro.bio,
-                dentista_avaliacao: 5.0,
-                endereco_id: d.id,
-                nome_clinica: d.nome_clinica,
-                logradouro: d.logradouro,
-                numero: d.numero,
-                bairro: d.bairro,
-                cidade: d.cidade,
-                estado: d.estado,
-                atividades: d.atividades || [],
-                convenios: d.convenios || [],
-                formas_pagamento: d.formas_pagamento || [],
-                distancia_km: dist
-              };
-            });
+                return {
+                  dentista_id: pro.id,
+                  dentista_nome: pro.nome || "Dentista Parceiro",
+                  dentista_foto: pro.foto_url || "",
+                  dentista_bio: pro.bio || "",
+                  dentista_avaliacao: 5.0,
+                  endereco_id: d.id,
+                  nome_clinica: d.nome_clinica || "",
+                  logradouro: d.logradouro || "",
+                  numero: d.numero || "",
+                  bairro: d.bairro || "",
+                  cidade: d.cidade || "",
+                  estado: d.estado || "",
+                  atividades: d.atividades || [],
+                  convenios: d.convenios || [],
+                  formas_pagamento: d.formas_pagamento || [],
+                  distancia_km: dist
+                };
+              });
 
             // Aplica filtro de raio APENAS em dentistas com coordenadas cadastradas
-            // Dentistas sem lat/lng no banco são incluídos (foram encontrados pelo nome do bairro)
             if (finalLat !== null) {
-              const originalCount = textResults.length;
+              const antesFiltro = textResults.length;
               textResults = textResults.filter((r) => {
                 const temCoordenadas = r.distancia_km > 0;
                 return !temCoordenadas || r.distancia_km <= raio;
               });
-              console.log("Pesquisa: buscar - filtered text results by raio from", originalCount, "to", textResults.length);
+              console.log("[Pesquisa] Aplicado filtro de raio. Antes:", antesFiltro, "Depois:", textResults.length);
             }
           } else if (textError) {
-             console.error("Erro na busca por texto:", textError);
+             console.error("[Pesquisa] Erro na busca por texto:", textError);
           }
         }
 
-        // 4. Combinação de Resultados sem duplicação
+        // 5. Combinação de Resultados sem duplicação
         const mergedMap = new Map<string, DentistaResultado>();
         mapResults.forEach(r => mergedMap.set(r.endereco_id, r));
         textResults.forEach(r => {
@@ -202,30 +216,19 @@ export default function Pesquisa() {
           }
         });
 
-        const arrayResultados = Array.from(mergedMap.values());
-        console.log("Pesquisa: buscar - total merged results:", arrayResultados.length);
-        setResultadosBrutos(arrayResultados);
-
-        // SALVA OS RESULTADOS NO CACHE PARA CARREGAR O PERFIL INSTANTANEAMENTE
-        try {
-          localStorage.setItem("curadentes_search_cache", JSON.stringify({
-            timestamp: Date.now(),
-            resultados: arrayResultados
-          }));
-        } catch (e) {
-          console.error("Erro ao salvar cache de busca:", e);
-        }
+        const finalResults = Array.from(mergedMap.values());
+        console.log("[Pesquisa] 🏁 Busca finalizada com sucesso! Total de resultados combinados:", finalResults.length);
+        setResultadosBrutos(finalResults);
       } catch (err) {
-        console.error("Erro inesperado:", err);
+        console.error("[Pesquisa] 💥 Erro inesperado durante a busca:", err);
       } finally {
-        console.log("Pesquisa: buscar - setting loading false");
+        console.log("[Pesquisa] Definindo loading para false.");
         setLoading(false);
       }
     }
 
     buscar();
   }, [query, searchParams.get("lat"), searchParams.get("lng"), raio, user?.latitude, user?.longitude]);
-
 
   // Aplicação dos filtros locais
   const resultadosFiltrados = resultadosBrutos.filter((dentista) => {

@@ -9,12 +9,6 @@ export async function getCoordenadas(
 ): Promise<{ latitude: number; longitude: number } | null> {
   if (!enderecoTexto) return null;
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => {
-    console.warn("[Geocoding] Timeout de busca de coordenadas excedido (2.5s). Abortando requisição...");
-    controller.abort();
-  }, 2500);
-
   try {
     // A API Nominatim requer um header User-Agent válido
     // Restringimos a busca ao Brasil (countrycodes=br)
@@ -31,11 +25,13 @@ export async function getCoordenadas(
       // Não usamos bounded=1 porque queremos apenas priorizar, e não proibir que ache em outro estado se o usuário digitar "Rio de Janeiro" estando em SP.
     }
     
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
     const resposta = await fetch(url, {
       signal: controller.signal,
       headers: {
-        'Accept-Language': 'pt-BR,pt;q=0.9',
-        'User-Agent': 'CuraDentes/1.0 (contato@curadentes.com.br)'
+        'Accept-Language': 'pt-BR,pt;q=0.9'
       }
     });
 
@@ -56,13 +52,8 @@ export async function getCoordenadas(
     }
 
     return null;
-  } catch (erro: any) {
-    clearTimeout(timeoutId);
-    if (erro.name === 'AbortError') {
-      console.warn("[Geocoding] Requisição de coordenadas abortada devido a timeout.");
-    } else {
-      console.error("Falha ao geocodificar o endereço:", erro);
-    }
+  } catch (erro) {
+    console.error("Falha ao geocodificar o endereço:", erro);
     return null;
   }
 }
