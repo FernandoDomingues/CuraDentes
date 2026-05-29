@@ -9,6 +9,12 @@ export async function getCoordenadas(
 ): Promise<{ latitude: number; longitude: number } | null> {
   if (!enderecoTexto) return null;
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    console.warn("[Geocoding] Timeout de busca de coordenadas excedido (2.5s). Abortando requisição...");
+    controller.abort();
+  }, 2500);
+
   try {
     // A API Nominatim requer um header User-Agent válido
     // Restringimos a busca ao Brasil (countrycodes=br)
@@ -26,11 +32,14 @@ export async function getCoordenadas(
     }
     
     const resposta = await fetch(url, {
+      signal: controller.signal,
       headers: {
         'Accept-Language': 'pt-BR,pt;q=0.9',
         'User-Agent': 'CuraDentes/1.0 (contato@curadentes.com.br)'
       }
     });
+
+    clearTimeout(timeoutId);
 
     if (!resposta.ok) {
       console.error("Erro na API de geocoding:", resposta.statusText);
@@ -47,8 +56,13 @@ export async function getCoordenadas(
     }
 
     return null;
-  } catch (erro) {
-    console.error("Falha ao geocodificar o endereço:", erro);
+  } catch (erro: any) {
+    clearTimeout(timeoutId);
+    if (erro.name === 'AbortError') {
+      console.warn("[Geocoding] Requisição de coordenadas abortada devido a timeout.");
+    } else {
+      console.error("Falha ao geocodificar o endereço:", erro);
+    }
     return null;
   }
 }

@@ -67,16 +67,19 @@ export default function Pesquisa() {
   const [selectedPagamentos, setSelectedPagamentos] = useState<string[]>([]);
 
   useEffect(() => {
+    console.log("Pesquisa: useEffect triggered!", { query, lat: searchParams.get("lat"), lng: searchParams.get("lng"), raio, userLat: user?.latitude, userLng: user?.longitude });
     async function buscar() {
       const urlLat = searchParams.get("lat");
       const urlLng = searchParams.get("lng");
 
       if (!query && (!urlLat || !urlLng)) {
+        console.log("Pesquisa: buscar - no query and no coords, skipping search");
         setLoading(false);
         return;
       }
 
       try {
+        console.log("Pesquisa: buscar - setting loading true");
         setLoading(true);
         let finalLat: number | null = null;
         let finalLng: number | null = null;
@@ -86,6 +89,7 @@ export default function Pesquisa() {
         let textSearchPromise: Promise<{ data: any[] | null; error: any }> = Promise.resolve({ data: null, error: null });
         if (query) {
           const q = query.trim();
+          console.log("Pesquisa: buscar - launching text search for:", q);
           textSearchPromise = supabase
             .from("curadentespro_enderecos")
             .select(`
@@ -106,12 +110,16 @@ export default function Pesquisa() {
         if (urlLat && urlLng) {
           finalLat = parseFloat(urlLat);
           finalLng = parseFloat(urlLng);
+          console.log("Pesquisa: buscar - using URL coords:", finalLat, finalLng);
         } else if (query) {
+          console.log("Pesquisa: buscar - launching geocoding for:", query);
           coordPromise = getCoordenadas(query, user?.latitude, user?.longitude);
         }
 
         // AGUARDA AS DUAS BUSCAS TERMINAREM JUNTAS (Corta o tempo pela metade!)
+        console.log("Pesquisa: buscar - awaiting Promise.all");
         const [textResult, coordResult] = await Promise.all([textSearchPromise, coordPromise]);
+        console.log("Pesquisa: buscar - Promise.all resolved", { textHasData: !!textResult.data, textError: textResult.error, coordResult });
 
         if (coordResult) {
           finalLat = coordResult.latitude;
@@ -121,12 +129,14 @@ export default function Pesquisa() {
         // 3. Busca Geográfica pelo mapa (get_dentistas_proximos)
         let mapResults: DentistaResultado[] = [];
         if (finalLat !== null && finalLng !== null) {
+          console.log("Pesquisa: buscar - launching RPC get_dentistas_proximos at:", finalLat, finalLng, "raio:", raio);
           const { data, error } = await supabase.rpc("get_dentistas_proximos", {
             lat: finalLat,
             lng: finalLng,
             raio_km: raio
           });
           if (!error && data) {
+            console.log("Pesquisa: buscar - RPC success, count:", data.length);
             mapResults = data;
           } else {
             console.error("Erro na busca por raio:", error);
@@ -139,6 +149,7 @@ export default function Pesquisa() {
           const { data: textData, error: textError } = textResult;
 
           if (textData) {
+            console.log("Pesquisa: buscar - process text results, count:", textData.length);
             textResults = textData.map((d: any) => {
               const pro = Array.isArray(d.curadentespro) ? d.curadentespro[0] : (d.curadentespro || {});
               
@@ -167,9 +178,16 @@ export default function Pesquisa() {
               };
             });
 
-            // Não aplicamos mais filtro de raio aqui nos resultados de texto!
-            // Se o texto (nome, bairro) bateu com a busca, o paciente quer ver esse dentista,
-            // mesmo que a coordenada central do bairro fique a mais de 5km de distância.
+            // Aplica filtro de raio APENAS em dentistas com coordenadas cadastradas
+            // Dentistas sem lat/lng no banco são incluídos (foram encontrados pelo nome do bairro)
+            if (finalLat !== null) {
+              const originalCount = textResults.length;
+              textResults = textResults.filter((r) => {
+                const temCoordenadas = r.distancia_km > 0;
+                return !temCoordenadas || r.distancia_km <= raio;
+              });
+              console.log("Pesquisa: buscar - filtered text results by raio from", originalCount, "to", textResults.length);
+            }
           } else if (textError) {
              console.error("Erro na busca por texto:", textError);
           }
@@ -185,9 +203,10 @@ export default function Pesquisa() {
         });
 
         const arrayResultados = Array.from(mergedMap.values());
+        console.log("Pesquisa: buscar - total merged results:", arrayResultados.length);
         setResultadosBrutos(arrayResultados);
-        
-        // SALVAR NO CACHE PARA ACESSO OFFLINE / INSTANTÂNEO NO PERFIL
+
+        // SALVA OS RESULTADOS NO CACHE PARA CARREGAR O PERFIL INSTANTANEAMENTE
         try {
           localStorage.setItem("curadentes_search_cache", JSON.stringify({
             timestamp: Date.now(),
@@ -196,16 +215,17 @@ export default function Pesquisa() {
         } catch (e) {
           console.error("Erro ao salvar cache de busca:", e);
         }
-
       } catch (err) {
         console.error("Erro inesperado:", err);
       } finally {
+        console.log("Pesquisa: buscar - setting loading false");
         setLoading(false);
       }
     }
 
     buscar();
   }, [query, searchParams.get("lat"), searchParams.get("lng"), raio, user?.latitude, user?.longitude]);
+
 
   // Aplicação dos filtros locais
   const resultadosFiltrados = resultadosBrutos.filter((dentista) => {

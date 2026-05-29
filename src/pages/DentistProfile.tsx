@@ -497,61 +497,63 @@ export default function DentistProfilePage() {
 
   const fetchPerfil = async () => {
     if (!id) return;
+
+    // ── PASSO 0: Verificar cache de forma SÍNCRONA (antes de qualquer spinner) ──
+    let temCache = false;
     try {
-      // Começamos o loading apenas se não tivermos nenhum dado ainda
-      if (!perfil) {
-        setLoading(true);
-      }
-      setError(false);
-
-      // 0. TENTATIVA DE CARREGAR DO CACHE DA BUSCA (Offline-first / Instant loading)
-      try {
-        const cachedStr = localStorage.getItem("curadentes_search_cache");
-        if (cachedStr) {
-          const parsed = JSON.parse(cachedStr);
-          if (parsed.resultados) {
-            const doCache = parsed.resultados.find((r: any) => r.dentista_id === id);
-            if (doCache) {
-              const espec = doCache.atividades && doCache.atividades.length > 0 ? doCache.atividades[0] : "Clínico Geral";
-              
-              const partialProfile: DentistProfile = {
-                dentista_id: doCache.dentista_id,
-                nome_completo: doCache.dentista_nome,
-                foto_url: doCache.dentista_foto || "",
-                cro: doCache.cro || "", 
-                especialidade_principal: espec,
-                bio: doCache.dentista_bio || "",
-                rating: doCache.dentista_avaliacao || 5.0,
-                total_avaliacoes: 0,
-                enderecos: [
-                  {
-                    id: doCache.endereco_id,
-                    nome_clinica: doCache.nome_clinica || "",
-                    logradouro: doCache.logradouro || "",
-                    numero: doCache.numero || "",
-                    complemento: "",
-                    bairro: doCache.bairro || "",
-                    cidade: doCache.cidade || "",
-                    estado: doCache.estado || "",
-                    cep: "",
-                    atividades: doCache.atividades || [],
-                    agenda: [], 
-                    formas_pagamento: doCache.formas_pagamento ? doCache.formas_pagamento.map((fp: string, i: number) => ({ id: `${i}`, nome: fp, tipo: "dinheiro" })) : [],
-                    convenios: doCache.convenios ? doCache.convenios.map((c: string, i: number) => ({ id: `${i}`, nome: c })) : [],
-                  }
-                ]
-              };
-              // Exibe o perfil instantaneamente!
-              setPerfil(partialProfile);
-              setLoading(false);
-            }
-          }
+      const cachedStr = localStorage.getItem("curadentes_search_cache");
+      if (cachedStr) {
+        const parsed = JSON.parse(cachedStr);
+        const doCache = parsed.resultados?.find((r: any) => r.dentista_id === id);
+        if (doCache) {
+          const espec = doCache.atividades?.length > 0 ? doCache.atividades[0] : "Clínico Geral";
+          const partialProfile: DentistProfile = {
+            dentista_id: doCache.dentista_id,
+            nome_completo: doCache.dentista_nome || "",
+            foto_url: doCache.dentista_foto || "",
+            cro: doCache.cro || "",
+            especialidade_principal: espec,
+            bio: doCache.dentista_bio || "",
+            rating: doCache.dentista_avaliacao || 5.0,
+            total_avaliacoes: 0,
+            enderecos: [{
+              id: doCache.endereco_id,
+              nome_clinica: doCache.nome_clinica || "",
+              logradouro: doCache.logradouro || "",
+              numero: doCache.numero || "",
+              complemento: "",
+              bairro: doCache.bairro || "",
+              cidade: doCache.cidade || "",
+              estado: doCache.estado || "",
+              cep: "",
+              telefone: "",
+              atividades: doCache.atividades || [],
+              agenda: [],
+              formas_pagamento: doCache.formas_pagamento
+                ? doCache.formas_pagamento.map((fp: string, i: number) => ({ id: `${i}`, nome: fp, tipo: "dinheiro" as const }))
+                : [],
+              convenios: doCache.convenios
+                ? doCache.convenios.map((c: string, i: number) => ({ id: `${i}`, nome: c }))
+                : [],
+            }]
+          };
+          // Exibe perfil INSTANTANEAMENTE — sem spinner!
+          setPerfil(partialProfile);
+          temCache = true;
         }
-      } catch (e) {
-        console.error("Erro ao ler cache do dentista:", e);
       }
+    } catch (cacheErr) {
+      console.error("[DentistProfile] Erro ao ler cache:", cacheErr);
+    }
 
-      // 1. Busca o dentista atualizado em background (ou se não tinha cache)
+    // ── PASSO 1: Se não tem cache, mostra o spinner enquanto carrega ──
+    if (!temCache) {
+      setLoading(true);
+    }
+    setError(false);
+
+    // ── PASSO 2: Busca dados completos do Supabase (sempre, em background) ──
+    try {
       const { data: pro, error: proError } = await supabase
         .from("curadentespro")
         .select("*")
@@ -560,7 +562,6 @@ export default function DentistProfilePage() {
 
       if (proError || !pro) throw new Error("Dentista não encontrado");
 
-      // 2. Busca os endereços
       const { data: ends, error: endError } = await supabase
         .from("curadentespro_enderecos")
         .select("*")
@@ -568,90 +569,86 @@ export default function DentistProfilePage() {
 
       if (endError) throw endError;
 
-      // 3. Busca as avaliações do dentista
-      const { data: avs, error: avError } = await supabase
-        .from("avaliacoes")
-        .select("*")
-        .eq("dentista_id", id);
+      // Avaliações: não bloqueiam o carregamento — se falhar, apenas ignoramos
+      let avs: any[] = [];
+      try {
+        const { data: avsData } = await supabase
+          .from("avaliacoes")
+          .select("*")
+          .eq("dentista_id", id);
+        avs = avsData || [];
+      } catch (_) { /* sem avaliações não é erro crítico */ }
 
-      if (avError) throw avError;
-
-      // 4. Calcula médias de avaliações
+      // Calcula médias
       let mediaGeral = 0;
       let totalAvs = 0;
-      let porAtividadeMap = new Map<string, { soma: number, count: number }>();
-
-      if (avs && avs.length > 0) {
+      const porAtividadeMap = new Map<string, { soma: number; count: number }>();
+      if (avs.length > 0) {
         totalAvs = avs.length;
         let somaTotal = 0;
         avs.forEach((av: any) => {
           somaTotal += av.nota;
           const atv = av.atividade || "Geral";
-          if (!porAtividadeMap.has(atv)) {
-            porAtividadeMap.set(atv, { soma: 0, count: 0 });
-          }
+          if (!porAtividadeMap.has(atv)) porAtividadeMap.set(atv, { soma: 0, count: 0 });
           porAtividadeMap.get(atv)!.soma += av.nota;
           porAtividadeMap.get(atv)!.count += 1;
         });
         mediaGeral = somaTotal / totalAvs;
       }
-
       const porAtividade: ResumoAvaliacaoAtividade[] = Array.from(porAtividadeMap.entries()).map(([nome, dados]) => ({
         nome_atividade: nome,
         media_nota: dados.soma / dados.count,
-        total_avaliacoes: dados.count
+        total_avaliacoes: dados.count,
       }));
 
-      // A especialidade principal será a primeira atividade do primeiro endereço (se existir)
       let espec = "Clínico Geral";
-      if (ends && ends.length > 0 && ends[0].atividades && ends[0].atividades.length > 0) {
+      if (ends && ends.length > 0 && ends[0].atividades?.length > 0) {
         espec = ends[0].atividades[0];
       }
 
       const formatarEnderecos = (ends || []).map((e: any) => ({
         id: e.id,
-        nome_clinica: e.nome_clinica,
-        logradouro: e.logradouro,
-        numero: e.numero,
-        complemento: e.complemento,
-        bairro: e.bairro,
-        cidade: e.cidade,
-        estado: e.estado,
-        cep: e.cep,
-        telefone: e.telefone,
-        whatsapp: e.whatsapp,
+        nome_clinica: e.nome_clinica || "",
+        logradouro: e.logradouro || "",
+        numero: e.numero || "",
+        complemento: e.complemento || "",
+        bairro: e.bairro || "",
+        cidade: e.cidade || "",
+        estado: e.estado || "",
+        cep: e.cep || "",
+        telefone: e.telefone || "",
+        whatsapp: e.whatsapp || "",
+        maps_url: e.maps_url || undefined,
         atividades: e.atividades || [],
         agenda: e.agenda || [],
-        formas_pagamento: e.formas_pagamento ? e.formas_pagamento.map((fp: string, i: number) => ({ id: `${i}`, nome: fp, tipo: "dinheiro" })) : [],
-        convenios: e.convenios ? e.convenios.map((c: string, i: number) => ({ id: `${i}`, nome: c })) : [],
+        formas_pagamento: e.formas_pagamento
+          ? e.formas_pagamento.map((fp: string, i: number) => ({ id: `${i}`, nome: fp, tipo: "dinheiro" as const }))
+          : [],
+        convenios: e.convenios
+          ? e.convenios.map((c: string, i: number) => ({ id: `${i}`, nome: c }))
+          : [],
       }));
 
-      const perfilMontado: DentistProfile = {
+      // Atualiza o perfil com os dados completos do banco (atualização silenciosa)
+      setPerfil({
         dentista_id: pro.id,
-        nome_completo: pro.nome,
+        nome_completo: pro.nome || "",
         foto_url: pro.foto_url || "",
-        cro: pro.cro,
+        cro: pro.cro || "",
         especialidade_principal: espec,
-        bio: pro.bio,
+        bio: pro.bio || "",
         rating: mediaGeral,
         total_avaliacoes: totalAvs,
         enderecos: formatarEnderecos,
-        avaliacoes: totalAvs > 0 ? {
-          media_geral: mediaGeral,
-          total_avaliacoes: totalAvs,
-          por_atividade: porAtividade
-        } : undefined,
-      };
-
-      setPerfil(perfilMontado);
-    } catch (err) {
-      console.error(err);
-      // Se não temos perfil algum (nem do cache), então é erro de fato.
-      // Se já temos o perfil do cache, apenas ignoramos o erro (offline mode).
-      setPerfil((atual) => {
-        if (!atual) setError(true);
-        return atual;
+        avaliacoes: totalAvs > 0 ? { media_geral: mediaGeral, total_avaliacoes: totalAvs, por_atividade: porAtividade } : undefined,
       });
+
+    } catch (err) {
+      console.error("[DentistProfile] Erro ao carregar do Supabase:", err);
+      if (!temCache) {
+        setError(true);
+      }
+      // Se tinha cache, mantém o perfil do cache e não mostra erro
     } finally {
       setLoading(false);
     }
