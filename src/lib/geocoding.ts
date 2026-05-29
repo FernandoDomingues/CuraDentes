@@ -2,12 +2,28 @@
  * Função para buscar as coordenadas geográficas (latitude, longitude)
  * a partir de um endereço em texto usando a API gratuita do OpenStreetMap (Nominatim).
  */
-export async function getCoordenadas(enderecoTexto: string): Promise<{ latitude: number; longitude: number } | null> {
+export async function getCoordenadas(
+  enderecoTexto: string,
+  userLat?: number | null,
+  userLng?: number | null
+): Promise<{ latitude: number; longitude: number } | null> {
   if (!enderecoTexto) return null;
 
   try {
     // A API Nominatim requer um header User-Agent válido
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(enderecoTexto)}&limit=1`;
+    // Restringimos a busca ao Brasil (countrycodes=br)
+    let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(enderecoTexto)}&countrycodes=br&limit=1`;
+    
+    // Se tivermos as coordenadas do usuário, criamos um "viewbox" de ~50km ao redor dele para priorizar cidades mais próximas com o mesmo nome
+    if (userLat && userLng) {
+      const offset = 0.5; // ~50km
+      const left = userLng - offset;
+      const right = userLng + offset;
+      const top = userLat + offset;
+      const bottom = userLat - offset;
+      url += `&viewbox=${left},${top},${right},${bottom}`;
+      // Não usamos bounded=1 porque queremos apenas priorizar, e não proibir que ache em outro estado se o usuário digitar "Rio de Janeiro" estando em SP.
+    }
     
     const resposta = await fetch(url, {
       headers: {

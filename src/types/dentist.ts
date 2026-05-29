@@ -8,7 +8,7 @@
 
 /** Dentista como exibido nas listas e cards de resultado */
 export interface Dentist {
-  id: number;
+  id: string | number;
   name: string;
   cro: string;
   specialty: string;
@@ -36,7 +36,7 @@ export interface AvaliacaoAtividade {
   /** Identificador único da avaliação */
   id: string;
   /** FK para dentistas_perfis.dentista_id */
-  dentista_id: number;
+  dentista_id: string | number;
   /** Nome exato da atividade avaliada (deve existir na lista de atividades do endereço) */
   nome_atividade: string;
   /** Nota de 1 a 5 */
@@ -162,7 +162,7 @@ export interface Convenio {
  */
 export interface DentistProfile {
   /** FK para Dentist.id / tabela: dentistas */
-  dentista_id: number;
+  dentista_id: string | number;
   nome_completo: string;
   foto_url: string;
   cro: string;

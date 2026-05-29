@@ -43,13 +43,22 @@ import {
   Check,
   Loader2,
 } from "lucide-react";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+} from "recharts";
 import { DEMO_DENTISTAS } from "@/constants/demoDentists";
 import type { DentistaPro } from "@/constants/demoDentists";
 
 import logoProUrl from "@/assets/logos/logo-pro.png";
+import logoProAltUrl from "@/assets/logos/logo-pro-alt.png";
 
 // ─── Logo CuraDentes Pro ──────────────────────────────────────────────────────
 const LOGO_PRO = logoProUrl;
+const LOGO_PRO_ALT = logoProAltUrl;
 
 // ─── Cor de destaque para urgências ──────────────────────────────────────────
 const COR_URGENCIA = "#E6004C";
@@ -405,7 +414,7 @@ export default function Dashboard() {
         nome_completo: perfil.nome,
         email: perfil.email || "",
         telefone: perfil.telefone || "",
-        foto_url: perfil.foto_url || "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=400&fit=crop&auto=format&q=80",
+        foto_url: perfil.foto_url || logoProAltUrl,
         cro: perfil.cro,
         cpf: perfil.cpf || "",
         ano_formacao: perfil.ano_formacao || 0,
@@ -672,7 +681,7 @@ export default function Dashboard() {
                   }}
                 >
                   <img
-                    src={dentista.foto_url}
+                    src={dentista.foto_url || logoProAltUrl}
                     alt={dentista.nome_completo}
                     className="w-full h-full object-cover"
                   />

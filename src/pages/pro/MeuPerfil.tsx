@@ -9,6 +9,7 @@ import {
   Camera, Check, Plus, Trash2
 } from "lucide-react";
 import logoProUrl from "@/assets/logos/logo-pro.png";
+import logoProAltUrl from "@/assets/logos/logo-pro-alt.png";
 
 // --- Constantes ---
 const ESPECIALIDADES = [
@@ -376,7 +377,7 @@ export default function MeuPerfil() {
                 {isUploadingFoto ? (
                   <Loader2 className="animate-spin text-[#007AFF]" size={24} />
                 ) : fotoUrl ? (
-                  <img src={fotoUrl} alt="Sua foto" className="w-full h-full object-cover" />
+                  <img src={fotoUrl || logoProAltUrl} alt="Sua foto" className="w-full h-full object-cover" />
                 ) : (
                   <User size={48} className="text-gray-300" />
                 )}

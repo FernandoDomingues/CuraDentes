@@ -14,148 +14,174 @@ export interface User {
   longitude?: number | null;
 }
 
-// Interface que descreve quais dados e funções estarão disponíveis globalmente no site.
 interface AuthState {
-  user: User | null; // Armazena o usuário que está logado atualmente
-  login: (userData: { 
-    name: string; 
-    email: string; 
-    picture: string;
-    latitude?: number | null;
-    longitude?: number | null;
-  }) => Promise<User>; // Função assíncrona para cadastrar/entrar
-  logout: () => void; // Função para desconectar o usuário
+  user: User | null;
+  isInitializing: boolean;
+  signInWithGoogle: (latitude?: number | null, longitude?: number | null) => Promise<void>;
+  logout: () => Promise<void>;
+  initialize: () => void;
 }
 
-// 1. Carrega a sessão do usuário que já estava logado antes (Cache local rápido)
-const getPersistedSession = (): User | null => {
+// ============================================================================
+// CACHE LOCAL (localStorage) — RESTAURAÇÃO INSTANTÂNEA AO ABRIR O NAVEGADOR
+// ============================================================================
+const CACHE_KEY = "curadentes_user_cache";
+
+function saveUserCache(user: User) {
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(user)); } catch (_) {}
+}
+
+function readUserCache(): User | null {
   try {
-    const session = localStorage.getItem("curadentes_session_user");
-    return session ? JSON.parse(session) : null;
-  } catch (error) {
-    console.error("Erro ao carregar sessão persistida:", error);
-    return null;
-  }
-};
+    const raw = localStorage.getItem(CACHE_KEY);
+    return raw ? (JSON.parse(raw) as User) : null;
+  } catch (_) { return null; }
+}
+
+function clearUserCache() {
+  try { localStorage.removeItem(CACHE_KEY); } catch (_) {}
+}
 
 // ============================================================================
 // ESTADO GLOBAL DE AUTENTICAÇÃO (ZUSTAND STORE)
 // ============================================================================
-export const useAuth = create<AuthState>((set) => ({
-  user: getPersistedSession(),
+export const useAuth = create<AuthState>((set, get) => ({
+  // Carrega do cache LOCAL DE FORMA SÍNCRONA — aparece logado instantaneamente
+  user: readUserCache(),
+  isInitializing: true,
 
-  // Função disparada no momento em que o login com o Google é finalizado com sucesso
-  login: async (userData) => {
-    
-    // Procura por um cliente existente no Supabase pelo e-mail
-    const { data: clienteExistente, error: searchError } = await supabase
-      .from('clientes')
-      .select('*')
-      .eq('email', userData.email.toLowerCase())
-      .single();
-
-    // Esta variável vai armazenar os dados exatos do banco
-    let dbRow: any;
-
-    if (!clienteExistente && searchError?.code === 'PGRST116') {
-      // PGRST116 significa "nenhuma linha retornada" (usuário não existe)
-      // SE O USUÁRIO FOR INÉDITO (NOVO CADASTRO):
-      // No banco de dados, usamos nome, foto e criado_em
-      const novoCliente = {
-        nome: userData.name,
-        email: userData.email.toLowerCase(),
-        foto: userData.picture,
-        latitude: userData.latitude || null,
-        longitude: userData.longitude || null,
-      };
-      
-      const { data: insertedData, error: insertError } = await supabase
-        .from('clientes')
-        .insert([novoCliente])
-        .select()
-        .single();
-
-      if (insertError) {
-        console.error("Erro ao criar usuário no Supabase:", insertError);
-        throw new Error("Erro ao criar usuário no Supabase");
-      }
-      
-      dbRow = insertedData;
-
-    } else if (clienteExistente) {
-      // SE O USUÁRIO JÁ EXISTIR EM NOSSO BANCO:
-      // Atualizamos a foto de perfil, o nome ou a localização caso ela tenha mudado
-      let needsUpdate = false;
-      const updates: any = {};
-
-      if (clienteExistente.foto !== userData.picture) {
-        updates.foto = userData.picture;
-        needsUpdate = true;
-      }
-      if (clienteExistente.nome !== userData.name) {
-        updates.nome = userData.name;
-        needsUpdate = true;
-      }
-      if (userData.latitude !== undefined && userData.latitude !== null && clienteExistente.latitude !== userData.latitude) {
-        updates.latitude = userData.latitude;
-        needsUpdate = true;
-      }
-      if (userData.longitude !== undefined && userData.longitude !== null && clienteExistente.longitude !== userData.longitude) {
-        updates.longitude = userData.longitude;
-        needsUpdate = true;
-      }
-
-      if (needsUpdate) {
-        const { data: updatedData, error: updateError } = await supabase
-          .from('clientes')
-          .update(updates)
-          .eq('id', clienteExistente.id)
-          .select()
-          .single();
-
-        if (updateError) {
-          console.error("Erro ao atualizar usuário no Supabase:", updateError);
-          dbRow = { ...clienteExistente, ...updates }; // fallback
-        } else {
-          dbRow = updatedData;
-        }
-      } else {
-        dbRow = clienteExistente;
-      }
-
-    } else {
-      console.error("Erro desconhecido ao buscar cliente no Supabase:", searchError);
-      throw new Error("Erro de banco de dados");
+  signInWithGoogle: async (latitude, longitude) => {
+    if (latitude && longitude) {
+      localStorage.setItem("curadentes_pending_loc", JSON.stringify({ latitude, longitude }));
     }
-
-    // Convertendo a linha do Banco de Dados (Português) para o formato esperado pelo Frontend (Inglês)
-    const clienteFinal: User = {
-      id: dbRow.id,
-      name: dbRow.nome,
-      email: dbRow.email,
-      picture: dbRow.foto,
-      createdAt: dbRow.criado_em,
-      latitude: dbRow.latitude,
-      longitude: dbRow.longitude,
-    };
-
-    // Salva na memória do navegador que este cliente está com a sessão ativa
-    try {
-      localStorage.setItem("curadentes_session_user", JSON.stringify(clienteFinal));
-    } catch (error) {
-      console.error("Erro ao salvar sessão:", error);
-    }
-
-    set({ user: clienteFinal });
-    return clienteFinal;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin },
+    });
+    if (error) { console.error("Erro no login com Supabase:", error); throw error; }
   },
 
-  logout: () => {
-    try {
-      localStorage.removeItem("curadentes_session_user");
-    } catch (error) {
-      console.error("Erro ao remover sessão:", error);
-    }
+  logout: async () => {
+    await supabase.auth.signOut();
+    clearUserCache();
     set({ user: null });
+  },
+
+  initialize: () => {
+    const setAndCache = (userObj: User) => {
+      saveUserCache(userObj);
+      set({ user: userObj, isInitializing: false });
+    };
+
+    // Restaura do banco (somente quando o cache não existe)
+    const restoreFromDB = async (authUser: any) => {
+      if (!authUser) { set({ isInitializing: false }); return; }
+      
+      // 1. Ação Agressiva: Mostra o usuário como logado imediatamente com dados básicos
+      const basicUser: User = {
+        id: authUser.id,
+        name: authUser.user_metadata?.full_name || authUser.email,
+        email: authUser.email,
+        picture: authUser.user_metadata?.avatar_url || "",
+        createdAt: new Date().toISOString(), // Fallback
+      };
+      setAndCache(basicUser);
+
+      // 2. Busca dados complementares no banco em background
+      try {
+        const { data: cliente } = await supabase
+          .from("clientes").select("*").eq("id", authUser.id).single();
+        if (cliente) {
+          setAndCache({
+            id: cliente.id, name: cliente.nome, email: cliente.email,
+            picture: cliente.foto, createdAt: cliente.criado_em,
+            latitude: cliente.latitude, longitude: cliente.longitude,
+          });
+        }
+      } catch (err) {
+        console.error("Erro ao puxar dados extras do banco:", err);
+      }
+    };
+
+    // Login real: cria/atualiza o registro do cliente no banco
+    const signInAndSync = async (session: any) => {
+      const authUser = session.user;
+      if (!authUser) return;
+
+      const pendingLocStr = localStorage.getItem("curadentes_pending_loc");
+      let lat = null, lng = null;
+      if (pendingLocStr) {
+        try {
+          const parsed = JSON.parse(pendingLocStr);
+          lat = parsed.latitude; lng = parsed.longitude;
+          localStorage.removeItem("curadentes_pending_loc");
+        } catch (e) {}
+      }
+
+      // 1. Ação Agressiva: O frontend precisa mostrar o usuário logado AGORA, não importa o banco
+      const basicUser: User = {
+        id: authUser.id,
+        name: authUser.user_metadata?.full_name || authUser.email,
+        email: authUser.email,
+        picture: authUser.user_metadata?.avatar_url || "",
+        createdAt: new Date().toISOString(),
+        latitude: lat,
+        longitude: lng
+      };
+      setAndCache(basicUser);
+
+      // 2. Tenta sincronizar em background com a tabela 'clientes'
+      try {
+        const { data: cliente } = await supabase
+          .from("clientes")
+          .upsert({
+            id: authUser.id,
+            nome: basicUser.name,
+            email: basicUser.email,
+            foto: basicUser.picture,
+            ...(lat && lng ? { latitude: lat, longitude: lng } : {}),
+          }, { onConflict: "id" })
+          .select().single();
+
+        if (cliente) {
+          setAndCache({
+            id: cliente.id, name: cliente.nome, email: cliente.email,
+            picture: cliente.foto, createdAt: cliente.criado_em,
+            latitude: cliente.latitude, longitude: cliente.longitude,
+          });
+        }
+      } catch (err) { console.error("Erro background upsert:", err); }
+    };
+
+    // Escuta todos os eventos de autenticação do Supabase
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN" && session) {
+        // Login real (vindo do Google): sincroniza/cria no banco
+        await signInAndSync(session);
+
+      } else if (event === "INITIAL_SESSION") {
+        if (session) {
+          // O cache já restaurou o usuário? Apenas finaliza a inicialização.
+          // Caso contrário, vai buscar no banco.
+          if (get().user) {
+            set({ isInitializing: false });
+          } else {
+            await restoreFromDB(session.user);
+          }
+        } else {
+          // Sem sessão no Supabase: limpa o cache caso estivesse desatualizado
+          clearUserCache();
+          set({ user: null, isInitializing: false });
+        }
+
+      } else if (event === "SIGNED_OUT") {
+        clearUserCache();
+        set({ user: null, isInitializing: false });
+
+      } else if (event === "TOKEN_REFRESHED" && session) {
+        // Token renovado automaticamente em background — sem ação necessária
+        set({ isInitializing: false });
+      }
+    });
   },
 }));

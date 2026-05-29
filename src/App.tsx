@@ -1,5 +1,7 @@
+import { useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
 
 import Index from "@/pages/Index";
 import Pesquisa from "@/pages/Pesquisa";
@@ -10,6 +12,12 @@ import Dashboard from "@/pages/pro/Dashboard";
 import MeuPerfil from "@/pages/pro/MeuPerfil";
 
 export default function App() {
+  const { initialize } = useAuth();
+
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
+
   return (
     <BrowserRouter>
       <Toaster position="top-right" richColors />

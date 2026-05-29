@@ -20,7 +20,6 @@ import { useNavigate } from "react-router-dom";
 // IMPORTAÇÕES PARA A AUTENTICAÇÃO COM O GOOGLE
 // ============================================================================
 import { useAuth } from "@/hooks/useAuth"; // Hook global que controla quem está logado
-import { useGoogleLogin } from "@react-oauth/google"; // Integração oficial com o Google
 import { toast } from "sonner"; // Notificações amigáveis na tela
 import { supabase } from "@/lib/supabase";
 
@@ -57,8 +56,8 @@ function GoogleIcon() {
 export default function Header() {
   const navigate = useNavigate();
   
-  // Importamos os estados de login: "user" (usuário ativo), "login" (entrar) e "logout" (sair)
-  const { user, login, logout } = useAuth();
+  // Importamos os estados de login: "user" (usuário ativo), "signInWithGoogle" (entrar) e "logout" (sair)
+  const { user, signInWithGoogle, logout } = useAuth();
 
   // ============================================================================
   // FLUXO DE LOGIN COM GOOGLE UNIFICADO NO HEADER + GEOLOCALIZAÇÃO
@@ -66,89 +65,33 @@ export default function Header() {
   // Permite que o usuário faça o login diretamente clicando no botão "Entrar"
   // do topo da página ou dentro dos modais de login.
   // AGORA, também captura as coordenadas de localização atuais!
-  const handleGoogleLogin = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      const loadingToast = toast.loading("Autenticando com o Google e criando seu perfil...");
-      try {
-        // 1. Busca os dados de perfil da conta do Google
-        const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-        });
-
-        if (!res.ok) throw new Error("Erro ao obter dados do Google.");
-
-        const data = await res.json();
-        
-        // 2. Tentamos capturar as coordenadas de localização atuais do navegador
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            async (position) => {
-              const { latitude, longitude } = position.coords;
-              
-              // Realiza o cadastro/login no banco de dados incluindo coordenadas
-              const loggedUser = await login({
-                name: data.name,
-                email: data.email,
-                picture: data.picture,
-                latitude,
-                longitude,
-              });
-
-              fecharModal();
-              toast.dismiss(loadingToast);
-              toast.success(`Olá, ${loggedUser.name}! Login realizado com sucesso.`, {
-                description: `Seu cadastro de cliente foi registrado com sua localização (Lat: ${latitude.toFixed(4)}, Lon: ${longitude.toFixed(4)}).`,
-                duration: 5000,
-              });
-            },
-            async (error) => {
-              // Caso o usuário negue a localização, fazemos o cadastro sem localização
-              const loggedUser = await login({
-                name: data.name,
-                email: data.email,
-                picture: data.picture,
-                latitude: null,
-                longitude: null,
-              });
-
-              fecharModal();
-              toast.dismiss(loadingToast);
-              toast.success(`Olá, ${loggedUser.name}! Login realizado com sucesso.`, {
-                description: "Seu cadastro foi criado com sucesso (sem localização).",
-                duration: 5000,
-              });
-              console.warn("Permissão de geolocalização recusada no login:", error.message);
-            },
-            { timeout: 5000 } // Espera no máximo 5 segundos pela localização
-          );
-        } else {
-          // Caso o navegador não tenha suporte a geolocalização
-          const loggedUser = await login({
-            name: data.name,
-            email: data.email,
-            picture: data.picture,
-            latitude: null,
-            longitude: null,
-          });
-
-          fecharModal();
-          toast.dismiss(loadingToast);
-          toast.success(`Olá, ${loggedUser.name}! Login realizado com sucesso.`, {
-            description: "Seu cadastro foi criado (suporte a localização indisponível).",
-            duration: 5000,
-          });
-        }
-      } catch (error) {
+  const handleGoogleLogin = async () => {
+    const loadingToast = toast.loading("Redirecionando para o Google...");
+    try {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const { latitude, longitude } = position.coords;
+            await signInWithGoogle(latitude, longitude);
+            toast.dismiss(loadingToast);
+          },
+          async (error) => {
+            console.warn("Permissão de geolocalização recusada no login:", error.message);
+            await signInWithGoogle(null, null);
+            toast.dismiss(loadingToast);
+          },
+          { timeout: 5000 }
+        );
+      } else {
+        await signInWithGoogle(null, null);
         toast.dismiss(loadingToast);
-        toast.error("Falha ao criar o cadastro com o Google. Tente novamente.");
-        console.error("Erro no login do Google:", error);
       }
-    },
-    onError: (error) => {
-      toast.error("Falha na autenticação com o Google.");
-      console.error("Google Auth Error:", error);
-    },
-  });
+    } catch (error) {
+      toast.dismiss(loadingToast);
+      toast.error("Falha ao inicializar login com o Google.");
+      console.error(error);
+    }
+  };
 
   // Controla abertura do menu mobile
   const [menuOpen, setMenuOpen] = useState(false);

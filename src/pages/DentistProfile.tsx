@@ -32,9 +32,14 @@ import {
   CheckCircle,
   BarChart2,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DENTIST_PROFILES } from "@/constants/profiles";
-import type { EnderecoClinica, FormaPagamento, Convenio, ResumoAvaliacaoAtividade } from "@/types/dentist";
+import type { EnderecoClinica, FormaPagamento, Convenio, ResumoAvaliacaoAtividade, DentistProfile } from "@/types/dentist";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
+import logoProAltUrl from "@/assets/logos/logo-pro-alt.png";
 
 // ─── Dados do pódio de ranking ─────────────────────────────────────────────
 
@@ -475,26 +480,191 @@ function EnderecoCard({ endereco, index }: { endereco: EnderecoClinica; index: n
 export default function DentistProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user, signInWithGoogle } = useAuth(); // para o paciente
 
-  // Busca o perfil pelo ID na lista mock
-  // Em produção: substituir por query ao Supabase: SELECT * FROM dentistas_perfis WHERE id = :id
-  const perfil = DENTIST_PROFILES.find((p) => p.dentista_id === Number(id));
+  const [perfil, setPerfil] = useState<DentistProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  // Renderiza mensagem de erro se o dentista não for encontrado
-  if (!perfil) {
+  // Estados para o formulário de avaliação
+  const [showRatingForm, setShowRatingForm] = useState(false);
+  const [ratingNota, setRatingNota] = useState(0);
+  const [ratingAtividade, setRatingAtividade] = useState("");
+  const [submittingRating, setSubmittingRating] = useState(false);
+
+  // Extrair todas as atividades do dentista para o select
+  const todasAtividades = perfil ? Array.from(new Set(perfil.enderecos.flatMap(e => e.atividades || []))) : [];
+
+  const fetchPerfil = async () => {
+    if (!id) return;
+    try {
+      setLoading(true);
+      setError(false);
+
+      // 1. Busca o dentista
+      const { data: pro, error: proError } = await supabase
+        .from("curadentespro")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+
+      if (proError || !pro) throw new Error("Dentista não encontrado");
+
+      // 2. Busca os endereços
+      const { data: ends, error: endError } = await supabase
+        .from("curadentespro_enderecos")
+        .select("*")
+        .eq("curadentespro_id", id);
+
+      if (endError) throw endError;
+
+      // 3. Busca as avaliações do dentista
+      const { data: avs, error: avError } = await supabase
+        .from("avaliacoes")
+        .select("*")
+        .eq("dentista_id", id);
+
+      if (avError) throw avError;
+
+      // 4. Calcula médias de avaliações
+      let mediaGeral = 0;
+      let totalAvs = 0;
+      let porAtividadeMap = new Map<string, { soma: number, count: number }>();
+
+      if (avs && avs.length > 0) {
+        totalAvs = avs.length;
+        let somaTotal = 0;
+        avs.forEach((av: any) => {
+          somaTotal += av.nota;
+          const atv = av.atividade || "Geral";
+          if (!porAtividadeMap.has(atv)) {
+            porAtividadeMap.set(atv, { soma: 0, count: 0 });
+          }
+          porAtividadeMap.get(atv)!.soma += av.nota;
+          porAtividadeMap.get(atv)!.count += 1;
+        });
+        mediaGeral = somaTotal / totalAvs;
+      }
+
+      const porAtividade: ResumoAvaliacaoAtividade[] = Array.from(porAtividadeMap.entries()).map(([nome, dados]) => ({
+        nome_atividade: nome,
+        media_nota: dados.soma / dados.count,
+        total_avaliacoes: dados.count
+      }));
+
+      // A especialidade principal será a primeira atividade do primeiro endereço (se existir)
+      let espec = "Clínico Geral";
+      if (ends && ends.length > 0 && ends[0].atividades && ends[0].atividades.length > 0) {
+        espec = ends[0].atividades[0];
+      }
+
+      const formatarEnderecos = (ends || []).map((e: any) => ({
+        id: e.id,
+        nome_clinica: e.nome_clinica,
+        logradouro: e.logradouro,
+        numero: e.numero,
+        complemento: e.complemento,
+        bairro: e.bairro,
+        cidade: e.cidade,
+        estado: e.estado,
+        cep: e.cep,
+        telefone: e.telefone,
+        whatsapp: e.whatsapp,
+        atividades: e.atividades || [],
+        agenda: e.agenda || [],
+        formas_pagamento: e.formas_pagamento ? e.formas_pagamento.map((fp: string, i: number) => ({ id: `${i}`, nome: fp, tipo: "dinheiro" })) : [],
+        convenios: e.convenios ? e.convenios.map((c: string, i: number) => ({ id: `${i}`, nome: c })) : [],
+      }));
+
+      const perfilMontado: DentistProfile = {
+        dentista_id: pro.id,
+        nome_completo: pro.nome,
+        foto_url: pro.foto_url || "",
+        cro: pro.cro,
+        especialidade_principal: espec,
+        bio: pro.bio,
+        rating: mediaGeral,
+        total_avaliacoes: totalAvs,
+        enderecos: formatarEnderecos,
+        avaliacoes: totalAvs > 0 ? {
+          media_geral: mediaGeral,
+          total_avaliacoes: totalAvs,
+          por_atividade: porAtividade
+        } : undefined,
+      };
+
+      setPerfil(perfilMontado);
+    } catch (err) {
+      console.error(err);
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPerfil();
+  }, [id]);
+
+  const handleSubmitRating = async () => {
+    if (!user) {
+      toast.error("Você precisa entrar com sua conta Google para avaliar!");
+      return;
+    }
+    if (ratingNota === 0) {
+      toast.error("Por favor, selecione as estrelas.");
+      return;
+    }
+    if (!ratingAtividade) {
+      toast.error("Por favor, selecione qual tratamento você realizou.");
+      return;
+    }
+
+    setSubmittingRating(true);
+    const toastId = toast.loading("Salvando sua avaliação...");
+
+    try {
+      const { error: insertError } = await supabase
+        .from("avaliacoes")
+        .insert({
+          paciente_id: user.id,
+          dentista_id: perfil?.dentista_id,
+          nota: ratingNota,
+          atividade: ratingAtividade,
+        });
+
+      if (insertError) throw insertError;
+
+      toast.dismiss(toastId);
+      toast.success("Avaliação salva com sucesso! Obrigado.");
+      
+      setShowRatingForm(false);
+      setRatingNota(0);
+      setRatingAtividade("");
+      fetchPerfil();
+    } catch (err) {
+      toast.dismiss(toastId);
+      console.error(err);
+      toast.error("Falha ao salvar a avaliação.");
+    } finally {
+      setSubmittingRating(false);
+    }
+  };
+
+  if (loading) {
     return (
-      <div
-        className="min-h-screen flex flex-col items-center justify-center gap-4"
-        style={{ background: "#F2F2F7" }}
-      >
-        <p className="text-[18px] font-semibold" style={{ color: "#0A2A66" }}>
-          Dentista não encontrado.
-        </p>
-        <button
-          onClick={() => navigate("/")}
-          className="px-5 py-3 rounded-[14px] font-semibold text-white text-[15px]"
-          style={{ background: "#007AFF" }}
-        >
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#F2F2F7]">
+        <Loader2 className="animate-spin text-[#007AFF] mb-4" size={40} />
+        <p className="text-[#8E8E93] font-medium">Carregando perfil do dentista...</p>
+      </div>
+    );
+  }
+
+  if (error || !perfil) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-[#F2F2F7]">
+        <p className="text-[18px] font-semibold text-[#0A2A66]">Dentista não encontrado.</p>
+        <button onClick={() => navigate("/")} className="px-5 py-3 rounded-[14px] font-semibold text-white text-[15px] bg-[#007AFF]">
           Voltar ao início
         </button>
       </div>
@@ -571,7 +741,7 @@ export default function DentistProfilePage() {
               }}
             >
               <img
-                src={perfil.foto_url}
+                src={perfil.foto_url || logoProAltUrl}
                 alt={perfil.nome_completo}
                 className="w-full h-full object-cover"
               />
@@ -748,6 +918,70 @@ export default function DentistProfilePage() {
             )}
           </div>
 
+          {/* ── Formulário de Avaliação (Paciente) ── */}
+          <div className="flex flex-col gap-4 bg-white rounded-[20px] border border-gray-100 shadow-sm overflow-hidden mt-6 p-5 lg:p-8">
+            <div className="flex items-center gap-2 mb-1">
+              <Star size={20} style={{ color: "#E6004C" }} />
+              <h2 className="text-[18px] lg:text-[20px] font-bold text-[#0A2A66] font-inter">Avalie este Dentista</h2>
+            </div>
+            
+            {showRatingForm ? (
+              <div className="flex flex-col gap-5 mt-2 animate-in fade-in slide-in-from-top-4 duration-300">
+                <div>
+                  <label className="text-[12px] font-bold text-[#8E8E93] mb-3 block uppercase tracking-wider">Quantas estrelas?</label>
+                  <div className="flex gap-2">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <button key={s} onClick={() => setRatingNota(s)} className="p-1 transition-transform hover:scale-110 active:scale-95">
+                        <Star size={36} fill={s <= ratingNota ? "#FFCC00" : "transparent"} stroke={s <= ratingNota ? "#FFCC00" : "#C7C7CC"} strokeWidth={1.5} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[12px] font-bold text-[#8E8E93] mb-2 block uppercase tracking-wider">Qual procedimento você realizou?</label>
+                  <select 
+                    value={ratingAtividade}
+                    onChange={(e) => setRatingAtividade(e.target.value)}
+                    className="w-full h-12 bg-[#F2F2F7] rounded-xl px-4 outline-none text-[#1C1C1E] border border-transparent focus:border-[#007AFF] transition-all font-medium"
+                  >
+                    <option value="">Selecione o procedimento...</option>
+                    {todasAtividades.length > 0 ? (
+                      todasAtividades.map(atv => <option key={atv} value={atv}>{atv}</option>)
+                    ) : (
+                      <option value="Consulta Geral">Consulta Geral</option>
+                    )}
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-3 mt-4 border-t border-gray-100 pt-5">
+                  <button onClick={() => setShowRatingForm(false)} className="flex-1 py-3.5 rounded-xl text-[#3A3A3C] font-semibold bg-[#E5E5EA] hover:bg-gray-300 transition-colors">Cancelar</button>
+                  <button onClick={handleSubmitRating} disabled={submittingRating} className="flex-1 py-3.5 rounded-xl text-white font-semibold bg-[#007AFF] hover:bg-blue-600 transition-colors disabled:opacity-50">
+                    {submittingRating ? "Salvando..." : "Enviar Avaliação"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <p className="text-[14px] text-[#3A3A3C] mb-5">
+                  Sua opinião ajuda outros pacientes a encontrarem os melhores profissionais. Como foi o seu atendimento?
+                </p>
+                <button 
+                  onClick={() => {
+                    if (!user) {
+                      toast.error("Por favor, faça login antes de avaliar!");
+                      // Opcional: redirecionar para login
+                    } else {
+                      setShowRatingForm(true);
+                    }
+                  }}
+                  className="w-full md:w-auto px-6 py-3.5 rounded-xl font-bold text-[#007AFF] bg-blue-50 border border-blue-100 hover:bg-blue-100 transition-colors shadow-sm"
+                >
+                  Deixar uma Avaliação
+                </button>
+              </div>
+            )}
+          </div>
 
         </div>
       </div>

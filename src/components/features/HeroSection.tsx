@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search,
@@ -15,8 +15,8 @@ import { FILTER_CHIPS } from "@/constants/data";
 // IMPORTAÇÕES PARA A AUTENTICAÇÃO COM O GOOGLE
 // ============================================================================
 import { useAuth } from "@/hooks/useAuth"; // Nosso hook de controle de login global
-import { useGoogleLogin } from "@react-oauth/google"; // Biblioteca oficial do Google OAuth
 import { toast } from "sonner"; // Biblioteca de alertas/mensagens elegantes na tela (toasts)
+import { supabase } from "@/lib/supabase";
 
 // ── Custom SVG icons ────────────────────────────────────────────────────────
 const BracesIcon = ({ size = 14, color = "currentColor" }: { size?: number; color?: string }) => (
@@ -101,10 +101,32 @@ const ICON_MAP: Record<string, AnyIcon> = {
 export default function HeroSection() {
   const [searchValue, setSearchValue] = useState("");
   const [activeChip, setActiveChip] = useState<string | null>(null);
+  const [totalDentists, setTotalDentists] = useState<number>(0);
+  const [averageRating, setAverageRating] = useState<string>("5.0");
   const navigate = useNavigate();
   
-  // Puxamos os estados globais: "user" (usuário logado) e "login" (função para entrar/cadastrar)
-  const { user, login } = useAuth();
+  useEffect(() => {
+    async function fetchStats() {
+      // Quantidade real de dentistas cadastrados
+      const { count } = await supabase
+        .from("curadentespro")
+        .select("*", { count: "exact", head: true });
+      if (count !== null) setTotalDentists(count);
+
+      // Avaliação média (Comentado para ativar futuramente conforme solicitado)
+      /*
+      const { data } = await supabase.from("avaliacoes").select("nota");
+      if (data && data.length > 0) {
+        const avg = data.reduce((acc, curr) => acc + curr.nota, 0) / data.length;
+        setAverageRating(avg.toFixed(1));
+      }
+      */
+    }
+    fetchStats();
+  }, []);
+  
+  // Puxamos os estados globais: "user" (usuário logado) e "signInWithGoogle" (função para entrar/cadastrar)
+  const { user, signInWithGoogle } = useAuth();
 
   // ============================================================================
   // ARMAZENAMENTO TEMPORÁRIO DA LOCALIZAÇÃO (useRef)
@@ -121,57 +143,18 @@ export default function HeroSection() {
   // ============================================================================
   // CONFIGURAÇÃO DO FLUXO DE LOGIN COM O GOOGLE
   // ============================================================================
-  // IMPORTANTE: A localização é capturada ANTES de abrir o popup do Google.
-  // Isso garante que a permissão de localização do navegador seja solicitada
-  // primeiro, e as coordenadas ficam prontas para salvar quando o login finalizar.
-  const handleGoogleLogin = useGoogleLogin({
-    // Disparado quando o usuário escolhe a conta do Google com sucesso na janelinha
-    onSuccess: async (tokenResponse) => {
-      const loadingToast = toast.loading("Autenticando com o Google e criando seu perfil...");
-      try {
-        // 1. Busca nome completo, e-mail e foto de perfil do usuário na API do Google
-        const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-        });
-
-        if (!res.ok) throw new Error("Erro ao obter dados do Google.");
-
-        const data = await res.json();
-
-        // 2. Usa as coordenadas que já foram capturadas ANTES do popup abrir
-        //    (armazenadas em coordenadasRef pela função iniciarLoginComLocalizacao)
-        const { latitude, longitude } = coordenadasRef.current;
-
-        // 3. Cadastra o cliente com todos os dados (incluindo localização se disponível)
-        const loggedUser = await login({
-          name: data.name,
-          email: data.email,
-          picture: data.picture,
-          latitude,
-          longitude,
-        });
-
-        toast.dismiss(loadingToast);
-
-        const descricaoLocaliz = latitude && longitude
-          ? `Seu cadastro foi registrado com localização (Lat: ${latitude.toFixed(4)}, Lon: ${longitude.toFixed(4)}).`
-          : "Seu cadastro foi criado com sucesso.";
-
-        toast.success(`Olá, ${loggedUser.name}! Login realizado com sucesso.`, {
-          description: descricaoLocaliz,
-          duration: 5000,
-        });
-      } catch (error) {
-        toast.dismiss(loadingToast);
-        toast.error("Falha ao criar o cadastro com o Google. Tente novamente.");
-        console.error("Erro no login do Google:", error);
-      }
-    },
-    onError: (error) => {
-      toast.error("Falha na autenticação com o Google.");
-      console.error("Google Auth Error:", error);
-    },
-  });
+  const handleGoogleLogin = async () => {
+    const loadingToast = toast.loading("Redirecionando para o Google...");
+    try {
+      const { latitude, longitude } = coordenadasRef.current;
+      await signInWithGoogle(latitude, longitude);
+      toast.dismiss(loadingToast);
+    } catch (error) {
+      toast.dismiss(loadingToast);
+      toast.error("Falha ao inicializar login com o Google.");
+      console.error(error);
+    }
+  };
 
   // ============================================================================
   // FUNÇÃO PRINCIPAL: CAPTURA LOCALIZAÇÃO ANTES DE ABRIR O POPUP DO GOOGLE
@@ -216,6 +199,28 @@ export default function HeroSection() {
     if (searchValue.trim()) {
       navigate(`/pesquisa?q=${encodeURIComponent(searchValue)}`);
     }
+  };
+
+  const handleUseMyLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Seu navegador não suporta geolocalização.");
+      return;
+    }
+
+    const toastId = toast.loading("Buscando sua localização...");
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        toast.dismiss(toastId);
+        const { latitude, longitude } = position.coords;
+        navigate(`/pesquisa?lat=${latitude}&lng=${longitude}`);
+      },
+      (error) => {
+        toast.dismiss(toastId);
+        toast.error("Não foi possível acessar sua localização.");
+      },
+      { timeout: 8000 }
+    );
   };
 
   return (
@@ -353,7 +358,7 @@ export default function HeroSection() {
               <form onSubmit={handleSearchSubmit} className="flex items-center gap-2" style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(20px) saturate(120%)", WebkitBackdropFilter: "blur(20px) saturate(120%)", border: "0.5px solid rgba(255,255,255,0.5)", borderRadius: "16px", padding: "6px 6px 6px 16px", minHeight: "56px", boxShadow: "0 8px 20px rgba(16,24,64,0.08)" }}>
                 <Search size={20} style={{ color: "#8E8E93", flexShrink: 0 }} />
                 <input type="text" value={searchValue} onChange={(e) => setSearchValue(e.target.value)} placeholder="Bairro, Cidade" className="flex-1 min-w-0 outline-none bg-transparent" style={{ fontFamily: "Inter, sans-serif", fontSize: "16px", color: "#1C1C1E", minHeight: "44px", border: "none" }} />
-                <button type="button" className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[13px] font-semibold min-h-[40px] flex-shrink-0 transition-all duration-200" style={{ background: "rgba(0,122,255,0.08)", color: "#007AFF", border: "0.5px solid rgba(0,122,255,0.18)" }}>
+                <button type="button" onClick={handleUseMyLocation} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[13px] font-semibold min-h-[40px] flex-shrink-0 transition-all duration-200 hover:bg-blue-50" style={{ background: "rgba(0,122,255,0.08)", color: "#007AFF", border: "0.5px solid rgba(0,122,255,0.18)" }}>
                   <MapPin size={14} />
                   Usar minha Localização
                 </button>
@@ -380,12 +385,18 @@ export default function HeroSection() {
 
             {/* Stats */}
             <div className="flex flex-wrap items-center justify-center gap-5 mt-5">
-              {[{ value: "+3.800", label: "dentistas cadastrados" }, { value: "4.9★", label: "avaliação média" }, { value: "+120k", label: "consultas agendadas" }].map((stat) => (
-                <div key={stat.label} className="text-center">
-                  <div className="text-[20px] font-bold" style={{ color: "#0A2A66", fontFamily: "Inter, sans-serif", letterSpacing: "-0.02em" }}>{stat.value}</div>
-                  <div className="text-[12px]" style={{ color: "#8E8E93" }}>{stat.label}</div>
-                </div>
-              ))}
+              <div className="text-center">
+                <div className="text-[20px] font-bold" style={{ color: "#0A2A66", fontFamily: "Inter, sans-serif", letterSpacing: "-0.02em" }}>{totalDentists}</div>
+                <div className="text-[12px]" style={{ color: "#8E8E93" }}>dentistas cadastrados</div>
+              </div>
+              
+              {/* Avaliação média comentada para uso futuro */}
+              {/*
+              <div className="text-center">
+                <div className="text-[20px] font-bold" style={{ color: "#0A2A66", fontFamily: "Inter, sans-serif", letterSpacing: "-0.02em" }}>{averageRating}★</div>
+                <div className="text-[12px]" style={{ color: "#8E8E93" }}>avaliação média</div>
+              </div>
+              */}
             </div>
           </div>
         </div>

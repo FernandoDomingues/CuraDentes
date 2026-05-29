@@ -6,6 +6,20 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Loader2, MapPin, Star, Building2, ChevronRight, Filter, SlidersHorizontal, X } from "lucide-react";
 import logoProAltUrl from "@/assets/logos/logo-pro-alt.png";
+import { useAuth } from "@/hooks/useAuth";
+
+// Função utilitária para cálculo de distância Haversine em JS
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Raio da Terra em km
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2); 
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+  return R * c;
+}
 
 interface DentistaResultado {
   dentista_id: string;
@@ -40,6 +54,7 @@ export default function Pesquisa() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const query = searchParams.get("q");
+  const { user } = useAuth(); // Para viés geográfico (coordenadas de login)
 
   const [loading, setLoading] = useState(true);
   const [resultadosBrutos, setResultadosBrutos] = useState<DentistaResultado[]>([]);
@@ -53,33 +68,128 @@ export default function Pesquisa() {
 
   useEffect(() => {
     async function buscar() {
-      if (!query) {
+      const urlLat = searchParams.get("lat");
+      const urlLng = searchParams.get("lng");
+
+      if (!query && (!urlLat || !urlLng)) {
         setLoading(false);
         return;
       }
 
       try {
         setLoading(true);
-        const coord = await getCoordenadas(query);
-        
-        if (!coord) {
-          setResultadosBrutos([]);
-          setLoading(false);
-          return;
+        let finalLat: number | null = null;
+        let finalLng: number | null = null;
+
+        // 1. Inicia a Busca Textual no banco (roda em paralelo com a API de mapas)
+        // Nota: usamos múltiplos .or() em colunas da própria tabela para compatibilidade com o join
+        let textSearchPromise: Promise<{ data: any[] | null; error: any }> = Promise.resolve({ data: null, error: null });
+        if (query) {
+          const q = query.trim();
+          textSearchPromise = supabase
+            .from("curadentespro_enderecos")
+            .select(`
+              id, nome_clinica, logradouro, numero, bairro, cidade, estado, atividades, convenios, formas_pagamento, latitude, longitude,
+              curadentespro:curadentespro_id ( id, nome, foto_url, bio )
+            `)
+            .or([
+              `bairro.ilike.%${q}%`,
+              `cidade.ilike.%${q}%`,
+              `estado.ilike.%${q}%`,
+              `logradouro.ilike.%${q}%`,
+              `nome_clinica.ilike.%${q}%`
+            ].join(','));
         }
 
-        const { data, error } = await supabase.rpc("get_dentistas_proximos", {
-          lat: coord.latitude,
-          lng: coord.longitude,
-          raio_km: raio
+        // 2. Inicia a busca de Coordenadas (roda em paralelo com o banco de dados)
+        let coordPromise: Promise<{ latitude: number; longitude: number } | null> = Promise.resolve(null);
+        if (urlLat && urlLng) {
+          finalLat = parseFloat(urlLat);
+          finalLng = parseFloat(urlLng);
+        } else if (query) {
+          coordPromise = getCoordenadas(query, user?.latitude, user?.longitude);
+        }
+
+        // AGUARDA AS DUAS BUSCAS TERMINAREM JUNTAS (Corta o tempo pela metade!)
+        const [textResult, coordResult] = await Promise.all([textSearchPromise, coordPromise]);
+
+        if (coordResult) {
+          finalLat = coordResult.latitude;
+          finalLng = coordResult.longitude;
+        }
+
+        // 3. Busca Geográfica pelo mapa (get_dentistas_proximos)
+        let mapResults: DentistaResultado[] = [];
+        if (finalLat !== null && finalLng !== null) {
+          const { data, error } = await supabase.rpc("get_dentistas_proximos", {
+            lat: finalLat,
+            lng: finalLng,
+            raio_km: raio
+          });
+          if (!error && data) {
+            mapResults = data;
+          } else {
+            console.error("Erro na busca por raio:", error);
+          }
+        }
+
+        // 4. Processa a Busca Textual que rodou lá no passo 1
+        let textResults: DentistaResultado[] = [];
+        if (query) {
+          const { data: textData, error: textError } = textResult;
+
+          if (textData) {
+            textResults = textData.map((d: any) => {
+              const pro = Array.isArray(d.curadentespro) ? d.curadentespro[0] : (d.curadentespro || {});
+              
+              let dist = 0;
+              if (finalLat !== null && finalLng !== null && d.latitude && d.longitude) {
+                dist = calculateDistance(finalLat, finalLng, d.latitude, d.longitude);
+              }
+
+              return {
+                dentista_id: pro.id,
+                dentista_nome: pro.nome,
+                dentista_foto: pro.foto_url,
+                dentista_bio: pro.bio,
+                dentista_avaliacao: 5.0,
+                endereco_id: d.id,
+                nome_clinica: d.nome_clinica,
+                logradouro: d.logradouro,
+                numero: d.numero,
+                bairro: d.bairro,
+                cidade: d.cidade,
+                estado: d.estado,
+                atividades: d.atividades || [],
+                convenios: d.convenios || [],
+                formas_pagamento: d.formas_pagamento || [],
+                distancia_km: dist
+              };
+            });
+
+            // Aplica filtro de raio APENAS em dentistas com coordenadas cadastradas
+            // Dentistas sem lat/lng no banco são incluídos (foram encontrados pelo nome do bairro)
+            if (finalLat !== null) {
+              textResults = textResults.filter((r) => {
+                const temCoordenadas = r.distancia_km > 0;
+                return !temCoordenadas || r.distancia_km <= raio;
+              });
+            }
+          } else if (textError) {
+             console.error("Erro na busca por texto:", textError);
+          }
+        }
+
+        // 4. Combinação de Resultados sem duplicação
+        const mergedMap = new Map<string, DentistaResultado>();
+        mapResults.forEach(r => mergedMap.set(r.endereco_id, r));
+        textResults.forEach(r => {
+          if (!mergedMap.has(r.endereco_id)) {
+            mergedMap.set(r.endereco_id, r);
+          }
         });
 
-        if (error) {
-          console.error("Erro na busca:", error);
-          setResultadosBrutos([]);
-        } else {
-          setResultadosBrutos(data || []);
-        }
+        setResultadosBrutos(Array.from(mergedMap.values()));
       } catch (err) {
         console.error("Erro inesperado:", err);
       } finally {
@@ -88,7 +198,7 @@ export default function Pesquisa() {
     }
 
     buscar();
-  }, [query, raio]);
+  }, [query, searchParams.get("lat"), searchParams.get("lng"), raio, user?.latitude, user?.longitude]);
 
   // Aplicação dos filtros locais
   const resultadosFiltrados = resultadosBrutos.filter((dentista) => {
@@ -208,7 +318,7 @@ export default function Pesquisa() {
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white p-4 rounded-[20px] shadow-sm border border-gray-100">
             <div>
               <h1 className="text-[20px] font-bold text-[#0A2A66]">
-                Resultados para "{query}"
+                Resultados para "{query || "Sua Localização"}"
               </h1>
               <p className="text-[14px] text-gray-500">
                 {loading ? "Buscando..." : `${resultadosFiltrados.length} dentistas encontrados.`}
