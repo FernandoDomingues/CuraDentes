@@ -107,20 +107,47 @@ export default function HeroSection() {
   
   useEffect(() => {
     async function fetchStats() {
-      // Quantidade real de dentistas cadastrados
-      const { count } = await supabase
-        .from("curadentespro")
-        .select("*", { count: "exact", head: true });
-      if (count !== null) setTotalDentists(count);
+      const CACHE_KEY = "curadentes_hero_stats_cache";
+      const CACHE_VERSION = "v2";
+      const EXPIRATION_TIME = 24 * 60 * 60 * 1000; // 24 horas
 
-      // Avaliação média (Comentado para ativar futuramente conforme solicitado)
-      /*
-      const { data } = await supabase.from("avaliacoes").select("nota");
-      if (data && data.length > 0) {
-        const avg = data.reduce((acc, curr) => acc + curr.nota, 0) / data.length;
-        setAverageRating(avg.toFixed(1));
+      // Tenta ler do cache primeiro
+      const cachedData = localStorage.getItem(CACHE_KEY);
+      if (cachedData) {
+        try {
+          const parsed = JSON.parse(cachedData);
+          const isValidVersion = parsed.version === CACHE_VERSION;
+          const isNotExpired = parsed.timestamp && (Date.now() - parsed.timestamp < EXPIRATION_TIME);
+          const hasData = parsed.totalDentists && parsed.totalDentists > 0;
+          
+          if (isValidVersion && isNotExpired && hasData) {
+            // Cache válido
+            setTotalDentists(parsed.totalDentists);
+            return;
+          }
+        } catch (e) {
+          console.error("Erro ao ler cache do Hero:", e);
+        }
       }
-      */
+
+      // Se não tem cache válido, busca no banco
+      try {
+        const { count, error } = await supabase
+          .from("curadentespro")
+          .select("*", { count: "exact", head: true });
+          
+        if (!error && count !== null && count > 0) {
+          setTotalDentists(count);
+          // Salva no cache com o timestamp e versão
+          localStorage.setItem(CACHE_KEY, JSON.stringify({
+            totalDentists: count,
+            timestamp: Date.now(),
+            version: CACHE_VERSION
+          }));
+        }
+      } catch (err) {
+        console.error("Erro ao buscar total de dentistas:", err);
+      }
     }
     fetchStats();
   }, []);

@@ -167,14 +167,9 @@ export default function Pesquisa() {
               };
             });
 
-            // Aplica filtro de raio APENAS em dentistas com coordenadas cadastradas
-            // Dentistas sem lat/lng no banco são incluídos (foram encontrados pelo nome do bairro)
-            if (finalLat !== null) {
-              textResults = textResults.filter((r) => {
-                const temCoordenadas = r.distancia_km > 0;
-                return !temCoordenadas || r.distancia_km <= raio;
-              });
-            }
+            // Não aplicamos mais filtro de raio aqui nos resultados de texto!
+            // Se o texto (nome, bairro) bateu com a busca, o paciente quer ver esse dentista,
+            // mesmo que a coordenada central do bairro fique a mais de 5km de distância.
           } else if (textError) {
              console.error("Erro na busca por texto:", textError);
           }
@@ -189,7 +184,19 @@ export default function Pesquisa() {
           }
         });
 
-        setResultadosBrutos(Array.from(mergedMap.values()));
+        const arrayResultados = Array.from(mergedMap.values());
+        setResultadosBrutos(arrayResultados);
+        
+        // SALVAR NO CACHE PARA ACESSO OFFLINE / INSTANTÂNEO NO PERFIL
+        try {
+          localStorage.setItem("curadentes_search_cache", JSON.stringify({
+            timestamp: Date.now(),
+            resultados: arrayResultados
+          }));
+        } catch (e) {
+          console.error("Erro ao salvar cache de busca:", e);
+        }
+
       } catch (err) {
         console.error("Erro inesperado:", err);
       } finally {

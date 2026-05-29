@@ -28,9 +28,32 @@ export default function LatestDentists() {
 
   useEffect(() => {
     async function fetchLatest() {
+      const CACHE_KEY = "curadentes_latest_dentists_cache";
+      const CACHE_VERSION = "v2";
+      const EXPIRATION_TIME = 24 * 60 * 60 * 1000; // 24 horas
+
       try {
         setLoading(true);
-        // Busca os últimos 15 dentistas criados
+
+        // 1. Tenta ler do cache
+        const cachedData = localStorage.getItem(CACHE_KEY);
+        if (cachedData) {
+          try {
+            const parsed = JSON.parse(cachedData);
+            const isValidVersion = parsed.version === CACHE_VERSION;
+            const isNotExpired = parsed.timestamp && (Date.now() - parsed.timestamp < EXPIRATION_TIME);
+            const hasData = parsed.dentistas && parsed.dentistas.length > 0;
+            
+            if (isValidVersion && isNotExpired && hasData) {
+              setDentistas(parsed.dentistas);
+              return; // Usa o cache e sai
+            }
+          } catch (e) {
+            console.error("Erro ao ler cache de últimos dentistas:", e);
+          }
+        }
+
+        // 2. Busca do Supabase se não houver cache válido
         const { data: pros, error } = await supabase
           .from("curadentespro")
           .select("id, nome, foto_url, bio, cro, criado_em")
@@ -39,7 +62,6 @@ export default function LatestDentists() {
 
         if (error) throw error;
 
-        // Para cada um, buscar 1 endereço (o principal) para exibir
         if (pros && pros.length > 0) {
           const comEnderecos = await Promise.all(
             pros.map(async (p) => {
@@ -53,7 +75,15 @@ export default function LatestDentists() {
               return { ...p, endereco: end };
             })
           );
+          
           setDentistas(comEnderecos);
+          
+          // 3. Salva no cache com versão
+          localStorage.setItem(CACHE_KEY, JSON.stringify({
+            dentistas: comEnderecos,
+            timestamp: Date.now(),
+            version: CACHE_VERSION
+          }));
         }
       } catch (err) {
         console.error("Erro ao buscar últimos dentistas:", err);
