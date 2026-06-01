@@ -113,10 +113,21 @@ export default function Pesquisa() {
         return;
       }
 
-      // Só mostra spinner se não há resultado em cache para exibir
-      const hasCached = (loadQueryCache(currentKey) ?? []).length > 0;
+      // Aplica estado inicial correto para ESTA query:
+      // - Se há cache: mostra imediatamente sem spinner, busca atualiza em background
+      // - Se não há cache: limpa resultados antigos e mostra spinner
+      const cached = loadQueryCache(currentKey);
+      if (!cancelled) {
+        if (cached && cached.length > 0) {
+          setResultadosBrutos(cached as DentistaResultado[]);
+          setLoading(false);
+        } else {
+          setResultadosBrutos([]);
+          setLoading(true);
+        }
+      }
+
       try {
-        if (!cancelled && !hasCached) setLoading(true);
         let finalLat: number | null = null;
         let finalLng: number | null = null;
 
@@ -478,8 +489,7 @@ export default function Pesquisa() {
             </div>
           </div>
 
-          {loading && resultadosBrutos.length === 0 ? (
-            // Spinner APENAS quando não há nenhum resultado em cache para exibir
+          {loading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
               <Loader2 className="animate-spin text-[#007AFF]" size={40} />
               <p className="text-gray-500 font-medium">Buscando na sua região...</p>
