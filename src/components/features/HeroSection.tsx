@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search,
@@ -8,15 +8,18 @@ import {
   Sparkles,
   Star,
   Baby,
+  Building2,
   type LucideIcon,
 } from "lucide-react";
 import { FILTER_CHIPS } from "@/constants/data";
 // ============================================================================
 // IMPORTAÇÕES PARA A AUTENTICAÇÃO COM O GOOGLE
 // ============================================================================
-import { useAuth } from "@/hooks/useAuth"; // Nosso hook de controle de login global
-import { toast } from "sonner"; // Biblioteca de alertas/mensagens elegantes na tela (toasts)
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
+import { useAddressSuggestions } from "@/hooks/useAddressSuggestions";
+import type { AddressSuggestion } from "@/hooks/useAddressSuggestions";
 
 // ── Custom SVG icons ────────────────────────────────────────────────────────
 const BracesIcon = ({ size = 14, color = "currentColor" }: { size?: number; color?: string }) => (
@@ -98,12 +101,148 @@ const ICON_MAP: Record<string, AnyIcon> = {
   Scissors: DoctorMaskIcon,
 };
 
+// ─── Subcomponente: Item de Sugestão do Autocomplete ──────────────────────────
+
+/** Destaca a parte da string que corresponde à query com negrito */
+function HighlightMatch({ text, query }: { text: string; query: string }) {
+  if (!query.trim()) return <>{text}</>;
+  const idx = text.toLowerCase().indexOf(query.toLowerCase());
+  if (idx === -1) return <>{text}</>;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <strong style={{ color: "#007AFF", fontWeight: 700 }}>{text.slice(idx, idx + query.length)}</strong>
+      {text.slice(idx + query.length)}
+    </>
+  );
+}
+
+const TYPE_LABELS: Record<string, string> = {
+  cidade: "Cidade",
+  bairro: "Bairro",
+  clinica: "Clínica",
+};
+
+function SuggestionItem({
+  suggestion,
+  highlighted,
+  query,
+  onSelect,
+}: {
+  suggestion: import("@/hooks/useAddressSuggestions").AddressSuggestion;
+  highlighted: boolean;
+  query: string;
+  onSelect: (s: import("@/hooks/useAddressSuggestions").AddressSuggestion) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onMouseDown={(e) => { e.preventDefault(); onSelect(suggestion); }}
+      className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors"
+      style={{
+        background: highlighted ? "rgba(0,122,255,0.07)" : "transparent",
+        borderBottom: "0.5px solid rgba(60,60,67,0.06)",
+        cursor: "pointer",
+      }}
+    >
+      {/* Ícone de tipo */}
+      <div
+        className="flex-shrink-0 flex items-center justify-center"
+        style={{
+          width: "32px",
+          height: "32px",
+          borderRadius: "10px",
+          background: suggestion.type === "cidade"
+            ? "rgba(0,122,255,0.10)"
+            : suggestion.type === "bairro"
+            ? "rgba(52,199,89,0.10)"
+            : "rgba(255,149,0,0.10)",
+        }}
+      >
+        {suggestion.type === "clinica" ? (
+          <Building2 size={15} style={{ color: "#FF9500" }} />
+        ) : (
+          <MapPin size={15} style={{ color: suggestion.type === "cidade" ? "#007AFF" : "#34C759" }} />
+        )}
+      </div>
+
+      {/* Texto e badge de tipo */}
+      <div className="flex-1 min-w-0">
+        <p className="text-[14px] font-medium truncate" style={{ color: "#1C1C1E" }}>
+          <HighlightMatch text={suggestion.label} query={query} />
+        </p>
+      </div>
+
+      {/* Badge de tipo */}
+      <span
+        className="flex-shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+        style={{
+          background: suggestion.type === "cidade"
+            ? "rgba(0,122,255,0.08)"
+            : suggestion.type === "bairro"
+            ? "rgba(52,199,89,0.08)"
+            : "rgba(255,149,0,0.08)",
+          color: suggestion.type === "cidade" ? "#007AFF" : suggestion.type === "bairro" ? "#34C759" : "#FF9500",
+        }}
+      >
+        {TYPE_LABELS[suggestion.type]}
+      </span>
+    </button>
+  );
+}
+
 export default function HeroSection() {
   const [searchValue, setSearchValue] = useState("");
   const [activeChip, setActiveChip] = useState<string | null>(null);
   const [totalDentists, setTotalDentists] = useState<number>(0);
   const [averageRating, setAverageRating] = useState<string>("5.0");
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [highlightedIdx, setHighlightedIdx] = useState(-1);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+
+  // Hook de sugestões fuzzy
+  const { suggestions } = useAddressSuggestions(showSuggestions ? searchValue : "");
+
+  // Fecha o dropdown ao clicar fora
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+        setHighlightedIdx(-1);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Reseta o índice destacado quando as sugestões mudam
+  useEffect(() => { setHighlightedIdx(-1); }, [suggestions]);
+
+  const handleSuggestionSelect = useCallback((suggestion: AddressSuggestion) => {
+    setSearchValue(suggestion.value);
+    setShowSuggestions(false);
+    setHighlightedIdx(-1);
+    navigate(`/pesquisa?q=${encodeURIComponent(suggestion.value)}`);
+  }, [navigate]);
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showSuggestions || suggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlightedIdx(i => Math.min(i + 1, suggestions.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlightedIdx(i => Math.max(i - 1, -1));
+    } else if (e.key === "Enter" && highlightedIdx >= 0) {
+      e.preventDefault();
+      handleSuggestionSelect(suggestions[highlightedIdx]);
+    } else if (e.key === "Escape") {
+      setShowSuggestions(false);
+      setHighlightedIdx(-1);
+    }
+  };
+
   
   useEffect(() => {
     async function fetchStats() {
@@ -223,6 +362,11 @@ export default function HeroSection() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setShowSuggestions(false);
+    if (highlightedIdx >= 0 && suggestions[highlightedIdx]) {
+      handleSuggestionSelect(suggestions[highlightedIdx]);
+      return;
+    }
     if (searchValue.trim()) {
       navigate(`/pesquisa?q=${encodeURIComponent(searchValue)}`);
     }
@@ -256,14 +400,11 @@ export default function HeroSection() {
       <div className="lg:hidden">
         {/* Search bar */}
         <div
+          ref={searchContainerRef}
           className="px-4 pt-4 pb-3 relative"
           style={{ background: "#F2F2F7" }}
         >
-          {/* 
-            BLOQUEIO DE BUSCA (MOBILE): 
-            Se o usuário NÃO estiver logado (!user), renderizamos um escudo invisível sobre a busca.
-            Ao clicar em qualquer campo da busca, o escudo captura o clique e dispara o login do Google.
-          */}
+          {/* BLOQUEIO DE BUSCA (MOBILE) */}
           {!user && (
             <div
               onClick={() => iniciarLoginComLocalizacao()}
@@ -277,21 +418,54 @@ export default function HeroSection() {
             className="flex items-center gap-3 px-4"
             style={{
               background: "#fff",
-              borderRadius: "14px",
+              borderRadius: showSuggestions && suggestions.length > 0 ? "14px 14px 0 0" : "14px",
               minHeight: "48px",
               boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+              transition: "border-radius 0.15s",
             }}
           >
             <Search size={18} style={{ color: "#8E8E93", flexShrink: 0 }} />
             <input
               type="text"
               value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
+              onChange={(e) => { setSearchValue(e.target.value); setShowSuggestions(true); }}
+              onFocus={() => setShowSuggestions(true)}
+              onKeyDown={handleSearchKeyDown}
               placeholder="Bairro, Cidade"
               className="flex-1 outline-none bg-transparent text-[16px]"
               style={{ color: "#1C1C1E", minHeight: "48px", border: "none" }}
+              autoComplete="off"
             />
           </form>
+
+          {/* Dropdown de Sugestões — Mobile */}
+          {showSuggestions && suggestions.length > 0 && (
+            <div
+              style={{
+                position: "absolute",
+                top: "calc(100% - 12px)",
+                left: "16px",
+                right: "16px",
+                background: "#fff",
+                borderRadius: "0 0 14px 14px",
+                boxShadow: "0 8px 24px rgba(10,42,102,0.12)",
+                border: "0.5px solid rgba(60,60,67,0.10)",
+                borderTop: "none",
+                zIndex: 30,
+                overflow: "hidden",
+              }}
+            >
+              {suggestions.map((s, i) => (
+                <SuggestionItem
+                  key={`${s.type}-${s.label}`}
+                  suggestion={s}
+                  highlighted={i === highlightedIdx}
+                  query={searchValue}
+                  onSelect={handleSuggestionSelect}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         {/* "O QUE VOCÊ PRECISA?" label + chips */}
@@ -368,12 +542,8 @@ export default function HeroSection() {
             </p>
 
             {/* Search Bar */}
-            <div className="max-w-[720px] mx-auto mb-4 relative">
-              {/* 
-                BLOQUEIO DE BUSCA (DESKTOP): 
-                Se o usuário NÃO estiver logado (!user), renderizamos um escudo invisível sobre a busca.
-                Ao clicar em qualquer campo da busca, o escudo captura o clique e dispara o login do Google.
-              */}
+            <div ref={searchContainerRef} className="max-w-[720px] mx-auto mb-4 relative">
+              {/* BLOQUEIO DE BUSCA (DESKTOP) */}
               {!user && (
                 <div
                   onClick={() => iniciarLoginComLocalizacao()}
@@ -382,17 +552,81 @@ export default function HeroSection() {
                   aria-label="Entrar com o Google para buscar"
                 />
               )}
-              <form onSubmit={handleSearchSubmit} className="flex items-center gap-2" style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(20px) saturate(120%)", WebkitBackdropFilter: "blur(20px) saturate(120%)", border: "0.5px solid rgba(255,255,255,0.5)", borderRadius: "16px", padding: "6px 6px 6px 16px", minHeight: "56px", boxShadow: "0 8px 20px rgba(16,24,64,0.08)" }}>
+              <form
+                onSubmit={handleSearchSubmit}
+                className="flex items-center gap-2"
+                style={{
+                  background: "rgba(255,255,255,0.72)",
+                  backdropFilter: "blur(20px) saturate(120%)",
+                  WebkitBackdropFilter: "blur(20px) saturate(120%)",
+                  border: "0.5px solid rgba(255,255,255,0.5)",
+                  borderRadius: showSuggestions && suggestions.length > 0 ? "16px 16px 0 0" : "16px",
+                  padding: "6px 6px 6px 16px",
+                  minHeight: "56px",
+                  boxShadow: "0 8px 20px rgba(16,24,64,0.08)",
+                  transition: "border-radius 0.15s",
+                }}
+              >
                 <Search size={20} style={{ color: "#8E8E93", flexShrink: 0 }} />
-                <input type="text" value={searchValue} onChange={(e) => setSearchValue(e.target.value)} placeholder="Bairro, Cidade" className="flex-1 min-w-0 outline-none bg-transparent" style={{ fontFamily: "Inter, sans-serif", fontSize: "16px", color: "#1C1C1E", minHeight: "44px", border: "none" }} />
-                <button type="button" onClick={handleUseMyLocation} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[13px] font-semibold min-h-[40px] flex-shrink-0 transition-all duration-200 hover:bg-blue-50" style={{ background: "rgba(0,122,255,0.08)", color: "#007AFF", border: "0.5px solid rgba(0,122,255,0.18)" }}>
+                <input
+                  type="text"
+                  value={searchValue}
+                  onChange={(e) => { setSearchValue(e.target.value); setShowSuggestions(true); }}
+                  onFocus={() => setShowSuggestions(true)}
+                  onKeyDown={handleSearchKeyDown}
+                  placeholder="Bairro, Cidade"
+                  className="flex-1 min-w-0 outline-none bg-transparent"
+                  style={{ fontFamily: "Inter, sans-serif", fontSize: "16px", color: "#1C1C1E", minHeight: "44px", border: "none" }}
+                  autoComplete="off"
+                />
+                <button
+                  type="button"
+                  onClick={handleUseMyLocation}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[13px] font-semibold min-h-[40px] flex-shrink-0 transition-all duration-200 hover:bg-blue-50"
+                  style={{ background: "rgba(0,122,255,0.08)", color: "#007AFF", border: "0.5px solid rgba(0,122,255,0.18)" }}
+                >
                   <MapPin size={14} />
                   Usar minha Localização
                 </button>
-                <button type="submit" className="flex items-center gap-2 px-5 py-3 rounded-[12px] text-white font-semibold text-[15px] min-h-[44px] flex-shrink-0 transition-all duration-200" style={{ background: "#007AFF", boxShadow: "0 8px 20px rgba(0,122,255,0.25)" }}>
+                <button
+                  type="submit"
+                  className="flex items-center gap-2 px-5 py-3 rounded-[12px] text-white font-semibold text-[15px] min-h-[44px] flex-shrink-0 transition-all duration-200"
+                  style={{ background: "#007AFF", boxShadow: "0 8px 20px rgba(0,122,255,0.25)" }}
+                >
                   Buscar
                 </button>
               </form>
+
+              {/* Dropdown de Sugestões — Desktop */}
+              {showSuggestions && suggestions.length > 0 && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "100%",
+                    left: 0,
+                    right: 0,
+                    background: "rgba(255,255,255,0.96)",
+                    backdropFilter: "blur(20px)",
+                    WebkitBackdropFilter: "blur(20px)",
+                    borderRadius: "0 0 16px 16px",
+                    boxShadow: "0 16px 40px rgba(10,42,102,0.14)",
+                    border: "0.5px solid rgba(255,255,255,0.5)",
+                    borderTop: "none",
+                    zIndex: 30,
+                    overflow: "hidden",
+                  }}
+                >
+                  {suggestions.map((s, i) => (
+                    <SuggestionItem
+                      key={`${s.type}-${s.label}`}
+                      suggestion={s}
+                      highlighted={i === highlightedIdx}
+                      query={searchValue}
+                      onSelect={handleSuggestionSelect}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Specialty Chips */}

@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { toast } from "sonner";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { getCoordenadas } from "@/lib/geocoding";
 import { supabase } from "@/lib/supabase";
@@ -7,6 +8,7 @@ import Footer from "@/components/layout/Footer";
 import { Loader2, MapPin, Star, Building2, ChevronRight, Filter, SlidersHorizontal, X } from "lucide-react";
 import logoProAltUrl from "@/assets/logos/logo-pro-alt.png";
 import { useAuth } from "@/hooks/useAuth";
+import { saveToSearchCache, saveQueryCache, loadQueryCache, buildQueryCacheKey } from "@/lib/dentistCache";
 
 // Função utilitária para cálculo de distância Haversine em JS
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -56,10 +58,29 @@ export default function Pesquisa() {
   const query = searchParams.get("q");
   const { user } = useAuth(); // Para viés geográfico (coordenadas de login)
 
-  const [loading, setLoading] = useState(true);
-  const [resultadosBrutos, setResultadosBrutos] = useState<DentistaResultado[]>([]);
-  const [ordenacao, setOrdenacao] = useState<"distancia" | "avaliacao">("distancia");
   const [raio, setRaio] = useState(5); // 5km por padrão
+
+  // Chave de cache — calculada uma vez por combinação de parâmetros
+  const cacheKey = useMemo(
+    () => buildQueryCacheKey(query, searchParams.get("lat"), searchParams.get("lng"), raio),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [query, searchParams.get("lat"), searchParams.get("lng"), raio]
+  );
+
+  // Lazy initializers: só leem localStorage 1× na montagem do componente
+  const [loading, setLoading] = useState(() => {
+    const cached = loadQueryCache(
+      buildQueryCacheKey(query, searchParams.get("lat"), searchParams.get("lng"), 5)
+    );
+    return !cached || cached.length === 0;
+  });
+  const [resultadosBrutos, setResultadosBrutos] = useState<DentistaResultado[]>(() => {
+    const cached = loadQueryCache(
+      buildQueryCacheKey(query, searchParams.get("lat"), searchParams.get("lng"), 5)
+    );
+    return cached ?? [];
+  });
+  const [ordenacao, setOrdenacao] = useState<"distancia" | "avaliacao">("distancia");
 
   // Filtros
   const [showFilters, setShowFilters] = useState(false);
@@ -67,6 +88,19 @@ export default function Pesquisa() {
   const [selectedPagamentos, setSelectedPagamentos] = useState<string[]>([]);
 
   useEffect(() => {
+    // ── (B) Flag de cancelamento: evita atualizar estado de uma busca "velha" ──
+    let cancelled = false;
+    // Chave de cache para esta combinação de query + raio
+    const currentKey = buildQueryCacheKey(
+      query,
+      searchParams.get("lat"),
+      searchParams.get("lng"),
+      raio
+    );
+
+    // ── (C) Timeout global de 10 s ───────────────────────────────────────────
+    const TIMEOUT_MS = 10_000;
+
     async function buscar() {
       const urlLat = searchParams.get("lat");
       const urlLng = searchParams.get("lng");
@@ -75,14 +109,21 @@ export default function Pesquisa() {
 
       if (!query && (!urlLat || !urlLng)) {
         console.log("[Pesquisa] Sem query ou coordenadas na URL. Parando busca.");
-        setLoading(false);
+        if (!cancelled) setLoading(false);
         return;
       }
 
+      // Só mostra spinner se não há resultado em cache para exibir
+      const hasCached = (loadQueryCache(currentKey) ?? []).length > 0;
       try {
-        setLoading(true);
+        if (!cancelled && !hasCached) setLoading(true);
         let finalLat: number | null = null;
         let finalLng: number | null = null;
+
+        // ── (A) Lê o user por snapshot — sem adicioná-lo às dependências ───────
+        // Isso evita que a busca reexecute quando a autenticação inicializar
+        // depois do F5 (que era a causa do spinner infinito).
+        const currentUser = useAuth.getState().user;
 
         // 1. Inicia a Busca Textual no banco (roda em paralelo com a API de mapas)
         let textSearchPromise: Promise<{ data: any[] | null; error: any }> = Promise.resolve({ data: null, error: null });
@@ -112,16 +153,29 @@ export default function Pesquisa() {
           console.log("[Pesquisa] [Passo 2] Coordenadas vindas diretamente da URL:", { finalLat, finalLng });
         } else if (query) {
           console.log("[Pesquisa] [Passo 2] Disparando geocodificação para obter lat/lng...");
-          coordPromise = getCoordenadas(query, user?.latitude, user?.longitude);
+          // Usa coordenadas do usuário apenas como dica de proximidade (viewbox),
+          // lidas por snapshot para não virar dependência do efeito.
+          coordPromise = getCoordenadas(query, currentUser?.latitude, currentUser?.longitude);
         }
 
-        // AGUARDA AS DUAS BUSCAS TERMINAREM JUNTAS (Corta o tempo pela metade!)
+        // ── (C) Promise.race: se demorar mais de 10 s, lança TIMEOUT ─────────
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("TIMEOUT")), TIMEOUT_MS)
+        );
+
         console.log("[Pesquisa] Aguardando Promise.all (busca textual + geocodificação)...");
-        const [textResult, coordResult] = await Promise.all([textSearchPromise, coordPromise]);
-        console.log("[Pesquisa] Promise.all resolvida!", { 
-          temTextResult: !!textResult.data, 
-          textError: textResult.error, 
-          coordResult 
+        const [textResult, coordResult] = await Promise.race([
+          Promise.all([textSearchPromise, coordPromise]),
+          timeoutPromise,
+        ]);
+
+        // Descarta resultado se a busca foi cancelada enquanto aguardávamos
+        if (cancelled) return;
+
+        console.log("[Pesquisa] Promise.all resolvida!", {
+          temTextResult: !!textResult.data,
+          textError: textResult.error,
+          coordResult
         });
 
         if (coordResult) {
@@ -138,7 +192,9 @@ export default function Pesquisa() {
             lng: finalLng,
             raio_km: raio
           });
-          
+
+          if (cancelled) return;
+
           if (!error && data) {
             console.log("[Pesquisa] RPC get_dentistas_proximos retornou:", data.length, "dentistas");
             mapResults = data;
@@ -167,7 +223,7 @@ export default function Pesquisa() {
               })
               .map((d: any) => {
                 const pro = Array.isArray(d.curadentespro) ? d.curadentespro[0] : (d.curadentespro || {});
-                
+
                 let dist = 0;
                 if (finalLat !== null && finalLng !== null && d.latitude && d.longitude) {
                   dist = calculateDistance(finalLat, finalLng, d.latitude, d.longitude);
@@ -203,9 +259,11 @@ export default function Pesquisa() {
               console.log("[Pesquisa] Aplicado filtro de raio. Antes:", antesFiltro, "Depois:", textResults.length);
             }
           } else if (textError) {
-             console.error("[Pesquisa] Erro na busca por texto:", textError);
+            console.error("[Pesquisa] Erro na busca por texto:", textError);
           }
         }
+
+        if (cancelled) return;
 
         // 5. Combinação de Resultados sem duplicação
         const mergedMap = new Map<string, DentistaResultado>();
@@ -218,17 +276,60 @@ export default function Pesquisa() {
 
         const finalResults = Array.from(mergedMap.values());
         console.log("[Pesquisa] 🏁 Busca finalizada com sucesso! Total de resultados combinados:", finalResults.length);
-        setResultadosBrutos(finalResults);
-      } catch (err) {
-        console.error("[Pesquisa] 💥 Erro inesperado durante a busca:", err);
+        if (!cancelled) setResultadosBrutos(finalResults);
+
+        // 6. Salva no cache por query (restauração no F5) e no cache de perfis
+        if (finalResults.length > 0) {
+          // Cache por query — restaura resultados instantaneamente no próximo F5
+          saveQueryCache(currentKey, finalResults);
+
+          // Cache global de perfis — carregamento rápido da página de detalhe
+          saveToSearchCache(finalResults.map(r => ({
+            dentista_id: r.dentista_id,
+            dentista_nome: r.dentista_nome,
+            dentista_foto: r.dentista_foto,
+            dentista_bio: r.dentista_bio,
+            dentista_avaliacao: r.dentista_avaliacao,
+            endereco_id: r.endereco_id,
+            nome_clinica: r.nome_clinica,
+            logradouro: r.logradouro,
+            numero: r.numero,
+            bairro: r.bairro,
+            cidade: r.cidade,
+            estado: r.estado,
+            atividades: r.atividades,
+            convenios: r.convenios,
+            formas_pagamento: r.formas_pagamento,
+          })));
+        }
+      } catch (err: any) {
+        if (cancelled) return;
+        if (err?.message === "TIMEOUT") {
+          // ── (C) Timeout disparado ──────────────────────────────────────────
+          console.error("[Pesquisa] ⏱️ Timeout: busca ultrapassou 10 segundos.");
+          toast.error("A busca demorou mais do que o esperado. Verifique sua conexão e tente novamente.");
+        } else {
+          console.error("[Pesquisa] 💥 Erro inesperado durante a busca:", err);
+        }
       } finally {
-        console.log("[Pesquisa] Definindo loading para false.");
-        setLoading(false);
+        // Só atualiza o loading se esta execução ainda for a "atual"
+        if (!cancelled) {
+          console.log("[Pesquisa] Definindo loading para false.");
+          setLoading(false);
+        }
       }
     }
 
     buscar();
-  }, [query, searchParams.get("lat"), searchParams.get("lng"), raio, user?.latitude, user?.longitude]);
+
+    // ── (B) Cleanup: cancela esta execução quando o efeito re-rodar ──────────
+    return () => { cancelled = true; };
+  // ⚠️ user REMOVIDO intencionalmente das dependências (Opção A):
+  // O user é lido por snapshot (useAuth.getState()) dentro de buscar().
+  // Isso evita que a inicialização do auth após F5 dispare uma segunda busca
+  // e cause o spinner infinito.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, searchParams.get("lat"), searchParams.get("lng"), raio]);
 
   // Aplicação dos filtros locais
   const resultadosFiltrados = resultadosBrutos.filter((dentista) => {
@@ -377,7 +478,8 @@ export default function Pesquisa() {
             </div>
           </div>
 
-          {loading ? (
+          {loading && resultadosBrutos.length === 0 ? (
+            // Spinner APENAS quando não há nenhum resultado em cache para exibir
             <div className="flex flex-col items-center justify-center py-20 gap-4">
               <Loader2 className="animate-spin text-[#007AFF]" size={40} />
               <p className="text-gray-500 font-medium">Buscando na sua região...</p>

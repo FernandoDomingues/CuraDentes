@@ -17,6 +17,7 @@ export interface User {
 interface AuthState {
   user: User | null;
   isInitializing: boolean;
+  initialized: boolean;
   signInWithGoogle: (latitude?: number | null, longitude?: number | null) => Promise<void>;
   logout: () => Promise<void>;
   initialize: () => void;
@@ -39,7 +40,21 @@ function readUserCache(): User | null {
 }
 
 function clearUserCache() {
-  try { localStorage.removeItem(CACHE_KEY); } catch (_) {}
+  try {
+    localStorage.removeItem(CACHE_KEY);
+    // Wipes all Supabase authentication tokens from localStorage
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith("sb-") || key.toLowerCase().includes("supabase"))) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    console.log("[useAuth] Cache e tokens do Supabase removidos com sucesso.");
+  } catch (err) {
+    console.error("[useAuth] Erro ao limpar tokens do localStorage:", err);
+  }
 }
 
 // ============================================================================
@@ -49,6 +64,7 @@ export const useAuth = create<AuthState>((set, get) => ({
   // Carrega do cache LOCAL DE FORMA SÍNCRONA — aparece logado instantaneamente
   user: readUserCache(),
   isInitializing: true,
+  initialized: false,
 
   signInWithGoogle: async (latitude, longitude) => {
     if (latitude && longitude) {
@@ -62,12 +78,25 @@ export const useAuth = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
-    await supabase.auth.signOut();
-    clearUserCache();
-    set({ user: null });
+    console.log("[useAuth] Iniciando logout...");
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("[useAuth] Erro retornado pelo signOut do Supabase:", error);
+      }
+    } catch (err) {
+      console.error("[useAuth] Exceção ao executar signOut do Supabase:", err);
+    } finally {
+      console.log("[useAuth] Limpando cache e estado local...");
+      clearUserCache();
+      set({ user: null });
+    }
   },
 
   initialize: () => {
+    if (get().initialized) return;
+    set({ initialized: true });
+
     const setAndCache = (userObj: User) => {
       saveUserCache(userObj);
       set({ user: userObj, isInitializing: false });
@@ -155,6 +184,7 @@ export const useAuth = create<AuthState>((set, get) => ({
 
     // Escuta todos os eventos de autenticação do Supabase
     supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("[useAuth] Evento de Autenticação Supabase:", event, session ? `Sessão Ativa (User ID: ${session.user.id})` : "Sem Sessão");
       if (event === "SIGNED_IN" && session) {
         // Login real (vindo do Google): sincroniza/cria no banco
         await signInAndSync(session);

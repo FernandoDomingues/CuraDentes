@@ -9,7 +9,7 @@
 //   Etapa 5: Bio (opcional)
 //   Etapa 6: Consentimento LGPD
 //
-// O dentista pode "Deixar para mais tarde" em etapas obrigatórias.
+// O dentista pode "Deixar para mais tarde" a partir da Etapa 2 (Etapa 1 é obrigatória e não pode ser pulada).
 // Ao finalizar com dados incompletos, exibe popup de aviso.
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -249,6 +249,35 @@ export default function NovoCadastro() {
 
   // ─ Modal de cadastro incompleto ───────────────────────────────────────────
   const [exibirModalIncompleto, setExibirModalIncompleto] = useState(false);
+
+  // ─ Auto-save: persiste o rascunho no localStorage a cada mudança de estado ─
+  // Garante que ao pressionar F5 o formulário seja restaurado exatamente como estava.
+  // ⚠️ A senha NÃO é salva por segurança — o dentista precisará digitá-la novamente.
+  useEffect(() => {
+    // Evita sobrescrever o rascunho enquanto o carregamento inicial ainda não terminou
+    // (etapa=1 e todos os campos vazios significa que o estado inicial ainda está sendo populado)
+    const rascunho = {
+      etapa,
+      nome,
+      email,
+      emailVerificado,
+      telefone,
+      telefoneVerificado,
+      cpf,
+      cro,
+      anoFormacao,
+      fotoUrl,
+      enderecos,
+      bio,
+      lgpdAceito,
+    };
+    localStorage.setItem("curadentes_pro_cadastro_rascunho", JSON.stringify(rascunho));
+  }, [
+    etapa, nome, email, emailVerificado,
+    telefone, telefoneVerificado,
+    cpf, cro, anoFormacao, fotoUrl,
+    enderecos, bio, lgpdAceito,
+  ]);
 
   // ─ Verifica se o cadastro está completo ───────────────────────────────────
   const cadastroCompleto =
@@ -715,7 +744,7 @@ export default function NovoCadastro() {
   );
 
   // ─── Botões de navegação entre etapas ────────────────────────────────────
-  const renderNavegacao = (podeProsseguir = true, ultimaEtapa = false) => (
+  const renderNavegacao = (podeProsseguir = true, ultimaEtapa = false, ocultarPular = false) => (
     <div className="flex items-center justify-between mt-8 pt-6" style={{ borderTop: "0.5px solid rgba(60,60,67,0.10)" }}>
       {/* Botão voltar */}
       {etapa > 1 ? (
@@ -739,8 +768,8 @@ export default function NovoCadastro() {
       )}
 
       <div className="flex items-center gap-2">
-        {/* Opção de pular etapa */}
-        {!ultimaEtapa && (
+        {/* Opção de pular etapa — oculta na Etapa 1 pois o e-mail deve ser verificado */}
+        {!ultimaEtapa && !ocultarPular && (
           <button
             onClick={() => setEtapa(etapa + 1)}
             className="px-4 py-3 rounded-[12px] font-medium text-[13px] min-h-[44px] transition-all duration-200"
@@ -975,7 +1004,9 @@ export default function NovoCadastro() {
       </button>*/}
 
       {renderNavegacao(
-        nome.trim() !== "" && emailVerificado && senha.length >= 8 && senha === confirmaSenha
+        nome.trim() !== "" && emailVerificado && senha.length >= 8 && senha === confirmaSenha,
+        false,
+        true  // Etapa 1: ocultar "Deixar para mais tarde" — e-mail deve ser verificado
       )}
     </div>
   );

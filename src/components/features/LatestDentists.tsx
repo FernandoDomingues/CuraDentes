@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { MapPin, Star, Building2, ChevronRight, Sparkles, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import logoProAltUrl from "@/assets/logos/logo-pro-alt.png";
+import { saveToSearchCache } from "@/lib/dentistCache";
 
 interface DentistaRecente {
   id: string;
@@ -78,6 +79,19 @@ export default function LatestDentists() {
           
           setDentistas(comEnderecos);
           
+          // Salva os dentistas novos no cache de busca para carregamento instantâneo dos perfis
+          saveToSearchCache(comEnderecos.map(d => ({
+            dentista_id: d.id,
+            dentista_nome: d.nome,
+            dentista_foto: d.foto_url || "",
+            dentista_bio: d.bio || "",
+            nome_clinica: d.endereco?.nome_clinica || "",
+            logradouro: d.endereco?.logradouro || "",
+            numero: d.endereco?.numero || "",
+            bairro: d.endereco?.bairro || "",
+            cidade: d.endereco?.cidade || "",
+          })));
+
           // 3. Salva no cache com versão
           localStorage.setItem(CACHE_KEY, JSON.stringify({
             dentistas: comEnderecos,
