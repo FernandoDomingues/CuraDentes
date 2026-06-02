@@ -3,7 +3,6 @@ import { TrendingUp, Users, Clock, CheckCircle } from "lucide-react";
 import { useState } from "react";
 import { Eye, EyeOff, ChevronRight, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import logoImg from "@/assets/curadentes-logo.png";
 
 import logoProUrl from "@/assets/logos/logo-pro.png";
 import logoProAltUrl from "@/assets/logos/logo-pro-alt.png";

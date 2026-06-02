@@ -15,7 +15,7 @@
 
 import { useState } from "react";
 import {
-  Star, Trophy, CheckCircle, MapPin, Clock, Heart,
+  Star, Trophy, CheckCircle, MapPin, Clock,
   ChevronDown, ChevronUp, Filter,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
-import { MapPin, Star, Building2, ChevronRight, Sparkles, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { Building2, Sparkles, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import logoProAltUrl from "@/assets/logos/logo-pro-alt.png";
 import { saveToSearchCache } from "@/lib/dentistCache";
 

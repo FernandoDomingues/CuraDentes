@@ -1,3 +1,22 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// EDITOR DE PERFIL — CURADENTES PRO
+//
+// Permite ao dentista autenticado editar seu perfil completo:
+//   - Foto de perfil (upload pro Supabase Storage via uploadService)
+//   - Dados pessoais (nome, email, telefone, bio, ano de formação)
+//   - Lista de endereços (CRUD: adicionar, editar, remover, reordenar)
+//   - Agenda por endereço (horários por dia da semana)
+//   - Convênios aceitos (multi-select)
+//   - Formas de pagamento aceitas (multi-select)
+//
+// Acesso: requer autenticação. Após carregar, valida se o dentista
+// logado tem `curadentespro.user_id = auth.uid()`. Se não, redireciona
+// para a home (proteção contra edição de perfil alheio via URL).
+//
+// Persistência: usa `upsert` no Supabase com `onConflict: "id"`.
+// Para novos endereços, gera UUID local antes de enviar.
+// ═══════════════════════════════════════════════════════════════════════════════
+
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
@@ -5,8 +24,8 @@ import { toast } from "sonner";
 import { uploadFotoDentista } from "@/lib/uploadService";
 import { getCoordenadas } from "@/lib/geocoding";
 import {
-  User, Phone, Shield, Building2, Save, ArrowLeft, Loader2, MapPin,
-  Camera, Check, Plus, Trash2
+  User, Building2, Save, ArrowLeft, Loader2,
+  Camera, Plus, Trash2
 } from "lucide-react";
 import logoProUrl from "@/assets/logos/logo-pro.png";
 import logoProAltUrl from "@/assets/logos/logo-pro-alt.png";
@@ -191,8 +210,9 @@ export default function MeuPerfil() {
       const publicUrl = await uploadFotoDentista(file, userId);
       setFotoUrl(publicUrl);
       toast.success("Foto atualizada com sucesso!", { id: toastId });
-    } catch (error: any) {
-      toast.error(error.message || "Erro ao atualizar foto.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erro ao atualizar foto.";
+      toast.error(message);
     } finally {
       setIsUploadingFoto(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -280,14 +300,15 @@ export default function MeuPerfil() {
 
       toast.success("Perfil atualizado com sucesso!", { id: toastId });
       setTimeout(() => navigate("/pro/dashboard"), 1500);
-    } catch (error: any) {
-      toast.error(error.message || "Erro ao salvar o perfil.", { id: toastId });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erro ao salvar o perfil.";
+      toast.error(message, { id: toastId });
     } finally {
       setSaving(false);
     }
   }
 
-  const atualizarEndereco = (idx: number, campo: keyof EnderecoForm, valor: any) => {
+  const atualizarEndereco = (idx: number, campo: keyof EnderecoForm, valor: string | number | boolean | null) => {
     setEnderecos(prev => {
       const novos = [...prev];
       novos[idx] = { ...novos[idx], [campo]: valor };
@@ -308,7 +329,7 @@ export default function MeuPerfil() {
     });
   };
 
-  const atualizarAgenda = (idxEndereco: number, idxDia: number, campo: "ativo" | "inicio" | "fim", valor: any) => {
+  const atualizarAgenda = (idxEndereco: number, idxDia: number, campo: "ativo" | "inicio" | "fim", valor: string | boolean) => {
     setEnderecos(prev => {
       const novos = [...prev];
       const novaAgenda = [...novos[idxEndereco].agenda];

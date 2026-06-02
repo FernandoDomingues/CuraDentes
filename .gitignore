@@ -29,5 +29,7 @@ dist-ssr
 
 # Database dumps
 *.sql
+# Excecao: migrations do projeto ficam versionadas
+!supabase_migrations/*.sql
 Curadentes_CuradentesPro_texto
 convert_sql.cjs

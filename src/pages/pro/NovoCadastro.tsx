@@ -34,7 +34,6 @@ import {
   Clock,
   FileText,
   Info,
-  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
@@ -215,7 +214,6 @@ export default function NovoCadastro() {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [emailVerificado, setEmailVerificado] = useState(false);
-  const [tokenEmail, setTokenEmail] = useState("");
   const [tokenEmailInput, setTokenEmailInput] = useState("");
   const [aguardandoTokenEmail, setAguardandoTokenEmail] = useState(false);
   const [senha, setSenha] = useState("");
@@ -225,10 +223,6 @@ export default function NovoCadastro() {
 
   // ─ Etapa 2: Telefone ──────────────────────────────────────────────────────
   const [telefone, setTelefone] = useState("");
-  const [modoVerifTel, setModoVerifTel] = useState<"sms" | "whatsapp">("whatsapp");
-  const [tokenTel, setTokenTel] = useState("");
-  const [tokenTelInput, setTokenTelInput] = useState("");
-  const [aguardandoTokenTel, setAguardandoTokenTel] = useState(false);
   const [telefoneVerificado, setTelefoneVerificado] = useState(false);
 
   // ─ Etapa 3: Identidade profissional ──────────────────────────────────────
@@ -342,27 +336,6 @@ export default function NovoCadastro() {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Função: Simula envio do token de verificação de telefone
-  // Em produção: chamar API SMS/WhatsApp com token gerado no backend
-  // ─────────────────────────────────────────────────────────────────────────
-  function enviarTokenTelefone() {
-    const token = Math.floor(100000 + Math.random() * 900000).toString();
-    setTokenTel(token);
-    setAguardandoTokenTel(true);
-    console.log("[Demo] Token de telefone:", token); // Remove em produção
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Função: Valida o token de telefone inserido pelo usuário
-  // ─────────────────────────────────────────────────────────────────────────
-  function validarTokenTelefone() {
-    if (tokenTelInput === tokenTel) {
-      setTelefoneVerificado(true);
-      setAguardandoTokenTel(false);
-    }
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
   // Função: Formata o CEP (#####-###)
   // ─────────────────────────────────────────────────────────────────────────
   function formatarCep(valor: string) {
@@ -394,7 +367,7 @@ export default function NovoCadastro() {
       soma += parseInt(numeros.charAt(i)) * (10 - i);
     }
     let resto = soma % 11;
-    let digito1 = resto < 2 ? 0 : 11 - resto;
+    const digito1 = resto < 2 ? 0 : 11 - resto;
     if (parseInt(numeros.charAt(9)) !== digito1) return false;
 
     soma = 0;
@@ -402,7 +375,7 @@ export default function NovoCadastro() {
       soma += parseInt(numeros.charAt(i)) * (11 - i);
     }
     resto = soma % 11;
-    let digito2 = resto < 2 ? 0 : 11 - resto;
+    const digito2 = resto < 2 ? 0 : 11 - resto;
     if (parseInt(numeros.charAt(10)) !== digito2) return false;
 
     return true;
@@ -550,9 +523,10 @@ export default function NovoCadastro() {
       
       navigate("/pro/dashboard");
 
-    } catch (error: any) {
+    } catch (error) {
       console.error("Erro ao salvar cadastro:", error);
-      toast.error(error.message || "Ocorreu um erro ao salvar o cadastro.", { id: toastId });
+      const message = error instanceof Error ? error.message : "Ocorreu um erro ao salvar o cadastro.";
+      toast.error(message, { id: toastId });
     }
   }
 
@@ -696,7 +670,7 @@ export default function NovoCadastro() {
     <div className="mb-8">
       {/* Indicadores de etapa */}
       <div className="flex items-center justify-between mb-3">
-        {ETAPAS.map((e, idx) => {
+        {ETAPAS.map((e) => {
           const concluida = etapa > e.id;
           const atual = etapa === e.id;
           return (

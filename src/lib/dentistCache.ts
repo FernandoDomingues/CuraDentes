@@ -16,6 +16,24 @@ export interface CacheableDentist {
   formas_pagamento?: string[];
 }
 
+export interface CachedDentistResult {
+  dentista_id: string;
+  dentista_nome: string;
+  dentista_foto: string;
+  dentista_bio: string;
+  dentista_avaliacao: number;
+  endereco_id: string;
+  nome_clinica: string;
+  logradouro: string;
+  numero: string;
+  bairro: string;
+  cidade: string;
+  estado: string;
+  atividades: string[];
+  convenios: string[];
+  formas_pagamento: string[];
+}
+
 /**
  * Salva ou atualiza dentistas no cache local de busca.
  * Isso permite que a página de perfil (DentistProfile.tsx) carregue
@@ -24,10 +42,10 @@ export interface CacheableDentist {
 export function saveToSearchCache(dentists: CacheableDentist[]) {
   try {
     const cachedStr = localStorage.getItem("curadentes_search_cache");
-    let currentResults: any[] = [];
+    let currentResults: CachedDentistResult[] = [];
     if (cachedStr) {
       try {
-        const parsed = JSON.parse(cachedStr);
+        const parsed = JSON.parse(cachedStr) as { resultados?: CachedDentistResult[] };
         if (parsed && Array.isArray(parsed.resultados)) {
           currentResults = parsed.resultados;
         }
@@ -40,7 +58,7 @@ export function saveToSearchCache(dentists: CacheableDentist[]) {
       if (!newD.dentista_id) return;
       
       const idx = currentResults.findIndex((r) => r.dentista_id === newD.dentista_id);
-      const mapped = {
+      const mapped: CachedDentistResult = {
         dentista_id: newD.dentista_id,
         dentista_nome: newD.dentista_nome,
         dentista_foto: newD.dentista_foto || "",
@@ -88,7 +106,7 @@ const QUERY_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutos
 
 interface QueryCacheEntry {
   key: string;
-  results: any[];
+  results: CachedDentistResult[];
   savedAt: number;
 }
 
@@ -109,12 +127,12 @@ export function buildQueryCacheKey(
 /**
  * Salva os resultados de uma busca no cache por query.
  */
-export function saveQueryCache(key: string, results: any[]): void {
+export function saveQueryCache(key: string, results: CachedDentistResult[]): void {
   try {
     const raw = localStorage.getItem(QUERY_CACHE_KEY);
     let entries: QueryCacheEntry[] = [];
     if (raw) {
-      try { entries = JSON.parse(raw); } catch { entries = []; }
+      try { entries = JSON.parse(raw) as QueryCacheEntry[]; } catch { entries = []; }
     }
     entries = entries.filter(e => e.key !== key);
     entries.unshift({ key, results, savedAt: Date.now() });
@@ -132,11 +150,11 @@ export function saveQueryCache(key: string, results: any[]): void {
  * Carrega resultados salvos para uma query específica.
  * Retorna null se não houver cache ou se tiver expirado (30 min).
  */
-export function loadQueryCache(key: string): any[] | null {
+export function loadQueryCache(key: string): CachedDentistResult[] | null {
   try {
     const raw = localStorage.getItem(QUERY_CACHE_KEY);
     if (!raw) return null;
-    const entries: QueryCacheEntry[] = JSON.parse(raw);
+    const entries: QueryCacheEntry[] = JSON.parse(raw) as QueryCacheEntry[];
     const entry = entries.find(e => e.key === key);
     if (!entry) return null;
     if (Date.now() - entry.savedAt > QUERY_CACHE_TTL_MS) {

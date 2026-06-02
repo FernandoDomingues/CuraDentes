@@ -115,7 +115,9 @@ async function fetchLocations(): Promise<RawLocation[]> {
         return parsed.data;
       }
     }
-  } catch (_) {}
+  } catch (err) {
+    console.warn("[useAddressSuggestions] Falha ao ler cache de endereços:", err);
+  }
 
   // Busca do Supabase
   const { data, error } = await supabase
@@ -124,7 +126,7 @@ async function fetchLocations(): Promise<RawLocation[]> {
 
   if (error || !data) return [];
 
-  const locations: RawLocation[] = data.map((d: any) => ({
+  const locations: RawLocation[] = (data as Array<Partial<RawLocation>>).map((d) => ({
     cidade: d.cidade || "",
     estado: d.estado || "",
     bairro: d.bairro || "",
@@ -134,7 +136,9 @@ async function fetchLocations(): Promise<RawLocation[]> {
   // Salva no cache
   try {
     localStorage.setItem(CACHE_KEY, JSON.stringify({ data: locations, timestamp: Date.now() }));
-  } catch (_) {}
+  } catch (err) {
+    console.warn("[useAddressSuggestions] Falha ao salvar cache de endereços:", err);
+  }
 
   return locations;
 }

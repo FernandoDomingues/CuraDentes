@@ -9,8 +9,15 @@
 //   - Convênios aceitos
 //   - Botões de contato (WhatsApp e ligação)
 //
-// Os dados são buscados por ID via constante mock (profiles.ts).
-// Em produção: substituir por query ao banco via Supabase.
+// Fonte dos dados: 3 queries paralelas no Supabase (curadentespro,
+// curadentespro_enderecos, avaliacoes). Antes de buscar no banco,
+// tenta carregar do cache local (`curadentes_search_cache`) para
+// renderização instantânea (estratégia offline-first).
+//
+// Subcomponentes definidos neste arquivo:
+//   - BadgePodio: badge dourado/prata/bronze para Top 1/2/3
+//   - BarraAvaliacao: barra de progresso colorida por nota média
+//   - EnderecoCard: card de endereço com accordion de agenda
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import { useParams, useNavigate } from "react-router-dom";
@@ -32,13 +39,13 @@ import {
   CheckCircle,
   BarChart2,
 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { DENTIST_PROFILES } from "@/constants/profiles";
+import { useCallback, useEffect, useState } from "react";
 import type { EnderecoClinica, FormaPagamento, Convenio, ResumoAvaliacaoAtividade, DentistProfile } from "@/types/dentist";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { CachedDentistResult } from "@/lib/dentistCache";
 import logoProAltUrl from "@/assets/logos/logo-pro-alt.png";
 
 // ─── Dados do pódio de ranking ─────────────────────────────────────────────
@@ -480,7 +487,7 @@ function EnderecoCard({ endereco, index }: { endereco: EnderecoClinica; index: n
 export default function DentistProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user, signInWithGoogle } = useAuth(); // para o paciente
+  const { user } = useAuth(); // para o paciente
 
   const [perfil, setPerfil] = useState<DentistProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -495,7 +502,7 @@ export default function DentistProfilePage() {
   // Extrair todas as atividades do dentista para o select
   const todasAtividades = perfil ? Array.from(new Set(perfil.enderecos.flatMap(e => e.atividades || []))) : [];
 
-  const fetchPerfil = async () => {
+  const fetchPerfil = useCallback(async () => {
     if (!id) return;
     try {
       // Começamos o loading apenas se não tivermos nenhum dado ainda
@@ -510,15 +517,15 @@ export default function DentistProfilePage() {
         if (cachedStr) {
           const parsed = JSON.parse(cachedStr);
           if (parsed.resultados) {
-            const doCache = parsed.resultados.find((r: any) => r.dentista_id === id);
+            const doCache = (parsed.resultados as CachedDentistResult[]).find((r) => r.dentista_id === id);
             if (doCache) {
               const espec = doCache.atividades && doCache.atividades.length > 0 ? doCache.atividades[0] : "Clínico Geral";
-              
+
               const partialProfile: DentistProfile = {
                 dentista_id: doCache.dentista_id,
                 nome_completo: doCache.dentista_nome,
                 foto_url: doCache.dentista_foto || "",
-                cro: doCache.cro || "", 
+                cro: "",
                 especialidade_principal: espec,
                 bio: doCache.dentista_bio || "",
                 rating: doCache.dentista_avaliacao || 5.0,
@@ -534,9 +541,10 @@ export default function DentistProfilePage() {
                     cidade: doCache.cidade || "",
                     estado: doCache.estado || "",
                     cep: "",
+                    telefone: "",
                     atividades: doCache.atividades || [],
-                    agenda: [], 
-                    formas_pagamento: doCache.formas_pagamento ? doCache.formas_pagamento.map((fp: string, i: number) => ({ id: `${i}`, nome: fp, tipo: "dinheiro" })) : [],
+                    agenda: [],
+                    formas_pagamento: doCache.formas_pagamento ? doCache.formas_pagamento.map((fp: string, i: number) => ({ id: `${i}`, nome: fp, tipo: "dinheiro" as const })) : [],
                     convenios: doCache.convenios ? doCache.convenios.map((c: string, i: number) => ({ id: `${i}`, nome: c })) : [],
                   }
                 ]
@@ -579,12 +587,12 @@ export default function DentistProfilePage() {
       // 4. Calcula médias de avaliações
       let mediaGeral = 0;
       let totalAvs = 0;
-      let porAtividadeMap = new Map<string, { soma: number, count: number }>();
+      const porAtividadeMap = new Map<string, { soma: number, count: number }>();
 
       if (avs && avs.length > 0) {
         totalAvs = avs.length;
         let somaTotal = 0;
-        avs.forEach((av: any) => {
+        avs.forEach((av: { nota: number; atividade?: string }) => {
           somaTotal += av.nota;
           const atv = av.atividade || "Geral";
           if (!porAtividadeMap.has(atv)) {
@@ -608,7 +616,23 @@ export default function DentistProfilePage() {
         espec = ends[0].atividades[0];
       }
 
-      const formatarEnderecos = (ends || []).map((e: any) => ({
+      const formatarEnderecos = (ends || []).map((e: {
+        id: string;
+        nome_clinica: string;
+        logradouro: string;
+        numero: string;
+        complemento?: string;
+        bairro: string;
+        cidade: string;
+        estado: string;
+        cep: string;
+        telefone: string;
+        whatsapp?: string;
+        atividades?: string[];
+        agenda?: EnderecoClinica["agenda"];
+        formas_pagamento?: string[];
+        convenios?: string[];
+      }) => ({
         id: e.id,
         nome_clinica: e.nome_clinica,
         logradouro: e.logradouro,
@@ -622,7 +646,7 @@ export default function DentistProfilePage() {
         whatsapp: e.whatsapp,
         atividades: e.atividades || [],
         agenda: e.agenda || [],
-        formas_pagamento: e.formas_pagamento ? e.formas_pagamento.map((fp: string, i: number) => ({ id: `${i}`, nome: fp, tipo: "dinheiro" })) : [],
+        formas_pagamento: e.formas_pagamento ? e.formas_pagamento.map((fp: string, i: number) => ({ id: `${i}`, nome: fp, tipo: "dinheiro" as const })) : [],
         convenios: e.convenios ? e.convenios.map((c: string, i: number) => ({ id: `${i}`, nome: c })) : [],
       }));
 
@@ -655,11 +679,12 @@ export default function DentistProfilePage() {
     } finally {
       setLoading(false);
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     fetchPerfil();
-  }, [id]);
+  }, [id, fetchPerfil]);
 
   const handleSubmitRating = async () => {
     if (!user) {

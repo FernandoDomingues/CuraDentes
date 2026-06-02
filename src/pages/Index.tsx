@@ -5,9 +5,8 @@
 //   Header → Hero → Como Funciona → Top 10 Dentistas → Especialidades
 //   → CTA Banner → Missão/Visão/Valores → App Mobile → Footer
 //
-// Geolocalização: o hook useUserLocation é chamado aqui para solicitar a
-// permissão de localização assim que o usuário abre o site. Os dados ficam
-// disponíveis para uso futuro (busca por proximidade, estatísticas, etc.).
+// Geolocalização: a permissão do navegador só é solicitada quando o usuário
+// clica explicitamente em "Usar minha localização" dentro do HeroSection.
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import Header from "@/components/layout/Header";
@@ -19,26 +18,8 @@ import CtaBanner from "@/components/features/CtaBanner";
 import AboutSection from "@/components/features/AboutSection";
 import AppSection from "@/components/features/AppSection";
 import Footer from "@/components/layout/Footer";
-import { useUserLocation } from "@/hooks/useUserLocation";
 
 const Index = () => {
-  // ─── Geolocalização ─────────────────────────────────────────────────────────
-  // Solicita a localização do usuário assim que a página carrega.
-  // O prompt nativo do navegador é exibido pedindo autorização.
-  //
-  // Dados disponíveis para uso futuro:
-  //   latitude, longitude → busca de dentistas por proximidade real
-  //   statusPermissao     → personalizar mensagens ao usuário
-  //
-  // Para usar os dados, descomente as variáveis abaixo e passe para os
-  // componentes que precisam deles (ex: HeroSection para busca por GPS).
-  const { latitude, longitude, statusPermissao } = useUserLocation();
-
-  // Log de desenvolvimento — remover em produção
-  if (statusPermissao === "autorizado") {
-    console.log("[Index] Localização disponível:", latitude, longitude);
-  }
-
   return (
     <div className="min-h-screen" style={{ background: "#F2F2F7" }}>
       <Header />

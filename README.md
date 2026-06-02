@@ -1,116 +1,169 @@
 # CuraDentes
 
-🚀 **Projeto de cadastro de dentistas** – uma aplicação web moderna para gerenciar o processo de registro de profissionais da saúde bucal.
+Aplicação web que conecta pacientes a dentistas próximos, com busca por geolocalização, perfil completo, avaliações e painel profissional ("CuraDentes Pro").
 
 ---
 
-## 📋 Visão geral
+## Visão geral
 
-Este repositório contém a aplicação **CuraDentes** e **CuraDentes Pro**, desenvolvida com **Vite**, **React**, **TypeScript**, **Tailwind CSS** e componentes da **shadcn‑ui**. O objetivo é oferecer um fluxo de cadastro em múltiplas etapas, com validações avançadas, integração com APIs de SMS/WhatsApp e suporte a LGPD.
+Este repositório contém a SPA **CuraDentes** (lado paciente) e **CuraDentes Pro** (lado dentista), construídas com Vite + React + TypeScript + Tailwind + shadcn-ui, com backend 100% Supabase (Postgres + Auth + Storage + RPCs).
 
----
-
-## 🛠️ Tecnologias utilizadas
-
-- **Vite** – bundler rápido e leve
-- **React** – UI declarativa
-- **TypeScript** – tipagem estática
-- **Tailwind CSS** – estilos utilitários
-- **shadcn‑ui** – componentes acessíveis e customizáveis
-- **Lucide‑react** – ícones SVG
+A landing page convida o usuário a buscar dentistas por bairro, cidade ou proximidade. O perfil do dentista mostra CRO, endereços com agenda, formas de pagamento, convênios, contato (WhatsApp/telefone) e sistema de avaliações 1-5 com média por especialidade. O lado Pro tem signup em 6 etapas, dashboard com métricas e editor de perfil.
 
 ---
 
-## 📦 Pré‑requisitos
+## Tecnologias
 
-- **Node.js** (versão LTS) e **npm** instalados. Recomendamos usar [nvm](https://github.com/nvm-sh/nvm#installing-and-updating) para gerenciar versões.
-- Git instalado para controle de versão.
+- **Vite 8** + **React 18** + **TypeScript 5** (com `tsconfig.app.json` endurecido: `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`)
+- **Tailwind CSS 3** + **shadcn-ui** + **lucide-react** (ícones)
+- **React Router 6** para SPA
+- **Zustand 5** para estado global de auth
+- **Supabase JS 2** para Postgres + Auth + Storage + RPCs
+- **React Query 5** para cache de queries
+- **React Hook Form 7** + **Zod 3** para formulários complexos (signup Pro)
+- **Sonner** para toasts
+- **StrictMode** ativo em `main.tsx` (item 7 do checklist)
 
 ---
 
-## ⚙️ Instalação e execução local
+## Pré-requisitos
+
+- Node.js 20+ (suporta `--env-file`)
+- npm
+- Conta no Supabase (projeto configurado em `dsnzgxjuqlalysyfiion`)
+
+---
+
+## Como rodar localmente
 
 ```bash
-# 1. Clone o repositório
-git clone <URL_DO_REPOSITORIO>
-
-# 2. Entre na pasta do projeto
-cd <NOME_DO_PROJETO>
-
-# 3. Instale as dependências
+# 1. Instalar dependências
 npm install
 
-# 4. Inicie o servidor de desenvolvimento
+# 2. Configurar .env (pegar do time ou do Vercel)
+#    VITE_SUPABASE_URL=https://dsnzgxjuqlalysyfiion.supabase.co
+#    VITE_SUPABASE_ANON_KEY=<chave-anon-publica>
+
+# 3. Dev server (http://localhost:5173)
 npm run dev
+
+# 4. Build de produção
+npm run build
+
+# 5. Lint + typecheck
+npm run lint
+npm run typecheck    # roda tsc em src/ E em tests/
 ```
 
-O comando `npm run dev` abrirá a aplicação em `http://localhost:5173` com recarga automática.
+### Scripts disponíveis
+
+| Script | O que faz |
+|---|---|
+| `npm run dev` | Inicia o Vite dev server |
+| `npm run build` | Build de produção (gera `dist/`) |
+| `npm run preview` | Serve o build localmente |
+| `npm run lint` | ESLint em todo o projeto |
+| `npm run typecheck` | TypeScript em `src/` + `tests/` |
+| `npm run test:smoke` | 4 checagens rápidas contra o Supabase |
+| `npm run test:security` | 6 testes E2E de RLS + Storage |
+| `npm run test:all` | Roda smoke + security |
 
 ---
 
-## 📂 Estrutura de pastas relevante
+## Estrutura de pastas
 
-- `src/` – código‑fonte da aplicação
-  - `pages/` – páginas da SPA (ex.: `NovoCadastro.tsx`)
-  - `components/` – componentes reutilizáveis
-  - `assets/` – imagens, logos e fontes
-- `public/` – arquivos estáticos servidos diretamente
-- `vite.config.ts` – configuração do Vite
-- `tailwind.config.ts` – configuração do Tailwind CSS
-
----
-
-## ⚠️ Pendências / Próximos passos para cadastro completo
-
-1. **Camada de backend / API**
-   - Implementar endpoints REST (ou GraphQL) para criar, atualizar e validar dentistas.
-   - Expor rotas como `/api/dentistas`, `/api/telefone/verify`, `/api/cadastro/confirm`.
-2. **Banco de dados**
-   - Definir esquema de tabelas: `dentistas`, `enderecos`, `convenios`, `horarios`, `pagamentos`.
-   - Utilizar um ORM (ex.: **Prisma** ou **TypeORM**) e gerar migrations.
-   - Criar chaves estrangeiras e índices para buscas eficientes.
-3. **Integração com serviços externos**
-   - Configurar provedor de SMS/WhatsApp (Twilio, Zenvia, etc.) para verificação de telefone.
-   - Configurar serviço de armazenamento de imagens (ex.: Cloudinary, AWS S3) para foto do profissional.
-4. **Variáveis de ambiente**
-   - `.env.example` deve conter: `DATABASE_URL`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `JWT_SECRET`, `BASE_URL`.
-   - Instruir o desenvolvedor a copiar `.env.example` para `.env` e preencher os valores.
-5. **Autenticação e segurança**
-   - Implementar fluxo de registro com token de email (JWT) e proteção de rotas sensíveis.
-   - Aplicar rate‑limiting nas APIs de verificação de telefone.
-6. **Testes**
-   - Acrescentar testes unitários e de integração (Jest + React Testing Library) para validar lógica de formulário e chamadas de API.
-7. **Deploy da API**
-   - Documentar como subir a API (ex.: Vercel Serverless Functions, Railway, Render ou Docker).
-   - Atualizar script de build para incluir `npm run build && npm run start:prod` no servidor.
-   - **HTTPS local**: gerar certificados (ex.: usando `mkcert`), criar a pasta `certs/` e apontar `vite.config.ts` para `./certs/localhost.pem` e `./certs/localhost-key.pem`. Também incluir redirecionamento HTTP→HTTPS (porta 5172 → 5173) conforme o exemplo no README.
-
-> **Nota:** Enquanto essas pendências não são implementadas, o fluxo de cadastro exibirá apenas a interface front‑end e validará campos localmente, mas não persiste dados nem envia SMS/WhatsApp.
-
----
-
-## 🧑‍💻 Contribuindo
-
-1. Fork o repositório
-2. Crie uma branch para sua feature ou correção
-3. Execute os testes (se houver) e use o lint antes de enviar o PR
-4. Abra um Pull Request descrevendo as mudanças
-
-> **Importante:** siga o padrão de commit *Conventional Commits* (ex.: `feat: adiciona validação de CPF`).
+```
+site-k7/
+├── src/
+│   ├── pages/                # Rotas da SPA
+│   │   ├── Index.tsx         # Home (landing)
+│   │   ├── Pesquisa.tsx      # Busca de dentistas
+│   │   ├── DentistProfile.tsx # Perfil público do dentista
+│   │   ├── NotFound.tsx      # 404
+│   │   └── pro/              # Rotas autenticadas (dentista)
+│   │       ├── NovoCadastro.tsx  # Signup em 6 etapas
+│   │       ├── Dashboard.tsx     # Painel principal Pro
+│   │       └── MeuPerfil.tsx     # Editor de perfil
+│   ├── components/
+│   │   ├── layout/           # Header, Footer
+│   │   ├── features/         # HeroSection, HowItWorks, etc.
+│   │   └── ui/               # shadcn-ui primitives
+│   ├── hooks/
+│   │   ├── useAuth.ts            # Zustand store + Supabase Auth
+│   │   ├── useUserLocation.ts    # Geolocalização OPT-IN (LGPD)
+│   │   └── useAddressSuggestions.ts # Autocomplete fuzzy
+│   ├── lib/
+│   │   ├── supabase.ts       # Cliente singleton
+│   │   ├── dentistCache.ts   # Cache local de busca (localStorage)
+│   │   ├── uploadService.ts  # Upload de foto pro Storage
+│   │   └── geocoding.ts      # Nominatim (OpenStreetMap)
+│   ├── types/                # Tipos TypeScript compartilhados
+│   └── constants/            # Dados estáticos (chips, listas)
+├── supabase_migrations/       # SQL aplicado no Supabase Studio
+│   ├── supabase_migration_final.sql    # Schema + seed (50 dentistas)
+│   ├── nova_migracao_raio3km.sql        # lat/lng + RPC Haversine
+│   ├── fix_rpc_get_dentistas_proximos.sql # Cast types v2
+│   └── nova_migracao_avaliacoes.sql    # Tabela avaliacoes + RLS
+├── tests/                    # Smoke + security tests
+│   ├── smoke/supabase.test.ts
+│   └── security/rls.test.ts
+├── docs/
+│   ├── PENDENCIAS.md         # Itens pendentes (4, 10 + outros)
+│   └── SEGURANCA.md          # Modelo de RLS + Storage
+├── tsconfig.app.json         # TS config endurecido (item 7)
+├── tsconfig.test.json        # TS config para tests/
+├── vite.config.ts            # Vite + CSP (Google OAuth, Google Fonts)
+└── package.json
+```
 
 ---
 
-## 📜 Licença
+## Rotas
 
-Este projeto está licenciado sob a licença MIT – veja o arquivo `LICENSE` para mais detalhes.
+| Rota | Auth | Descrição |
+|---|---|---|
+| `/` | público | Landing page com busca, especialidades, últimos dentistas |
+| `/pesquisa?q=...&lat=...&lng=...&r=5` | público | Resultados de busca com filtros (raio, convênios, pagamentos) |
+| `/dentista/:id` | público | Perfil completo do dentista + avaliações |
+| `/pro/novo-cadastro` | público (cria auth) | Signup Pro em 6 etapas |
+| `/pro/dashboard` | autenticado (dentista) | Painel com endereços, agenda, métricas |
+| `/pro/perfil` | autenticado (dentista) | Editor de perfil |
+| `*` | público | 404 |
 
 ---
 
-## 🚀 Deploy
+## Padrões importantes
 
-Para publicar a aplicação em produção, basta gerar o build estático e servir os arquivos gerados:
+- **Imports**: use `@/` para apontar para `src/` (configurado em `tsconfig.app.json` e `vite.config.ts`)
+- **Estado global**: Zustand para auth, `useState` para o resto
+- **Cache local**: `localStorage` para user, geolocalização, query de busca, e cache de perfis
+- **Geolocalização**: SEMPRE opt-in (botão explícito). Nunca chamar `getCurrentPosition` no mount
+- **Busca**: usa `get_dentistas_proximos` (RPC SECURITY DEFINER) + busca textual em paralelo
+- **Auth**: Zustand store com cache local em `localStorage` para login instantâneo
+- **TypeScript**: `noFallthroughCasesInSwitch`, `noUnusedLocals`, `noUnusedParameters` ativos
+- **Lint**: 0 errors, 7 warnings shadcn vendor (esperado, ignore)
+
+---
+
+## Documentação adicional
+
+- **[`docs/PENDENCIAS.md`](./docs/PENDENCIAS.md)** — Itens pendentes do checklist de QA
+- **[`docs/SEGURANCA.md`](./docs/SEGURANCA.md)** — Modelo de segurança (RLS, Storage, LGPD)
+- Migrations em `supabase_migrations/` são comentadas linha-a-linha
+
+---
+
+## Deploy
+
+Build estático vai pra Vercel. Variáveis `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` configuradas no painel da Vercel (não no `.env` versionado).
 
 ```bash
-npm run build   # gera a pasta /dist
-# Em seguida, copie o conteúdo de /dist para seu host (Vercel, Netlify, etc.)
+npm run build       # gera dist/
+vercel --prod       # deploy
 ```
+
+---
+
+## Licença
+
+MIT — ver `LICENSE`.

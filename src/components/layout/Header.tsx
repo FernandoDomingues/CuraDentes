@@ -127,7 +127,7 @@ export default function Header() {
     const toastId = toast.loading("Verificando credenciais...");
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email: emailLogin,
         password: senhaLogin,
       });
@@ -139,8 +139,9 @@ export default function Header() {
       toast.success("Login realizado com sucesso!", { id: toastId });
       fecharModal();
       navigate("/pro/perfil");
-    } catch (error: any) {
-      toast.error(error.message, { id: toastId });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erro desconhecido ao fazer login.";
+      toast.error(message, { id: toastId });
     }
   }
 

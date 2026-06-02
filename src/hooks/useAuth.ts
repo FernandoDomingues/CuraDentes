@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { Session, Subscription, User as SupabaseUser } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 
 // ============================================================================
@@ -28,8 +29,14 @@ interface AuthState {
 // ============================================================================
 const CACHE_KEY = "curadentes_user_cache";
 
+// Subscription de onAuthStateChange mantida em escopo de módulo para que
+// initialize() possa cancelar a anterior antes de registrar uma nova
+// (necessário em dev com React.StrictMode, que monta o App duas vezes).
+let authSubscription: Subscription | null = null;
+
 function saveUserCache(user: User) {
-  try { localStorage.setItem(CACHE_KEY, JSON.stringify(user)); } catch (_) {}
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(user)); }
+  catch (err) { console.warn("[useAuth] Falha ao salvar cache do usuário:", err); }
 }
 
 function readUserCache(): User | null {
@@ -97,13 +104,18 @@ export const useAuth = create<AuthState>((set, get) => ({
     if (get().initialized) return;
     set({ initialized: true });
 
+    // Cancela subscription anterior caso initialize() seja chamado novamente
+    // (ex.: React.StrictMode monta o App duas vezes em dev)
+    authSubscription?.unsubscribe();
+    authSubscription = null;
+
     const setAndCache = (userObj: User) => {
       saveUserCache(userObj);
       set({ user: userObj, isInitializing: false });
     };
 
     // Restaura do banco (somente quando o cache não existe)
-    const restoreFromDB = async (authUser: any) => {
+    const restoreFromDB = async (authUser: SupabaseUser) => {
       if (!authUser) { set({ isInitializing: false }); return; }
       
       // 1. Ação Agressiva: Mostra o usuário como logado imediatamente com dados básicos
@@ -133,18 +145,20 @@ export const useAuth = create<AuthState>((set, get) => ({
     };
 
     // Login real: cria/atualiza o registro do cliente no banco
-    const signInAndSync = async (session: any) => {
+    const signInAndSync = async (session: Session) => {
       const authUser = session.user;
       if (!authUser) return;
 
       const pendingLocStr = localStorage.getItem("curadentes_pending_loc");
-      let lat = null, lng = null;
+      let lat: number | null = null, lng: number | null = null;
       if (pendingLocStr) {
         try {
-          const parsed = JSON.parse(pendingLocStr);
-          lat = parsed.latitude; lng = parsed.longitude;
+          const parsed = JSON.parse(pendingLocStr) as { latitude?: number | null; longitude?: number | null };
+          lat = parsed.latitude ?? null; lng = parsed.longitude ?? null;
           localStorage.removeItem("curadentes_pending_loc");
-        } catch (e) {}
+        } catch (err) {
+          console.warn("[useAuth] Falha ao ler localização pendente:", err);
+        }
       }
 
       // 1. Ação Agressiva: O frontend precisa mostrar o usuário logado AGORA, não importa o banco
@@ -183,7 +197,7 @@ export const useAuth = create<AuthState>((set, get) => ({
     };
 
     // Escuta todos os eventos de autenticação do Supabase
-    supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("[useAuth] Evento de Autenticação Supabase:", event, session ? `Sessão Ativa (User ID: ${session.user.id})` : "Sem Sessão");
       if (event === "SIGNED_IN" && session) {
         // Login real (vindo do Google): sincroniza/cria no banco
@@ -213,5 +227,6 @@ export const useAuth = create<AuthState>((set, get) => ({
         set({ isInitializing: false });
       }
     });
+    authSubscription = subscription;
   },
 }));

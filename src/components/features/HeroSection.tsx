@@ -18,6 +18,7 @@ import { FILTER_CHIPS } from "@/constants/data";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
+import { useUserLocation } from "@/hooks/useUserLocation";
 import { useAddressSuggestions } from "@/hooks/useAddressSuggestions";
 import type { AddressSuggestion } from "@/hooks/useAddressSuggestions";
 
@@ -195,7 +196,6 @@ export default function HeroSection() {
   const [searchValue, setSearchValue] = useState("");
   const [activeChip, setActiveChip] = useState<string | null>(null);
   const [totalDentists, setTotalDentists] = useState<number>(0);
-  const [averageRating, setAverageRating] = useState<string>("5.0");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [highlightedIdx, setHighlightedIdx] = useState(-1);
   const searchContainerRef = useRef<HTMLDivElement>(null);
@@ -294,6 +294,16 @@ export default function HeroSection() {
   // Puxamos os estados globais: "user" (usuário logado) e "signInWithGoogle" (função para entrar/cadastrar)
   const { user, signInWithGoogle } = useAuth();
 
+  // Geolocalização OPT-IN: só dispara prompt quando o usuário clica no botão.
+  const {
+    latitude: userLat,
+    longitude: userLng,
+    carregando: locationLoading,
+    erro: locationError,
+    statusPermissao: locationStatus,
+    requestLocation,
+  } = useUserLocation();
+
   // ============================================================================
   // ARMAZENAMENTO TEMPORÁRIO DA LOCALIZAÇÃO (useRef)
   // ============================================================================
@@ -373,26 +383,41 @@ export default function HeroSection() {
   };
 
   const handleUseMyLocation = () => {
-    if (!navigator.geolocation) {
-      toast.error("Seu navegador não suporta geolocalização.");
+    if (locationStatus === "autorizado" && userLat !== null && userLng !== null) {
+      // Já temos coordenadas (cache ou captura anterior): navega direto
+      navigate(`/pesquisa?lat=${userLat}&lng=${userLng}`);
+      return;
+    }
+
+    if (locationError) {
+      toast.error(locationError);
       return;
     }
 
     const toastId = toast.loading("Buscando sua localização...");
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        toast.dismiss(toastId);
-        const { latitude, longitude } = position.coords;
-        navigate(`/pesquisa?lat=${latitude}&lng=${longitude}`);
-      },
-      (error) => {
-        toast.dismiss(toastId);
-        toast.error("Não foi possível acessar sua localização.");
-      },
-      { timeout: 8000 }
-    );
+    requestLocation();
+    // A navegação acontece via useEffect abaixo quando o hook resolver
+    sessionStorage.setItem("curadentes_location_toast_id", String(toastId));
   };
+
+  // Reage ao resultado do hook: navega ou mostra erro
+  useEffect(() => {
+    if (locationStatus === "autorizado" && userLat !== null && userLng !== null) {
+      const toastId = sessionStorage.getItem("curadentes_location_toast_id");
+      if (toastId) {
+        toast.dismiss(toastId);
+        sessionStorage.removeItem("curadentes_location_toast_id");
+        navigate(`/pesquisa?lat=${userLat}&lng=${userLng}`);
+      }
+    } else if (locationError) {
+      const toastId = sessionStorage.getItem("curadentes_location_toast_id");
+      if (toastId) {
+        toast.dismiss(toastId);
+        sessionStorage.removeItem("curadentes_location_toast_id");
+        toast.error(locationError);
+      }
+    }
+  }, [locationStatus, userLat, userLng, locationError, navigate]);
 
   return (
     <>
@@ -470,6 +495,24 @@ export default function HeroSection() {
 
         {/* "O QUE VOCÊ PRECISA?" label + chips */}
         <div style={{ background: "#F2F2F7", paddingBottom: "12px" }}>
+          {/* Botao "Usar minha localizacao" (mobile) */}
+          <div className="px-4 pb-3">
+            <button
+              type="button"
+              onClick={handleUseMyLocation}
+              disabled={locationLoading}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-[14px] font-semibold min-h-[44px] transition-all duration-200 active:scale-[0.98] disabled:opacity-60"
+              style={{
+                background: "rgba(0,122,255,0.08)",
+                color: "#007AFF",
+                border: "0.5px solid rgba(0,122,255,0.18)",
+              }}
+            >
+              <MapPin size={16} />
+              {locationLoading ? "Buscando..." : "Usar minha Localização"}
+            </button>
+          </div>
+
           <p
             className="px-4 pb-2 text-[12px] font-semibold uppercase tracking-widest"
             style={{ color: "#8E8E93" }}
@@ -582,11 +625,12 @@ export default function HeroSection() {
                 <button
                   type="button"
                   onClick={handleUseMyLocation}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[13px] font-semibold min-h-[40px] flex-shrink-0 transition-all duration-200 hover:bg-blue-50"
+                  disabled={locationLoading}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[13px] font-semibold min-h-[40px] flex-shrink-0 transition-all duration-200 hover:bg-blue-50 disabled:opacity-60"
                   style={{ background: "rgba(0,122,255,0.08)", color: "#007AFF", border: "0.5px solid rgba(0,122,255,0.18)" }}
                 >
                   <MapPin size={14} />
-                  Usar minha Localização
+                  {locationLoading ? "Buscando..." : "Usar minha Localização"}
                 </button>
                 <button
                   type="submit"

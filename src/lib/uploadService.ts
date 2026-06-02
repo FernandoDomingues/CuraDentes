@@ -63,8 +63,9 @@ export async function uploadFotoDentista(file: File, dentistaId: string): Promis
     // Retorna o link final para a tela poder exibir a nova foto imediatamente
     return publicUrl;
 
-  } catch (error: any) {
+  } catch (error) {
     console.error("Erro no processo de upload:", error);
-    throw new Error(error.message || "Ocorreu um erro inesperado ao alterar a foto.");
+    const message = error instanceof Error ? error.message : "Ocorreu um erro inesperado ao alterar a foto.";
+    throw new Error(message);
   }
 }

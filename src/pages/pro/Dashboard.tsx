@@ -43,14 +43,6 @@ import {
   Check,
   Loader2,
 } from "lucide-react";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip as RechartsTooltip,
-  ResponsiveContainer,
-} from "recharts";
-import { DEMO_DENTISTAS } from "@/constants/demoDentists";
 import type { DentistaPro } from "@/constants/demoDentists";
 
 import logoProUrl from "@/assets/logos/logo-pro.png";
@@ -58,7 +50,6 @@ import logoProAltUrl from "@/assets/logos/logo-pro-alt.png";
 
 // ─── Logo CuraDentes Pro ──────────────────────────────────────────────────────
 const LOGO_PRO = logoProUrl;
-const LOGO_PRO_ALT = logoProAltUrl;
 
 // ─── Cor de destaque para urgências ──────────────────────────────────────────
 const COR_URGENCIA = "#E6004C";
@@ -359,9 +350,9 @@ export default function Dashboard() {
     const file = e.target.files?.[0];
     if (!file || !dentista) return;
 
+    const toastId = toast.loading("Enviando foto...");
     try {
       setIsUploadingFoto(true);
-      const toastId = toast.loading("Enviando foto...");
 
       // Em produção, o ID virá do banco de dados (UUID real).
       // Aqui usamos o ID do mock convertendo para string.
@@ -371,8 +362,9 @@ export default function Dashboard() {
       // Atualiza a interface
       setDentista({ ...dentista, foto_url: publicUrl });
       toast.success("Foto atualizada com sucesso!", { id: toastId });
-    } catch (error: any) {
-      toast.error(error.message, { id: toastId });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erro ao atualizar foto.";
+      toast.error(message, { id: toastId });
     } finally {
       setIsUploadingFoto(false);
       if (fileInputRef.current) {
@@ -467,9 +459,10 @@ export default function Dashboard() {
       await carregarDadosDentista(data.user.id);
       toast.success("Bem-vindo ao painel!", { id: toastId });
       navigate("/pro/perfil");
-    } catch (error: any) {
-      setLoginErro(error.message);
-      toast.error(error.message, { id: toastId });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erro inesperado ao entrar.";
+      setLoginErro(message);
+      toast.error(message, { id: toastId });
     }
   }
 

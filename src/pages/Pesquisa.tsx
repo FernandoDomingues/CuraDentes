@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { getCoordenadas } from "@/lib/geocoding";
@@ -42,6 +42,30 @@ interface DentistaResultado {
   distancia_km: number;
 }
 
+interface EnderecoRow {
+  id: string;
+  nome_clinica: string | null;
+  logradouro: string | null;
+  numero: string | null;
+  bairro: string | null;
+  cidade: string | null;
+  estado: string | null;
+  atividades: string[] | null;
+  convenios: string[] | null;
+  formas_pagamento: string[] | null;
+  latitude: number | null;
+  longitude: number | null;
+  curadentespro:
+    | { id: string; nome: string; foto_url: string | null; bio: string | null }
+    | { id: string; nome: string; foto_url: string | null; bio: string | null }[]
+    | null;
+}
+
+interface SupabaseError {
+  message?: string;
+  code?: string;
+}
+
 const CONVENIOS_OPCOES = [
   "Amil Dental", "Bradesco Dental", "SulAmérica Odonto", "Hapvida Odonto",
   "Odontoprev", "Unimed Odonto", "Porto Seguro Saúde", "NotreDame Intermédica"
@@ -56,16 +80,8 @@ export default function Pesquisa() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const query = searchParams.get("q");
-  const { user } = useAuth(); // Para viés geográfico (coordenadas de login)
 
   const [raio, setRaio] = useState(5); // 5km por padrão
-
-  // Chave de cache — calculada uma vez por combinação de parâmetros
-  const cacheKey = useMemo(
-    () => buildQueryCacheKey(query, searchParams.get("lat"), searchParams.get("lng"), raio),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [query, searchParams.get("lat"), searchParams.get("lng"), raio]
-  );
 
   // Lazy initializers: só leem localStorage 1× na montagem do componente
   const [loading, setLoading] = useState(() => {
@@ -78,7 +94,7 @@ export default function Pesquisa() {
     const cached = loadQueryCache(
       buildQueryCacheKey(query, searchParams.get("lat"), searchParams.get("lng"), 5)
     );
-    return cached ?? [];
+    return (cached ?? []) as DentistaResultado[];
   });
   const [ordenacao, setOrdenacao] = useState<"distancia" | "avaliacao">("distancia");
 
@@ -137,11 +153,11 @@ export default function Pesquisa() {
         const currentUser = useAuth.getState().user;
 
         // 1. Inicia a Busca Textual no banco (roda em paralelo com a API de mapas)
-        let textSearchPromise: Promise<{ data: any[] | null; error: any }> = Promise.resolve({ data: null, error: null });
+        let textSearchPromise: Promise<{ data: EnderecoRow[] | null; error: SupabaseError | null }> = Promise.resolve({ data: null, error: null });
         if (query) {
           const q = query.trim();
           console.log("[Pesquisa] [Passo 1] Disparando busca textual por:", q);
-          textSearchPromise = supabase
+          const queryBuilder = supabase
             .from("curadentespro_enderecos")
             .select(`
               id, nome_clinica, logradouro, numero, bairro, cidade, estado, atividades, convenios, formas_pagamento, latitude, longitude,
@@ -154,6 +170,7 @@ export default function Pesquisa() {
               `logradouro.ilike.%${q}%`,
               `nome_clinica.ilike.%${q}%`
             ].join(','));
+          textSearchPromise = queryBuilder as unknown as Promise<{ data: EnderecoRow[] | null; error: SupabaseError | null }>;
         }
 
         // 2. Inicia a busca de Coordenadas (roda em paralelo com o banco de dados)
@@ -224,7 +241,7 @@ export default function Pesquisa() {
           if (textData) {
             console.log("[Pesquisa] [Passo 4] Processando", textData.length, "registros textuais...");
             textResults = textData
-              .filter((d: any) => {
+              .filter((d) => {
                 const pro = Array.isArray(d.curadentespro) ? d.curadentespro[0] : d.curadentespro;
                 const temPro = !!(pro && pro.id);
                 if (!temPro) {
@@ -232,8 +249,8 @@ export default function Pesquisa() {
                 }
                 return temPro;
               })
-              .map((d: any) => {
-                const pro = Array.isArray(d.curadentespro) ? d.curadentespro[0] : (d.curadentespro || {});
+              .map((d) => {
+                const pro = Array.isArray(d.curadentespro) ? d.curadentespro[0] : (d.curadentespro || { id: "", nome: "", foto_url: null, bio: null });
 
                 let dist = 0;
                 if (finalLat !== null && finalLng !== null && d.latitude && d.longitude) {
@@ -313,9 +330,10 @@ export default function Pesquisa() {
             formas_pagamento: r.formas_pagamento,
           })));
         }
-      } catch (err: any) {
+      } catch (err) {
         if (cancelled) return;
-        if (err?.message === "TIMEOUT") {
+        const message = err instanceof Error ? err.message : String(err);
+        if (message === "TIMEOUT") {
           // ── (C) Timeout disparado ──────────────────────────────────────────
           console.error("[Pesquisa] ⏱️ Timeout: busca ultrapassou 10 segundos.");
           toast.error("A busca demorou mais do que o esperado. Verifique sua conexão e tente novamente.");
