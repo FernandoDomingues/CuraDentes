@@ -166,6 +166,8 @@ export interface DentistProfile {
   nome_completo: string;
   foto_url: string;
   cro: string;
+  /** Email do dentista (para notificações) */
+  email?: string;
   /** Especialidade principal autodeclarada */
   especialidade_principal: string;
   /** Breve bio exibida no topo do perfil */

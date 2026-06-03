@@ -22,7 +22,6 @@
 
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  ArrowLeft,
   Star,
   MapPin,
   Clock,
@@ -38,6 +37,7 @@ import {
   Shield,
   CheckCircle,
   BarChart2,
+  X,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import type { EnderecoClinica, FormaPagamento, Convenio, ResumoAvaliacaoAtividade, DentistProfile } from "@/types/dentist";
@@ -46,60 +46,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { CachedDentistResult } from "@/lib/dentistCache";
+import Header from "@/components/layout/Header";
 import logoProAltUrl from "@/assets/logos/logo-pro-alt.png";
-
-// ─── Dados do pódio de ranking ─────────────────────────────────────────────
-
-/** Configuração visual de cada posição do pódio (Top 1, 2 ou 3) */
-const PODIO: Record<number, { fundo: string; texto: string; borda: string; emoji: string; label: string }> = {
-  1: { fundo: "#FFD700", texto: "#7A5800", borda: "rgba(255,215,0,0.50)",  emoji: "🥇", label: "1º da cidade" },
-  2: { fundo: "#E8E8E8", texto: "#4A4A4A", borda: "rgba(192,192,192,0.50)", emoji: "🥈", label: "2º da cidade" },
-  3: { fundo: "#EDCBAA", texto: "#5A3000", borda: "rgba(205,127,50,0.50)",  emoji: "🥉", label: "3º da cidade" },
-};
-
-// ─── Subcomponente: Badge de pódio ───────────────────────────────────────────
-
-/**
- * Exibe um badge dourado/prateado/bronze indicando a posição no ranking.
- * Usado tanto ao lado do nome do dentista (posição geral) quanto
- * em cada barra de atividade (posição por procedimento).
- */
-function BadgePodio({
-  posicao,
-  tamanho = "md",
-}: {
-  posicao: number;
-  tamanho?: "sm" | "md";
-}) {
-  // Exibe apenas Top 1, 2 ou 3
-  if (!PODIO[posicao]) return null;
-  const conf = PODIO[posicao];
-
-  return (
-    <span
-      className="inline-flex items-center gap-1 font-bold"
-      style={{
-        background: conf.fundo,
-        color: conf.texto,
-        border: `1px solid ${conf.borda}`,
-        borderRadius: tamanho === "sm" ? "8px" : "10px",
-        padding: tamanho === "sm" ? "1px 6px" : "3px 8px",
-        fontSize: tamanho === "sm" ? "11px" : "12px",
-        boxShadow: `0 2px 6px ${conf.borda}`,
-        whiteSpace: "nowrap" as const,
-        flexShrink: 0,
-      }}
-      title={`${conf.emoji} ${conf.label}`}
-    >
-      {conf.emoji} {conf.label}
-    </span>
-  );
-}
-
-import logoIconUrl from "@/assets/logos/logo-icon.png";
-
-// URL do logotipo exibido no cabeçalho
-const LOGO_ICON = logoIconUrl;
 
 // ─── Helpers de estilo para formas de pagamento ──────────────────────────────
 
@@ -226,7 +174,12 @@ function BarraAvaliacao({ atividade }: { atividade: ResumoAvaliacaoAtividade }) 
  * - Convênios aceitos neste endereço
  * - Botão de WhatsApp específico do endereço
  */
-function EnderecoCard({ endereco, index }: { endereco: EnderecoClinica; index: number }) {
+function EnderecoCard({ endereco, index, nomeDentista, onContactRequest }: {
+  endereco: EnderecoClinica;
+  index: number;
+  nomeDentista: string;
+  onContactRequest: (url: string) => void;
+}) {
   // Primeiro endereço começa com agenda aberta
   const [agendaAberta, setAgendaAberta] = useState(index === 0);
 
@@ -442,37 +395,38 @@ function EnderecoCard({ endereco, index }: { endereco: EnderecoClinica; index: n
           <div className="flex gap-2">
             {/* Botão WhatsApp deste endereço */}
             {endereco.whatsapp && (
-              <a
-                href={`https://wa.me/${endereco.whatsapp}?text=Olá, gostaria de agendar uma consulta!`}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                onClick={() => onContactRequest(`https://wa.me/${endereco.whatsapp}?text=${encodeURIComponent(`Olá, te encontrei na CuraDentes e gostaria de agendar uma consulta com o dr. ${nomeDentista}`)}`)}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[12px] font-semibold text-[14px] transition-all duration-200"
                 style={{
                   background: "#25D366",
                   color: "#fff",
                   textDecoration: "none",
+                  border: "none",
+                  cursor: "pointer",
                   boxShadow: "0 4px 12px rgba(37,211,102,0.25)",
                 }}
               >
                 <MessageCircle size={15} />
                 WhatsApp
-              </a>
+              </button>
             )}
             {/* Botão de ligação deste endereço */}
             {endereco.telefone && (
-              <a
-                href={`tel:${endereco.telefone.replace(/\D/g, "")}`}
+              <button
+                onClick={() => onContactRequest(`tel:${endereco.telefone.replace(/\D/g, "")}`)}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[12px] font-semibold text-[14px] transition-all duration-200"
                 style={{
                   background: "rgba(0,122,255,0.08)",
                   color: "#007AFF",
                   textDecoration: "none",
                   border: "0.5px solid rgba(0,122,255,0.20)",
+                  cursor: "pointer",
                 }}
               >
                 <Phone size={15} />
                 Ligar
-              </a>
+              </button>
             )}
           </div>
         </div>
@@ -485,6 +439,18 @@ function EnderecoCard({ endereco, index }: { endereco: EnderecoClinica; index: n
 
 function isCRO(valor: string): boolean {
   return /^CRO-[A-Z]{2}\s?\d{3,6}$/.test(valor.toUpperCase());
+}
+
+// ─── SVG do Google para o botão de login ─────────────────────────────────────
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
+      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+    </svg>
+  );
 }
 
 /** Página de perfil completo do dentista, acessada via /dentista/:id ou /dentista/:cro */
@@ -504,6 +470,34 @@ export default function DentistProfilePage() {
   const [ratingNota, setRatingNota] = useState(0);
   const [ratingAtividade, setRatingAtividade] = useState("");
   const [submittingRating, setSubmittingRating] = useState(false);
+
+  // Estados para o modal de login obrigatório antes do contato
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [pendingContactUrl, setPendingContactUrl] = useState("");
+
+  const handleContactRequest = useCallback((url: string) => {
+    if (user) {
+      window.open(url, "_blank", "noopener,noreferrer");
+    } else {
+      setPendingContactUrl(url);
+      setShowLoginModal(true);
+    }
+  }, [user]);
+
+  const handleGoogleLogin = async () => {
+    const loadingToast = toast.loading("Redirecionando para o Google...");
+    try {
+      await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: window.location.href },
+      });
+      toast.dismiss(loadingToast);
+    } catch (error) {
+      toast.dismiss(loadingToast);
+      toast.error("Falha ao inicializar login com o Google.");
+      console.error(error);
+    }
+  };
 
   // Extrair todas as atividades do dentista para o select
   const todasAtividades = perfil ? Array.from(new Set(perfil.enderecos.flatMap(e => e.atividades || []))) : [];
@@ -664,6 +658,7 @@ export default function DentistProfilePage() {
         nome_completo: pro.nome,
         foto_url: pro.foto_url || "",
         cro: (pro.cro || "").replace(/\s/g, ""),
+        email: pro.email,
         especialidade_principal: espec,
         bio: pro.bio,
         rating: mediaGeral,
@@ -726,10 +721,28 @@ export default function DentistProfilePage() {
 
       toast.dismiss(toastId);
       toast.success("Avaliação salva com sucesso! Obrigado.");
-      
+
       setShowRatingForm(false);
       setRatingNota(0);
       setRatingAtividade("");
+
+      // Notifica o dentista por email em background
+      supabase.functions.invoke("send-rating-notification", {
+        body: {
+          dentistEmail: perfil?.email,
+          dentistName: perfil?.nome_completo,
+          specialty: ratingAtividade,
+          patientName: user.name,
+        },
+      }).then(async (res) => {
+        if (res.error) {
+          const msg = res.response ? await res.response.text() : res.error.message;
+          console.warn("[notificação] Erro:", msg);
+        } else {
+          console.log("[notificação] Email enviado com sucesso");
+        }
+      });
+
       fetchPerfil();
     } catch (err) {
       toast.dismiss(toastId);
@@ -763,50 +776,7 @@ export default function DentistProfilePage() {
   return (
     <div className="min-h-screen" style={{ background: "#F2F2F7" }}>
 
-      {/* ── Barra de navegação superior fixa ── */}
-      <header
-        style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 100,
-          background: "rgba(255,255,255,0.92)",
-          backdropFilter: "blur(24px) saturate(120%)",
-          WebkitBackdropFilter: "blur(24px) saturate(120%)",
-          borderBottom: "0.5px solid rgba(60,60,67,0.10)",
-        }}
-      >
-        <div className="container mx-auto px-4 md:px-8 lg:px-16">
-          <div className="flex items-center justify-between h-[60px] gap-3">
-            {/* Botão voltar */}
-            <button
-              onClick={() => navigate(-1)}
-              className="flex items-center gap-2 min-h-[44px] px-1 rounded-xl transition-opacity duration-150"
-              style={{ color: "#007AFF", background: "transparent" }}
-              aria-label="Voltar para a listagem"
-            >
-              <ArrowLeft size={20} />
-              <span className="text-[15px] font-medium hidden sm:inline">Voltar</span>
-            </button>
-
-            {/* Logo CuraDentes */}
-            <a href="/" className="flex items-center gap-2 flex-shrink-0">
-              <img src={LOGO_ICON} alt="CuraDentes" className="h-7 w-7" />
-              <span
-                className="font-bold text-[16px] hidden sm:inline"
-                style={{
-                  color: "#0A2A66",
-                  fontFamily: "Inter, sans-serif",
-                  letterSpacing: "-0.01em",
-                }}
-              >
-                CuraDentes
-              </span>
-            </a>
-
-
-          </div>
-        </div>
-      </header>
+      <Header />
 
       {/* ── Hero do perfil ── */}
       <div
@@ -940,7 +910,7 @@ export default function DentistProfilePage() {
 
             {/* Cards de endereço */}
             {perfil.enderecos.map((end, idx) => (
-              <EnderecoCard key={end.id} endereco={end} index={idx} />
+              <EnderecoCard key={end.id} endereco={end} index={idx} nomeDentista={perfil.nome_completo} onContactRequest={handleContactRequest} />
             ))}
 
             {/* ── Seção de avaliações por atividade ── */}
@@ -1074,6 +1044,62 @@ export default function DentistProfilePage() {
 
         </div>
       </div>
+
+      {/* ── Modal de login obrigatório para contato ── */}
+      {showLoginModal && (
+        <div
+          className="fixed inset-0 flex items-center justify-center z-[200] px-4"
+          style={{ background: "rgba(10,42,102,0.45)", backdropFilter: "blur(6px)" }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowLoginModal(false); }}
+        >
+          <div
+            className="w-full max-w-[400px] rounded-[24px] p-7 flex flex-col gap-5"
+            style={{ background: "#fff", boxShadow: "0 24px 64px rgba(10,42,102,0.20)" }}
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-[20px] font-bold" style={{ color: "#0A2A66", fontFamily: "Inter, sans-serif" }}>
+                Entrar
+              </h2>
+              <button
+                onClick={() => setShowLoginModal(false)}
+                className="w-9 h-9 flex items-center justify-center rounded-full transition-colors"
+                style={{ color: "#8E8E93" }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(60,60,67,0.08)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p className="text-[14px]" style={{ color: "#8E8E93", lineHeight: 1.6 }}>
+              Faça login com sua conta Google para entrar em contato com o dentista.
+            </p>
+
+            <button
+              onClick={handleGoogleLogin}
+              className="w-full flex items-center justify-center gap-3 py-3.5 rounded-[14px] font-semibold text-[15px] min-h-[52px] transition-all duration-200"
+              style={{
+                background: "#fff",
+                border: "1.5px solid rgba(60,60,67,0.18)",
+                color: "#1C1C1E",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(60,60,67,0.04)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; }}
+            >
+              <GoogleIcon />
+              Continuar com Google
+            </button>
+
+            <p className="text-[12px] text-center" style={{ color: "#8E8E93", lineHeight: 1.6 }}>
+              Ao entrar, você concorda com nossos{" "}
+              <a href="/termos" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: "#007AFF" }}>Termos de Uso</a>{" "}
+              e{" "}
+              <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: "#007AFF" }}>Política de Privacidade</a>.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
