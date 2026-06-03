@@ -6,7 +6,7 @@ Lista de itens do checklist de QA que ainda não foram concluídos, com contexto
 
 ## Como o checklist foi construído
 
-Em uma sessão de QA, mapeamos 10 itens de melhoria no projeto. Itens 1, 2, 3 foram resolvidos antes do checklist formal (observação inicial, mocks substituídos por Supabase real, e `.env` migrado para Vercel). Itens 5, 6, 7, 8, 9 estão **concluídos**. Restam:
+Em uma sessão de QA, mapeamos 10 itens de melhoria no projeto. Itens 1, 2, 3 foram resolvidos antes do checklist formal (observação inicial, mocks substituídos por Supabase real, e `.env` migrado para Vercel). Itens 5, 6, 7, 8, 9 estão **concluídos**. Em sessões seguintes (itens 11-14) foram feitas mais melhorias de UX/auth. Restam:
 
 | # | Item | Status | Por que adiado |
 |---|---|---|---|
@@ -78,6 +78,10 @@ Em uma sessão de QA, mapeamos 10 itens de melhoria no projeto. Itens 1, 2, 3 fo
 - **Item 7 — StrictMode + tsconfig:** `<StrictMode>` envolvendo `<App />`. `tsconfig.app.json` endurecido (`noFallthrough`, `noUnusedLocals`, `noUnusedParameters`). 43 erros de typecheck corrigidos.
 - **Item 8 — RLS Supabase:** migration `2026-06-02_seguranca_rls_storage.sql` substituiu 3 policies permissivas por 12 granulares, tornou `get_dentistas_proximos` SECURITY DEFINER, e adicionou 4 policies de Storage no bucket `fotos-dentistas`. Teste E2E em `tests/security/rls.test.ts` valida.
 - **Item 9 — Test files organizados:** 5 scripts de debug ad-hoc deletados. Criados `tests/smoke/supabase.test.ts` (4 checagens) e `tests/security/rls.test.ts` (6 checagens RLS) com scripts npm.
+- **Item 11 — Remoção do Google login no modal dentista:** o dentista usava "email/senha, Google ou criar conta". Agora é só "email/senha ou criar conta". `signInWithGoogle` no `useAuth` foi mantido (pacientes, `HeroSection`, `CtaBanner` continuam usando).
+- **Item 12 — Auto-fill de CEP via ViaCEP (Etapa 4 do cadastro Pro):** criado `src/hooks/useCepLookup.ts` (debounce 500ms, cache localStorage 7 dias, AbortController para evitar race condition, estados `loading`/`notFound`/`error`). Sub-componente `CepInputComBusca` encapsula o hook. Auto-preenche `logradouro`, `bairro`, `cidade`, `estado` (sempre sobrescreve). `numero`, `complemento`, `nome_clinica` ficam manuais. `MeuPerfil.tsx` não foi tocado (escopo apenas do cadastro).
+- **Item 13 — Email verification: senha antes do email:** o usuário pode verificar o email antes de definir a senha. Usamos uma senha placeholder no `signUp` (depois removido no item 14) e sincronizamos a senha real via `updateUser` ao avançar da Etapa 1 (`avancarEtapa1`). `updateUser` é idempotente.
+- **Item 14 — Migração do fluxo de email: `signUp` → `signInWithOtp`:** o template "Confirm sign up" do GoTrue tem uma trava interna de "uma vez por endereço" — emails subsequentes para o mesmo destinatário não chegavam (mesmo com `resend` retornando 200). Migramos para `signInWithOtp` com `shouldCreateUser: true` (cria user stub em `auth.users`), `verifyOtp({type:"email"})` para validar, e reenvio via nova chamada a `signInWithOtp` (padrão recomendado pela doc oficial do Supabase para OTPs passwordless). SMTP do Supabase configurado com Hostinger (`smtp.hostinger.com:465` SSL). Trade-off aceito: user stubs em `auth.users` se o dentista abandonar o cadastro.
 
 ---
 
@@ -132,7 +136,6 @@ Não há ainda:
 
 ## Próximas melhorias (sugestões, não estão no checklist)
 
-- **Token de email (signup Pro com verificação)** — `supabase.auth.signInWithOtp` + template de email
 - **2FA para dentistas** — `supabase.auth.mfa.enroll`
 - **Stripe Connect** — para dentistas cobrarem consultas (já tem `@stripe/react-stripe-js` no package.json mas não está em uso)
 - **Agendamento real** — tabela `agendamentos` + fluxo de escolha de horário

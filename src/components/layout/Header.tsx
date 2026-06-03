@@ -211,7 +211,7 @@ export default function Header() {
     </div>
   );
 
-  // ─── Modal do Dentista: login por email/senha, Google ou criar conta ──────
+  // ─── Modal do Dentista: login por email/senha ou criar conta ───────────────
   const renderModalDentista = () => (
     <div
       className="fixed inset-0 flex items-center justify-center z-[200] px-4"
@@ -302,22 +302,6 @@ export default function Header() {
           <span className="text-[12px]" style={{ color: "#8E8E93" }}>ou</span>
           <div style={{ flex: 1, height: "0.5px", background: "rgba(60,60,67,0.15)" }} />
         </div>
-
-        {/* Login com Google */}
-        <button
-          onClick={() => handleGoogleLogin()}
-          className="w-full flex items-center justify-center gap-3 py-3 rounded-[14px] font-semibold text-[15px] min-h-[48px] transition-all duration-200"
-          style={{
-            background: "#fff",
-            border: "1.5px solid rgba(60,60,67,0.18)",
-            color: "#1C1C1E",
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(60,60,67,0.04)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; }}
-        >
-          <GoogleIcon />
-          Entrar com Google
-        </button>
 
         {/* Criar conta */}
         <button

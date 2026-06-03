@@ -91,6 +91,7 @@ site-k7/
 │   ├── hooks/
 │   │   ├── useAuth.ts            # Zustand store + Supabase Auth
 │   │   ├── useUserLocation.ts    # Geolocalização OPT-IN (LGPD)
+│   │   ├── useCepLookup.ts       # Auto-fill de CEP via ViaCEP (debounce + cache 7d)
 │   │   └── useAddressSuggestions.ts # Autocomplete fuzzy
 │   ├── lib/
 │   │   ├── supabase.ts       # Cliente singleton
@@ -100,7 +101,7 @@ site-k7/
 │   ├── types/                # Tipos TypeScript compartilhados
 │   └── constants/            # Dados estáticos (chips, listas)
 ├── supabase_migrations/       # SQL aplicado no Supabase Studio
-│   ├── supabase_migration_final.sql    # Schema + seed (50 dentistas)
+│   ├── supabase_migration_final.sql    # Schema (seeds com PII removidos do versionamento — LGPD)
 │   ├── nova_migracao_raio3km.sql        # lat/lng + RPC Haversine
 │   ├── fix_rpc_get_dentistas_proximos.sql # Cast types v2
 │   └── nova_migracao_avaliacoes.sql    # Tabela avaliacoes + RLS
@@ -139,6 +140,7 @@ site-k7/
 - **Cache local**: `localStorage` para user, geolocalização, query de busca, e cache de perfis
 - **Geolocalização**: SEMPRE opt-in (botão explícito). Nunca chamar `getCurrentPosition` no mount
 - **Busca**: usa `get_dentistas_proximos` (RPC SECURITY DEFINER) + busca textual em paralelo
+- **CEP**: auto-fill via ViaCEP (hook `useCepLookup`), com debounce 500ms e cache local de 7 dias
 - **Auth**: Zustand store com cache local em `localStorage` para login instantâneo
 - **TypeScript**: `noFallthroughCasesInSwitch`, `noUnusedLocals`, `noUnusedParameters` ativos
 - **Lint**: 0 errors, 7 warnings shadcn vendor (esperado, ignore)

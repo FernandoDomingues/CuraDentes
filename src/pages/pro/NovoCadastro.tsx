@@ -34,10 +34,12 @@ import {
   Clock,
   FileText,
   Info,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { getCoordenadas } from "@/lib/geocoding";
+import { useCepLookup, type CepData } from "@/hooks/useCepLookup";
 
 import logoProUrl from "@/assets/logos/logo-pro.png";
 
@@ -103,6 +105,72 @@ const DIAS_SEMANA = [
 // ─── Texto padrão de política de cancelamento ────────────────────────────────
 const POLITICA_CANCELAMENTO_PADRAO =
   "Cancelamentos devem ser feitos com no mínimo 24 horas de antecedência. Faltas sem aviso prévio poderão ser cobradas uma taxa administrativa.";
+
+// ─── Formata CEP como #####-### ───────────────────────────────────────────────
+function formatarCep(valor: string): string {
+  const numeros = valor.replace(/\D/g, "").slice(0, 8);
+  return numeros.replace(/(\d{5})(\d{1,3})/, "$1-$2");
+}
+
+// ─── Sub-componente: Input de CEP com auto-fill via ViaCEP ────────────────────
+// Encapsula o hook useCepLookup para que o componente principal nao precise
+// extrair um sub-componente do card inteiro (rules of hooks).
+
+interface CepInputComBuscaProps {
+  value: string;
+  onChange: (cep: string) => void;
+  onResolved: (data: CepData) => void;
+  inputStyle: React.CSSProperties;
+  labelStyle: React.CSSProperties;
+}
+
+function CepInputComBusca({ value, onChange, onResolved, inputStyle, labelStyle }: CepInputComBuscaProps) {
+  const { data, loading, notFound, error } = useCepLookup(value);
+  const lastResolvedRef = useRef<string | null>(null);
+
+  // Auto-fill quando o lookup retornar dados novos
+  useEffect(() => {
+    if (!data) return;
+    const fingerprint = `${data.logradouro}|${data.bairro}|${data.cidade}|${data.estado}`;
+    if (lastResolvedRef.current === fingerprint) return;
+    lastResolvedRef.current = fingerprint;
+    onResolved(data);
+  }, [data, onResolved]);
+
+  // Toast em caso de erro de rede (CEP nao encontrado e mostrado inline)
+  useEffect(() => {
+    if (error) toast.error("Não foi possível consultar o CEP. Verifique sua conexão.");
+  }, [error]);
+
+  return (
+    <div>
+      <label style={labelStyle}>CEP (somente números)</label>
+      <div style={{ position: "relative" }}>
+        <input
+          type="text"
+          inputMode="numeric"
+          value={value}
+          onChange={(e) => onChange(formatarCep(e.target.value))}
+          placeholder="00000-000"
+          maxLength={9}
+          style={{ ...inputStyle, paddingRight: loading ? "36px" : inputStyle.paddingRight ?? undefined }}
+        />
+        {loading && (
+          <Loader2
+            size={16}
+            className="animate-spin"
+            style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: "#8E8E93" }}
+          />
+        )}
+      </div>
+      {notFound && (
+        <p className="text-[11px] mt-1" style={{ color: "#FF9500" }}>
+          CEP não encontrado. Preencha o endereço manualmente.
+        </p>
+      )}
+    </div>
+  );
+}
 
 // ─── Definição das etapas ────────────────────────────────────────────────────
 const ETAPAS = [
@@ -216,6 +284,9 @@ export default function NovoCadastro() {
   const [emailVerificado, setEmailVerificado] = useState(false);
   const [tokenEmailInput, setTokenEmailInput] = useState("");
   const [aguardandoTokenEmail, setAguardandoTokenEmail] = useState(false);
+  // Email para o qual o signUp foi feito nesta sessao.
+  // Quando igual ao `email` atual, usamos resend() (senao, signUp).
+  const [emailSignUp, setEmailSignUp] = useState<string | null>(null);
   const [senha, setSenha] = useState("");
   const [confirmaSenha, setConfirmaSenha] = useState("");
   const [mostrarSenha, setMostrarSenha] = useState(false);
@@ -288,41 +359,61 @@ export default function NovoCadastro() {
   const progresso = ((etapa - 1) / (ETAPAS.length - 1)) * 100;
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Função: Simula envio do token de verificação de email
-  // Em produção: chamar API de envio de email com token gerado no backend
+  // Função: Envia token de verificação de email
+  //
+  // Usa signInWithOtp + shouldCreateUser: true (cria um user "stub" em
+  // auth.users se nao existir).
+  //
+  // Para REENVIAR, basta chamar signInWithOtp de novo: o client GoTrue
+  // gera um OTP novo e desconsidera o anterior (padrao recomendado pela
+  // documentacao oficial do Supabase).
+  //
+  // Diferenca pro signUp antigo: o template "Confirm sign up" tem uma
+  // restricao interna de "uma vez por endereco" no GoTrue (o usuario ja
+  // foi criado, entao o reenvio trava). O fluxo de OTP via signInWithOtp
+  // nao tem essa restricao.
+  //
+  // A senha e definida DEPOIS, via updateUser, quando o usuario avanca
+  // da Etapa 1.
   // ─────────────────────────────────────────────────────────────────────────
   async function enviarTokenEmail() {
-    if (senha.length < 8) {
-      toast.error("Por favor, preencha a sua Senha (mínimo 8 caracteres) logo abaixo antes de verificar o e-mail!");
-      return;
-    }
+    const isResend = emailSignUp === email;
+    const toastId = toast.loading(isResend ? "Reenviando código..." : "Enviando código...");
 
-    const toastId = toast.loading("Enviando código...");
-    const { error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signInWithOtp({
       email,
-      password: senha,
+      options: { shouldCreateUser: true },
     });
-
     if (error) {
-      toast.error("Erro ao enviar: " + error.message, { id: toastId });
+      toast.error(
+        (isResend ? "Erro ao reenviar: " : "Erro ao enviar: ") + error.message,
+        { id: toastId }
+      );
       return;
     }
 
-    toast.success("Código enviado para o seu e-mail!", { id: toastId });
+    setEmailSignUp(email);
+    toast.success(
+      isResend ? "Código reenviado para o seu e-mail!" : "Código enviado para o seu e-mail!",
+      { id: toastId }
+    );
     setAguardandoTokenEmail(true);
   }
 
   // ─────────────────────────────────────────────────────────────────────────
   // Função: Valida o token de email inserido pelo usuário
+  //
+  // type: "email" casa com o template OTP disparado por signInWithOtp /
+  // resend({type:"email"}). (Era "signup" no fluxo antigo, vindo de signUp.)
   // ─────────────────────────────────────────────────────────────────────────
   async function validarTokenEmail() {
     if (tokenEmailInput.length !== 8) return;
-    
+
     const toastId = toast.loading("Validando código...");
     const { error } = await supabase.auth.verifyOtp({
       email,
       token: tokenEmailInput,
-      type: "signup"
+      type: "email"
     });
 
     if (error) {
@@ -336,12 +427,26 @@ export default function NovoCadastro() {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Função: Formata o CEP (#####-###)
+  // Handler: Avançar da Etapa 1
+  //
+  // Sincroniza a senha real com o Supabase via updateUser. Necessário porque
+  // o fluxo de email usa signInWithOtp (sem senha) e o usuario define a
+  // senha aqui na Etapa 1. Idempotente: pode ser chamado quantas vezes
+  // forem necessarias sem efeito colateral.
   // ─────────────────────────────────────────────────────────────────────────
-  function formatarCep(valor: string) {
-    const numeros = valor.replace(/\D/g, "").slice(0, 8);
-    return numeros.replace(/(\d{5})(\d{1,3})/, "$1-$2");
+  async function avancarEtapa1() {
+    if (!emailVerificado || senha.length < 8) return;
+    const { error } = await supabase.auth.updateUser({ password: senha });
+    if (error) {
+      toast.error("Erro ao salvar a senha: " + error.message);
+      throw error;
+    }
   }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // (formatarCep foi movido para escopo de módulo para reuso no
+  //  sub-componente CepInputComBusca.)
+  // ─────────────────────────────────────────────────────────────────────────
 
   // ─────────────────────────────────────────────────────────────────────────
   // Função: Formata o CPF enquanto o usuário digita (###.###.###-##)
@@ -718,7 +823,14 @@ export default function NovoCadastro() {
   );
 
   // ─── Botões de navegação entre etapas ────────────────────────────────────
-  const renderNavegacao = (podeProsseguir = true, ultimaEtapa = false, ocultarPular = false) => (
+  // onAvancar: callback opcional executado antes de mudar de etapa
+  // (usado pela Etapa 1 para sincronizar a senha via updateUser).
+  const renderNavegacao = (
+    podeProsseguir = true,
+    ultimaEtapa = false,
+    ocultarPular = false,
+    onAvancar?: () => Promise<void> | void
+  ) => (
     <div className="flex items-center justify-between mt-8 pt-6" style={{ borderTop: "0.5px solid rgba(60,60,67,0.10)" }}>
       {/* Botão voltar */}
       {etapa > 1 ? (
@@ -770,7 +882,10 @@ export default function NovoCadastro() {
           </button>
         ) : (
           <button
-            onClick={() => setEtapa(etapa + 1)}
+            onClick={async () => {
+              if (onAvancar) await onAvancar();
+              setEtapa(etapa + 1);
+            }}
             disabled={!podeProsseguir}
             className="flex items-center gap-2 px-6 py-3 rounded-[14px] font-semibold text-[15px] min-h-[44px] transition-all duration-200 text-white"
             style={{
@@ -980,7 +1095,8 @@ export default function NovoCadastro() {
       {renderNavegacao(
         nome.trim() !== "" && emailVerificado && senha.length >= 8 && senha === confirmaSenha,
         false,
-        true  // Etapa 1: ocultar "Deixar para mais tarde" — e-mail deve ser verificado
+        true,  // Etapa 1: ocultar "Deixar para mais tarde" — e-mail deve ser verificado
+        avancarEtapa1  // Sincroniza a senha real com o Supabase antes de avancar
       )}
     </div>
   );
@@ -1315,8 +1431,18 @@ export default function NovoCadastro() {
                 <input type="text" value={end.bairro} onChange={(e) => atualizarEndereco(idx, "bairro", e.target.value)} placeholder="Centro" style={inputStyle} />
               </div>
               <div>
-                <label style={labelStyle}>CEP (somente números)</label>
-                <input type="text" value={end.cep} onChange={(e) => atualizarEndereco(idx, "cep", formatarCep(e.target.value))} placeholder="00000-000" maxLength={9} style={inputStyle} />
+                <CepInputComBusca
+                  value={end.cep}
+                  onChange={(cep) => atualizarEndereco(idx, "cep", cep)}
+                  onResolved={(d) => {
+                    atualizarEndereco(idx, "logradouro", d.logradouro);
+                    atualizarEndereco(idx, "bairro", d.bairro);
+                    atualizarEndereco(idx, "cidade", d.cidade);
+                    atualizarEndereco(idx, "estado", d.estado);
+                  }}
+                  inputStyle={inputStyle}
+                  labelStyle={labelStyle}
+                />
               </div>
               <div>
                 <label style={labelStyle}>Cidade *</label>

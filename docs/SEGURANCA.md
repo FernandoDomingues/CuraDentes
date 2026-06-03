@@ -8,7 +8,7 @@ Documento explicando como o projeto lida com RLS, Storage, autenticação e LGPD
 
 | Camada | Status | Detalhe |
 |---|---|---|
-| Auth | ✅ Supabase Auth (Google OAuth + email/senha) | Token em `localStorage`, refresh automático |
+| Auth | ✅ Supabase Auth (Google OAuth para pacientes, email/senha para dentistas, OTP de email no cadastro Pro via `signInWithOtp`) | Token em `localStorage`, refresh automático |
 | RLS em `avaliacoes` | ✅ 4 policies granulares | SELECT público, INSERT autenticado, UPDATE/DELETE só pelo dono |
 | RLS em `clientes` | ✅ Após migration 2026-06-02 | SELECT público, escrita só pelo dono (`auth.uid() = user_id`) |
 | RLS em `curadentespro` | ✅ Após migration 2026-06-02 | SELECT público, escrita só pelo dono |
@@ -139,6 +139,21 @@ A LGPD (e GDPR) exigem consentimento explícito antes de coletar dados de locali
 
 ---
 
+## Auto-fill de CEP — ViaCEP, OPT-IN por digitação
+
+A consulta de CEP no cadastro Pro (`useCepLookup.ts`) segue o mesmo princípio da geolocalização:
+
+- ❌ **NÃO** chamamos a API do ViaCEP no mount
+- ✅ Dispara só depois de o usuário digitar 8 dígitos (CEP completo) + debounce de 500ms
+- ✅ Cache local em `localStorage` com TTL 7 dias (mesmo CEP não é consultado de novo)
+- ✅ `AbortController` cancela requisições antigas se o usuário digitar outro CEP antes da resposta
+- ✅ CEP inexistente mostra mensagem amigável e **NÃO** auto-preenche nada
+- ✅ API é pública (não precisa de auth), mas o lookup é local — não vaza nada para o backend Supabase
+
+**Ver `src/hooks/useCepLookup.ts` para a implementação completa.**
+
+---
+
 ## Como auditar a segurança
 
 ### 1. Listar policies atuais
@@ -227,4 +242,4 @@ Se alguém reportar vazamento de dados ou comportamento estranho:
 
 ---
 
-**Última atualização:** 2026-06-02 (após migration de segurança)
+**Última atualização:** 2026-06-02 (após migration de segurança + iteração do fluxo de auth)
