@@ -3,11 +3,23 @@ import logoComNome from "@/assets/logos/logo-com-nome.png";
 
 const LOGO_FULL = logoComNome;
 
-const FOOTER_LINKS = {
-  Pacientes: ["Buscar dentista", "Como funciona", "Avaliar consulta", "Suporte"],
-  Dentistas: ["Cadastrar dentista", "Planos e preços", "Central do dentista", "Parceiros"],
-  Empresa: ["Sobre nós", "Blog", "Imprensa", "Trabalhe conosco"],
-  Legal: ["Termos de uso", "Privacidade", "Cookies"],
+const FOOTER_LINKS: Record<string, { label: string; href: string }[]> = {
+  Pacientes: [
+    { label: "Buscar dentista", href: "/pesquisa" },
+    { label: "Como funciona", href: "#como-funciona" },
+  ],
+  Dentistas: [
+    { label: "Cadastrar dentista", href: "/pro/novo-cadastro" },
+    { label: "Acesso do dentista", href: "#" },
+  ],
+  Empresa: [
+    { label: "Sobre nós", href: "#" },
+  ],
+  Legal: [
+    { label: "Termos de uso", href: "/termos" },
+    { label: "Privacidade", href: "/privacidade" },
+    { label: "Cookies", href: "/privacidade#cookies" },
+  ],
 };
 
 export default function Footer() {
@@ -58,15 +70,15 @@ export default function Footer() {
               </h3>
               <ul className="flex flex-col gap-3">
                 {links.map((link) => (
-                  <li key={link}>
+                  <li key={link.label}>
                     <a
-                      href={link === "Cadastrar dentista" ? "/pro/novo-cadastro" : "#"}
+                      href={link.href}
                       className="text-[14px] transition-colors duration-200 inline-block min-h-[32px] py-0.5"
                       style={{ color: "rgba(255,255,255,0.72)" }}
                       onMouseEnter={(e) => { e.currentTarget.style.color = "#fff"; }}
                       onMouseLeave={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.72)"; }}
                     >
-                      {link}
+                      {link.label}
                     </a>
                   </li>
                 ))}

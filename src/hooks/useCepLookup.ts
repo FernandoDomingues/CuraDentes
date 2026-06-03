@@ -87,8 +87,9 @@ export function useCepLookup(cep: string): {
       return;
     }
 
+    const controller = new AbortController();
+
     const timer = setTimeout(() => {
-      const controller = new AbortController();
       setLoading(true);
 
       fetch(`https://viacep.com.br/ws/${digits}/json/`, { signal: controller.signal })
@@ -118,11 +119,12 @@ export function useCepLookup(cep: string): {
           setError(true);
         })
         .finally(() => setLoading(false));
-
-      return () => controller.abort();
     }, DEBOUNCE_MS);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [digits]);
 
   return { data, loading, notFound, error };

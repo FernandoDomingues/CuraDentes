@@ -203,9 +203,9 @@ export default function Header() {
 
         <p className="text-[12px] text-center" style={{ color: "#8E8E93", lineHeight: 1.6 }}>
           Ao entrar, você concorda com nossos{" "}
-          <a href="#" className="underline" style={{ color: "#007AFF" }}>Termos de Uso</a>{" "}
+          <a href="/termos" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: "#007AFF" }}>Termos de Uso</a>{" "}
           e{" "}
-          <a href="#" className="underline" style={{ color: "#007AFF" }}>Política de Privacidade</a>.
+          <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: "#007AFF" }}>Política de Privacidade</a>.
         </p>
       </div>
     </div>

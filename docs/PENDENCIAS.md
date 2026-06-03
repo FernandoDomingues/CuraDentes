@@ -82,6 +82,8 @@ Em uma sessão de QA, mapeamos 10 itens de melhoria no projeto. Itens 1, 2, 3 fo
 - **Item 12 — Auto-fill de CEP via ViaCEP (Etapa 4 do cadastro Pro):** criado `src/hooks/useCepLookup.ts` (debounce 500ms, cache localStorage 7 dias, AbortController para evitar race condition, estados `loading`/`notFound`/`error`). Sub-componente `CepInputComBusca` encapsula o hook. Auto-preenche `logradouro`, `bairro`, `cidade`, `estado` (sempre sobrescreve). `numero`, `complemento`, `nome_clinica` ficam manuais. `MeuPerfil.tsx` não foi tocado (escopo apenas do cadastro).
 - **Item 13 — Email verification: senha antes do email:** o usuário pode verificar o email antes de definir a senha. Usamos uma senha placeholder no `signUp` (depois removido no item 14) e sincronizamos a senha real via `updateUser` ao avançar da Etapa 1 (`avancarEtapa1`). `updateUser` é idempotente.
 - **Item 14 — Migração do fluxo de email: `signUp` → `signInWithOtp`:** o template "Confirm sign up" do GoTrue tem uma trava interna de "uma vez por endereço" — emails subsequentes para o mesmo destinatário não chegavam (mesmo com `resend` retornando 200). Migramos para `signInWithOtp` com `shouldCreateUser: true` (cria user stub em `auth.users`), `verifyOtp({type:"email"})` para validar, e reenvio via nova chamada a `signInWithOtp` (padrão recomendado pela doc oficial do Supabase para OTPs passwordless). SMTP do Supabase configurado com Hostinger (`smtp.hostinger.com:465` SSL). Trade-off aceito: user stubs em `auth.users` se o dentista abandonar o cadastro.
+  - **Customização de templates:** ver seção "Customização de email templates" em `docs/SEGURANCA.md` (template ativo é "Magic link", não "Confirm sign up").
+- **Item 15 — Redefinição de senha (`resetPasswordForEmail` + `updateUser`):** nova seção "Segurança" no `MeuPerfil.tsx` com botão "Trocar senha" que dispara o template "Password recovery" do Supabase. O link do email leva para a nova página `/pro/redefinir-senha` (público, valida sessão de recovery via evento `PASSWORD_RECOVERY` do `onAuthStateChange`). Form com barra de força reutilizada do `NovoCadastro.tsx`. Após salvar, `signOut()` e redirect para home. SMTP usa o mesmo `do-not-reply@curadentes.com.br`. Requer adicionar `${SiteURL}/pro/redefinir-senha` à lista de "Redirect URLs" no Supabase Dashboard. Ver seção "Fluxo de redefinição de senha" em `docs/SEGURANCA.md`.
 
 ---
 
@@ -136,6 +138,13 @@ Não há ainda:
 
 ## Próximas melhorias (sugestões, não estão no checklist)
 
+- **Verificação de telefone no cadastro Pro** — atualmente a Etapa 2 do cadastro (`NovoCadastro.tsx`) tem o gate de validação relaxado e a UI de verificação comentada (decisão: telefone é opcional por enquanto). Quando for reativar, opções pesquisadas em 2026-06-02:
+  - **WhatsApp Cloud API (Meta)** — 1000 conversas/mês grátis, depois ~US$ 0.0042/utility. Recomendado para BR (todo mundo tem WhatsApp, não paga SMS).
+  - **TOTP (Google Authenticator)** — R$ 0, mais seguro que SMS, mas exige instalar app.
+  - **Twilio Voice OTP** — ~US$ 0.013/min para BR (chamada de 15s ≈ R$ 0,01), pago desde a primeira.
+  - **Twilio SMS** — ~US$ 0.06-0.08 por SMS no BR, mais caro.
+  - SMS grátis a longo prazo não existe (carriers sempre cobram terminação).
+  - Bloco da UI de SMS/WhatsApp já está no código em `NovoCadastro.tsx` (linhas comentadas com `modoVerifTel`); é só descomentar e religar o state `telefoneVerificado` quando decidir pelo provider.
 - **2FA para dentistas** — `supabase.auth.mfa.enroll`
 - **Stripe Connect** — para dentistas cobrarem consultas (já tem `@stripe/react-stripe-js` no package.json mas não está em uso)
 - **Agendamento real** — tabela `agendamentos` + fluxo de escolha de horário

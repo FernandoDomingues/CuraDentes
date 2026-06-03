@@ -34,12 +34,11 @@ import {
   Clock,
   FileText,
   Info,
-  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { getCoordenadas } from "@/lib/geocoding";
-import { useCepLookup, type CepData } from "@/hooks/useCepLookup";
+import { CepInputComBusca } from "@/components/ui/CepInputComBusca";
 
 import logoProUrl from "@/assets/logos/logo-pro.png";
 
@@ -106,71 +105,6 @@ const DIAS_SEMANA = [
 const POLITICA_CANCELAMENTO_PADRAO =
   "Cancelamentos devem ser feitos com no mínimo 24 horas de antecedência. Faltas sem aviso prévio poderão ser cobradas uma taxa administrativa.";
 
-// ─── Formata CEP como #####-### ───────────────────────────────────────────────
-function formatarCep(valor: string): string {
-  const numeros = valor.replace(/\D/g, "").slice(0, 8);
-  return numeros.replace(/(\d{5})(\d{1,3})/, "$1-$2");
-}
-
-// ─── Sub-componente: Input de CEP com auto-fill via ViaCEP ────────────────────
-// Encapsula o hook useCepLookup para que o componente principal nao precise
-// extrair um sub-componente do card inteiro (rules of hooks).
-
-interface CepInputComBuscaProps {
-  value: string;
-  onChange: (cep: string) => void;
-  onResolved: (data: CepData) => void;
-  inputStyle: React.CSSProperties;
-  labelStyle: React.CSSProperties;
-}
-
-function CepInputComBusca({ value, onChange, onResolved, inputStyle, labelStyle }: CepInputComBuscaProps) {
-  const { data, loading, notFound, error } = useCepLookup(value);
-  const lastResolvedRef = useRef<string | null>(null);
-
-  // Auto-fill quando o lookup retornar dados novos
-  useEffect(() => {
-    if (!data) return;
-    const fingerprint = `${data.logradouro}|${data.bairro}|${data.cidade}|${data.estado}`;
-    if (lastResolvedRef.current === fingerprint) return;
-    lastResolvedRef.current = fingerprint;
-    onResolved(data);
-  }, [data, onResolved]);
-
-  // Toast em caso de erro de rede (CEP nao encontrado e mostrado inline)
-  useEffect(() => {
-    if (error) toast.error("Não foi possível consultar o CEP. Verifique sua conexão.");
-  }, [error]);
-
-  return (
-    <div>
-      <label style={labelStyle}>CEP (somente números)</label>
-      <div style={{ position: "relative" }}>
-        <input
-          type="text"
-          inputMode="numeric"
-          value={value}
-          onChange={(e) => onChange(formatarCep(e.target.value))}
-          placeholder="00000-000"
-          maxLength={9}
-          style={{ ...inputStyle, paddingRight: loading ? "36px" : inputStyle.paddingRight ?? undefined }}
-        />
-        {loading && (
-          <Loader2
-            size={16}
-            className="animate-spin"
-            style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: "#8E8E93" }}
-          />
-        )}
-      </div>
-      {notFound && (
-        <p className="text-[11px] mt-1" style={{ color: "#FF9500" }}>
-          CEP não encontrado. Preencha o endereço manualmente.
-        </p>
-      )}
-    </div>
-  );
-}
 
 // ─── Definição das etapas ────────────────────────────────────────────────────
 const ETAPAS = [
@@ -444,8 +378,7 @@ export default function NovoCadastro() {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // (formatarCep foi movido para escopo de módulo para reuso no
-  //  sub-componente CepInputComBusca.)
+  // (formatarCep e CepInputComBusca movidos para src/components/ui/CepInputComBusca)
   // ─────────────────────────────────────────────────────────────────────────
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -694,9 +627,11 @@ export default function NovoCadastro() {
     campo: K,
     valor: EnderecoForm[K]
   ) {
-    const novos = [...enderecos];
-    novos[idx] = { ...novos[idx], [campo]: valor };
-    setEnderecos(novos);
+    setEnderecos((prev) => {
+      const novos = [...prev];
+      novos[idx] = { ...novos[idx], [campo]: valor };
+      return novos;
+    });
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -708,24 +643,33 @@ export default function NovoCadastro() {
     campo: "atividades" | "convenios" | "formas_pagamento",
     opcao: string
   ) {
-    const novos = [...enderecos];
-    const lista = novos[idx][campo];
-    novos[idx] = {
-      ...novos[idx],
-      [campo]: lista.includes(opcao)
-        ? lista.filter((i) => i !== opcao)
-        : [...lista, opcao],
-    };
-    setEnderecos(novos);
+    setEnderecos((prev) => {
+      const novos = [...prev];
+      const lista = novos[idx][campo];
+      novos[idx] = {
+        ...novos[idx],
+        [campo]: lista.includes(opcao)
+          ? lista.filter((i) => i !== opcao)
+          : [...lista, opcao],
+      };
+      return novos;
+    });
   }
 
   // ─────────────────────────────────────────────────────────────────────────
   // Função: Alterna a atividade de um dia na agenda de um endereço
   // ─────────────────────────────────────────────────────────────────────────
   function toggleDiaAgenda(idxEnd: number, idxDia: number) {
-    const novos = [...enderecos];
-    novos[idxEnd].agenda[idxDia].ativo = !novos[idxEnd].agenda[idxDia].ativo;
-    setEnderecos(novos);
+    setEnderecos((prev) => {
+      const novos = [...prev];
+      novos[idxEnd] = {
+        ...novos[idxEnd],
+        agenda: novos[idxEnd].agenda.map((d, i) =>
+          i === idxDia ? { ...d, ativo: !d.ativo } : d
+        ),
+      };
+      return novos;
+    });
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -737,9 +681,16 @@ export default function NovoCadastro() {
     campo: "inicio" | "fim",
     valor: string
   ) {
-    const novos = [...enderecos];
-    novos[idxEnd].agenda[idxDia][campo] = valor;
-    setEnderecos(novos);
+    setEnderecos((prev) => {
+      const novos = [...prev];
+      novos[idxEnd] = {
+        ...novos[idxEnd],
+        agenda: novos[idxEnd].agenda.map((d, i) =>
+          i === idxDia ? { ...d, [campo]: valor } : d
+        ),
+      };
+      return novos;
+    });
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -1107,8 +1058,11 @@ export default function NovoCadastro() {
   const renderEtapa2 = () => (
     <div className="flex flex-col gap-5">
       <div>
-        <h2 className="text-[22px] font-bold mb-1" style={{ color: "#0A2A66" }}>Verificação do telefone</h2>
-        <p className="text-[14px]" style={{ color: "#8E8E93" }}>Usaremos para notificações e segurança da conta</p>
+        <h2 className="text-[22px] font-bold mb-1" style={{ color: "#0A2A66" }}>Telefone de contato</h2>
+        <p className="text-[14px]" style={{ color: "#8E8E93" }}>
+          Usaremos para notificações e segurança da conta.
+          A verificação por SMS/WhatsApp será habilitada em uma versão futura — por enquanto o campo é opcional.
+        </p>
       </div>
 
       {/* Número de Telefone formatado sem +55 */}
@@ -1116,7 +1070,7 @@ export default function NovoCadastro() {
         <label style={labelStyle}>
           <span className="flex items-center gap-1.5">
             <Phone size={13} />
-            Número de telefone *
+            Número de telefone (opcional)
             {validarTelefone(telefone) && (
               <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: "rgba(52,199,89,0.10)", color: "#34C759" }}>
                 <Check size={10} /> Válido
@@ -1140,7 +1094,9 @@ export default function NovoCadastro() {
             Número inválido. O celular deve conter DDD e começar com 9.
           </p>
         )}
-        <p className="text-[12px] mt-1" style={{ color: "#8E8E93" }}>Digite o DDD e o número: (11) 99999-9999</p>
+        <p className="text-[12px] mt-1" style={{ color: "#8E8E93" }}>
+          Opcional. Formato: DDD + 9 dígitos (ex.: (11) 99999-9999).
+        </p>
       </div>
 
       {/* Modo de verificação: SMS ou WhatsApp (Comentado para implementações futuras)
@@ -1211,7 +1167,7 @@ export default function NovoCadastro() {
       )}
       */}
 
-      {renderNavegacao(validarTelefone(telefone))}
+      {renderNavegacao(true)}
     </div>
   );
 
@@ -1400,16 +1356,39 @@ export default function NovoCadastro() {
           </div>
 
           <div className="p-5 flex flex-col gap-4">
-            {/* Nome da clínica */}
-            <div>
-              <label style={labelStyle}>Nome da clínica / consultório *</label>
-              <input
-                type="text"
-                value={end.nome_clinica}
-                onChange={(e) => atualizarEndereco(idx, "nome_clinica", e.target.value)}
-                placeholder="Clínica Sorriso & Estética"
-                style={inputStyle}
-              />
+            {/* Nome da clínica + CEP lado a lado */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label style={labelStyle}>Nome da clínica / consultório *</label>
+                <input
+                  type="text"
+                  value={end.nome_clinica}
+                  onChange={(e) => atualizarEndereco(idx, "nome_clinica", e.target.value)}
+                  placeholder="Clínica Sorriso & Estética"
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <CepInputComBusca
+                  value={end.cep}
+                  onChange={(cep) => atualizarEndereco(idx, "cep", cep)}
+                  onResolved={(d) => {
+                    setEnderecos((prev) => {
+                      const novos = [...prev];
+                      novos[idx] = {
+                        ...novos[idx],
+                        logradouro: d.logradouro,
+                        bairro: d.bairro,
+                        cidade: d.cidade,
+                        estado: d.estado,
+                      };
+                      return novos;
+                    });
+                  }}
+                  inputStyle={inputStyle}
+                  labelStyle={labelStyle}
+                />
+              </div>
             </div>
 
             {/* Endereço completo */}
@@ -1426,23 +1405,9 @@ export default function NovoCadastro() {
                 <label style={labelStyle}>Complemento</label>
                 <input type="text" value={end.complemento} onChange={(e) => atualizarEndereco(idx, "complemento", e.target.value)} placeholder="Sala 42" style={inputStyle} />
               </div>
-              <div>
+              <div className="col-span-2">
                 <label style={labelStyle}>Bairro *</label>
                 <input type="text" value={end.bairro} onChange={(e) => atualizarEndereco(idx, "bairro", e.target.value)} placeholder="Centro" style={inputStyle} />
-              </div>
-              <div>
-                <CepInputComBusca
-                  value={end.cep}
-                  onChange={(cep) => atualizarEndereco(idx, "cep", cep)}
-                  onResolved={(d) => {
-                    atualizarEndereco(idx, "logradouro", d.logradouro);
-                    atualizarEndereco(idx, "bairro", d.bairro);
-                    atualizarEndereco(idx, "cidade", d.cidade);
-                    atualizarEndereco(idx, "estado", d.estado);
-                  }}
-                  inputStyle={inputStyle}
-                  labelStyle={labelStyle}
-                />
               </div>
               <div>
                 <label style={labelStyle}>Cidade *</label>
@@ -1764,7 +1729,7 @@ export default function NovoCadastro() {
           {[
             { label: "Nome", valor: nome || "—", ok: !!nome },
             { label: "E-mail", valor: email, ok: emailVerificado },
-            { label: "Telefone", valor: telefone || "—", ok: telefoneVerificado },
+            { label: "Telefone", valor: telefone || "Não informado", ok: !telefone || validarTelefone(telefone) },
             { label: "CRO", valor: cro || "—", ok: !!cro },
             { label: "CPF", valor: cpf ? "Informado" : "—", ok: !!cpf },
             { label: "Endereços", valor: `${enderecos.length} cadastrado(s)`, ok: enderecos.length > 0 },
@@ -1799,11 +1764,11 @@ export default function NovoCadastro() {
         />
         <span className="text-[14px]" style={{ color: "#3A3A3C", lineHeight: 1.7 }}>
           Li e concordo com a{" "}
-          <a href="#" className="font-semibold underline" style={{ color: "#007AFF" }}>
+          <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="font-semibold underline" style={{ color: "#007AFF" }}>
             Política de Privacidade
           </a>{" "}
           e os{" "}
-          <a href="#" className="font-semibold underline" style={{ color: "#007AFF" }}>
+          <a href="/termos" target="_blank" rel="noopener noreferrer" className="font-semibold underline" style={{ color: "#007AFF" }}>
             Termos de Uso
           </a>{" "}
           do CuraDentes Pro, incluindo o tratamento dos meus dados conforme a LGPD (Lei nº 13.709/2018).{" "}

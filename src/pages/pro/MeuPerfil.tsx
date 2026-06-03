@@ -25,9 +25,10 @@ import { uploadFotoDentista } from "@/lib/uploadService";
 import { getCoordenadas } from "@/lib/geocoding";
 import {
   User, Building2, Save, ArrowLeft, Loader2,
-  Camera, Plus, Trash2
+  Camera, Plus, Trash2, ShieldCheck, Mail, KeyRound
 } from "lucide-react";
 import logoProUrl from "@/assets/logos/logo-pro.png";
+import { CepInputComBusca } from "@/components/ui/CepInputComBusca";
 import logoProAltUrl from "@/assets/logos/logo-pro-alt.png";
 
 // --- Constantes ---
@@ -113,6 +114,8 @@ export default function MeuPerfil() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [enviandoLinkSenha, setEnviandoLinkSenha] = useState(false);
 
   // Dados Pessoais
   const [nome, setNome] = useState("");
@@ -140,6 +143,7 @@ export default function MeuPerfil() {
 
         const uid = session.user.id;
         setUserId(uid);
+        setUserEmail(session.user.email ?? null);
 
         const { data: perfil, error: perfilError } = await supabase
           .from("curadentespro")
@@ -305,6 +309,36 @@ export default function MeuPerfil() {
       toast.error(message, { id: toastId });
     } finally {
       setSaving(false);
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Envia email com link de redefinição de senha.
+  // O Supabase dispara o template "Password recovery" e redireciona o link
+  // para /pro/redefinir-senha, onde o dentista define a nova senha.
+  // ─────────────────────────────────────────────────────────────────────────
+  async function handleTrocarSenha() {
+    if (!userEmail) {
+      toast.error("Não foi possível identificar o e-mail da sua conta.");
+      return;
+    }
+    setEnviandoLinkSenha(true);
+    const toastId = toast.loading("Enviando link de confirmação...");
+    try {
+      const redirectTo = window.location.origin + "/pro/redefinir-senha";
+      const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
+        redirectTo,
+      });
+      if (error) throw error;
+      toast.success(
+        "Link enviado! Verifique o e-mail " + userEmail + " e clique no botão para definir a nova senha.",
+        { id: toastId, duration: 8000 }
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erro ao enviar o link.";
+      toast.error(message, { id: toastId });
+    } finally {
+      setEnviandoLinkSenha(false);
     }
   }
 
@@ -481,9 +515,30 @@ export default function MeuPerfil() {
 
               <div className="p-6 flex flex-col gap-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2">
+                  <div>
                     <label style={labelStyle}>Nome da clínica / consultório *</label>
                     <input type="text" value={end.nome_clinica} onChange={(e) => atualizarEndereco(idx, "nome_clinica", e.target.value)} placeholder="Clínica Sorriso..." style={inputStyle} />
+                  </div>
+                  <div>
+                    <CepInputComBusca
+                      value={end.cep}
+                      onChange={(cep) => atualizarEndereco(idx, "cep", cep)}
+                      onResolved={(d) => {
+                        setEnderecos((prev) => {
+                          const novos = [...prev];
+                          novos[idx] = {
+                            ...novos[idx],
+                            logradouro: d.logradouro,
+                            bairro: d.bairro,
+                            cidade: d.cidade,
+                            estado: d.estado,
+                          };
+                          return novos;
+                        });
+                      }}
+                      inputStyle={inputStyle}
+                      labelStyle={labelStyle}
+                    />
                   </div>
                   <div className="md:col-span-2">
                     <label style={labelStyle}>Logradouro *</label>
@@ -497,13 +552,9 @@ export default function MeuPerfil() {
                     <label style={labelStyle}>Complemento</label>
                     <input type="text" value={end.complemento} onChange={(e) => atualizarEndereco(idx, "complemento", e.target.value)} placeholder="Sala 42" style={inputStyle} />
                   </div>
-                  <div>
+                  <div className="md:col-span-2">
                     <label style={labelStyle}>Bairro *</label>
                     <input type="text" value={end.bairro} onChange={(e) => atualizarEndereco(idx, "bairro", e.target.value)} placeholder="Centro" style={inputStyle} />
-                  </div>
-                  <div>
-                    <label style={labelStyle}>CEP</label>
-                    <input type="text" value={end.cep} onChange={(e) => atualizarEndereco(idx, "cep", e.target.value)} placeholder="00000-000" style={inputStyle} />
                   </div>
                   <div>
                     <label style={labelStyle}>Cidade *</label>
@@ -609,6 +660,42 @@ export default function MeuPerfil() {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Seção 3: Segurança */}
+        <div className="bg-white p-6 rounded-[24px] shadow-sm border border-gray-100 flex flex-col gap-4">
+          <div className="flex items-center gap-2">
+            <ShieldCheck size={20} className="text-[#34C759]" />
+            <h2 className="text-[20px] font-bold text-[#0A2A66]">Segurança</h2>
+          </div>
+          <p className="text-[14px] text-gray-600">
+            Para trocar a senha, enviaremos um link de confirmação para o seu e-mail.
+            O link é válido por tempo limitado e só pode ser usado uma vez.
+          </p>
+
+          <div className="bg-gray-50 p-4 rounded-[12px] border border-gray-200 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+            <Mail size={18} className="text-gray-500 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">E-mail da conta</p>
+              <p className="text-[15px] font-semibold text-[#0A2A66] truncate">{userEmail || "—"}</p>
+            </div>
+            <button
+              onClick={handleTrocarSenha}
+              disabled={enviandoLinkSenha || !userEmail}
+              className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-[12px] font-semibold text-[14px] text-white transition-all disabled:opacity-50 shrink-0"
+              style={{ background: "#0A2A66" }}
+            >
+              {enviandoLinkSenha ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" /> Enviando...
+                </>
+              ) : (
+                <>
+                  <KeyRound size={14} /> Trocar senha
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </main>
     </div>

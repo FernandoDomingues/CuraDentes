@@ -15,6 +15,7 @@
 //   /pro/novo-cadastro      → Signup Pro em 6 etapas (público, vira autenticado)
 //   /pro/dashboard          → Painel principal (autenticado: dentista)
 //   /pro/perfil             → Editor de perfil (autenticado: dentista)
+//   /pro/redefinir-senha    → Landing do link de redefinição de senha (público, requer sessão de recovery)
 //   *                       → 404 (público)
 //
 // IMPORTANTE: useAuth.initialize() é idempotente (checa `initialized`
@@ -34,6 +35,9 @@ import DentistProfile from "@/pages/DentistProfile";
 import NovoCadastro from "@/pages/pro/NovoCadastro";
 import Dashboard from "@/pages/pro/Dashboard";
 import MeuPerfil from "@/pages/pro/MeuPerfil";
+import RedefinirSenha from "@/pages/pro/RedefinirSenha";
+import Privacidade from "@/pages/Privacidade";
+import TermosDeUso from "@/pages/TermosDeUso";
 
 export default function App() {
   const { initialize } = useAuth();
@@ -52,6 +56,9 @@ export default function App() {
         <Route path="/pro/novo-cadastro" element={<NovoCadastro />} />
         <Route path="/pro/dashboard" element={<Dashboard />} />
         <Route path="/pro/perfil" element={<MeuPerfil />} />
+        <Route path="/pro/redefinir-senha" element={<RedefinirSenha />} />
+        <Route path="/privacidade" element={<Privacidade />} />
+        <Route path="/termos" element={<TermosDeUso />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

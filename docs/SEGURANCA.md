@@ -154,6 +154,101 @@ A consulta de CEP no cadastro Pro (`useCepLookup.ts`) segue o mesmo princípio d
 
 ---
 
+## Customização de email templates
+
+O Supabase envia emails transacionais (verificação, magic link, reset de senha) usando templates HTML configuráveis. **Eles NÃO são parte do código do projeto** — vivem no Supabase Dashboard.
+
+### Onde editar
+
+**Supabase Dashboard → Authentication → Email Templates**
+
+Existem 4 templates prontos para editar:
+
+| Template | Disparado por | Usado pelo nosso projeto? |
+|---|---|---|
+| **Confirm sign up** | `supabase.auth.signUp()` | ⚠️ Legado — não é mais usado pelo cadastro Pro (item 14 migrou para `signInWithOtp`) |
+| **Magic link** | `supabase.auth.signInWithOtp()` | ✅ **Sim** — é o template que o dentista recebe na Etapa 1 do cadastro Pro |
+| **Email change** | mudança de email do user autenticado | ❌ Não usado |
+| **Password recovery** | `supabase.auth.resetPasswordForEmail()` | ✅ **Sim** — disparado pelo botão "Trocar senha" em `MeuPerfil.tsx`, link leva para `/pro/redefinir-senha` |
+
+**Erro comum:** customizar "Confirm sign up" achando que o cadastro Pro usa — mas o fluxo atual (`signInWithOtp` no `enviarTokenEmail` em `src/pages/pro/NovoCadastro.tsx`) dispara o template "Magic link". Se a tela mostra email em inglês, é este o template a editar.
+
+### Variáveis disponíveis
+
+Todas funcionam em qualquer template:
+
+| Variável | O que é | Útil para |
+|---|---|---|
+| `{{ .Token }}` | Código OTP (6 dígitos por padrão) | Mostrar o código destacado pro usuário digitar no form |
+| `{{ .ConfirmationURL }}` | Link mágico que loga o user com 1 clique | Botão de "entrar diretamente" como alternativa |
+| `{{ .SiteURL }}` | URL do projeto configurado no Supabase | Link "voltar para o site" no rodapé |
+| `{{ .Email }}` | Email do destinatário | Confirmação visual / log |
+
+⚠️ **`{{ .Token }}` pode não estar disponível** em projetos com versão antiga do GoTrue (pré-2.x). Se não funcionar, o template cai num fallback de link-only e o usuário precisa clicar no link (não dá pra digitar código no form). Teste disparando um `signInWithOtp` e vendo se o email recebido contém um número de 6 dígitos.
+
+### Idioma e branding
+
+Os templates default vêm em inglês com link genérico. **Recomendado:** traduzir para português e colocar branding "CuraDentes". Aprovação de copy é decisão do time, mas o template precisa ter `{{ .Token }}` (ou `{{ .ConfirmationURL }}`) visível — caso contrário o usuário não consegue completar o fluxo.
+
+**Exemplo mínimo (HTML) para o "Magic link":**
+
+```html
+<h2 style="font-family: sans-serif; color: #0A6E5C;">CuraDentes</h2>
+<p>Use o código abaixo para verificar seu e-mail e continuar seu cadastro:</p>
+<p style="font-family: 'Courier New', monospace; font-size: 32px; font-weight: bold;
+          letter-spacing: 6px; color: #0A6E5C; text-align: center;
+          padding: 16px; background: #F2F8F6; border-radius: 12px;">
+  {{ .Token }}
+</p>
+<p>Este código expira em 1 hora e só pode ser usado uma vez.</p>
+<p>Ou <a href="{{ .ConfirmationURL }}">clique aqui para entrar diretamente</a>.</p>
+<p style="color: #8E8E93; font-size: 12px;">
+  Se você não solicitou este código, ignore este e-mail.
+</p>
+```
+
+### Como testar
+
+1. Customize o template no Dashboard
+2. Salve (botão "Save")
+3. Em outro navegador / aba anônima, dispare `signInWithOtp` (ou acione o fluxo no app)
+4. Confira o email recebido — o HTML do Supabase é inline, então estilos CSS simples funcionam
+5. Se o `{{ .Token }}` não renderizar, veja o log do Supabase (Auth → Logs) e verifique a versão do GoTrue
+
+### SMTP provider
+
+Os templates rodam em cima do SMTP configurado em **Project Settings → Auth → SMTP**. Se o email demora > 30s para chegar ou não chega, o problema geralmente é SMTP (não é o template). Ver `docs/PENDENCIAS.md` item 14 para o setup com Hostinger.
+
+---
+
+## Fluxo de redefinição de senha
+
+O dentista pode trocar a senha pela seção "Segurança" em `MeuPerfil.tsx`. O fluxo é:
+
+1. **Botão "Trocar senha"** chama `supabase.auth.resetPasswordForEmail(email, { redirectTo })`
+2. **Supabase dispara o template "Password recovery"** (precisa estar customizado em português)
+3. **Dentista clica no link** do email → Supabase redireciona para `${redirectTo}#type=recovery&access_token=...`
+4. **Página `/pro/redefinir-senha`** carrega, `detectSessionInUrl: true` parseia o hash, dispara o evento `PASSWORD_RECOVERY`
+5. **Form de nova senha** aparece (validação: 8+ chars + confirmação + barra de força)
+6. **Submit** chama `supabase.auth.updateUser({ password: nova })` → Supabase faz hash e atualiza `auth.users.encrypted_password`
+7. **`signOut()`** encerra a sessão de recovery e redireciona para `/` com toast de sucesso
+8. **Dentista faz login** com a nova senha
+
+**Por que usar o fluxo de recovery (e não atualizar direto)?**
+- Prova que o usuário tem acesso ao email da conta (autenticação de segundo fator grátis)
+- Funciona mesmo que o dentista tenha esquecido a senha atual
+- Padroniza o template "Password recovery" para casos de "esqueci a senha" no futuro (item da checklist)
+
+**Configuração adicional no Supabase Dashboard → Auth → URL Configuration:**
+- Adicionar `https://curadentes.com.br/pro/redefinir-senha` à lista de "Redirect URLs"
+- Adicionar `http://localhost:5173/pro/redefinir-senha` para desenvolvimento local
+
+**`redirectTo` no código:** `window.location.origin + '/pro/redefinir-senha'` — funciona em dev e prod sem hardcode.
+
+**Rota `/pro/redefinir-senha` é pública** (sem `ProtectedRoute`) porque o usuário chega com uma sessão de recovery que não satisfaz o `ProtectedRoute` convencional. A própria página valida se há sessão e mostra erro caso contrário.
+
+---
+
 ## Como auditar a segurança
 
 ### 1. Listar policies atuais
