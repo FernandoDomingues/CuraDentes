@@ -82,6 +82,7 @@ export default function LatestDentists() {
           // Salva os dentistas novos no cache de busca para carregamento instantâneo dos perfis
           saveToSearchCache(comEnderecos.map(d => ({
             dentista_id: d.id,
+            dentista_cro: (d.cro || "").replace(/\s/g, ""),
             dentista_nome: d.nome,
             dentista_foto: d.foto_url || "",
             dentista_bio: d.bio || "",
@@ -171,7 +172,7 @@ export default function LatestDentists() {
             {dentistas.map((dentista) => (
             <div
               key={dentista.id}
-              onClick={() => navigate(`/dentista/${dentista.id}`)}
+              onClick={() => navigate(`/dentista/${dentista.cro || dentista.id}`)}
               className="snap-start snap-always shrink-0 w-[280px] md:w-auto bg-white rounded-[24px] p-5 border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer flex flex-col group relative"
             >
               <div className="absolute top-4 right-4 bg-green-50 text-green-600 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">

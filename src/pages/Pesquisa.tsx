@@ -260,7 +260,7 @@ export default function Pesquisa() {
 
                 return {
                   dentista_id: pro.id,
-                  dentista_cro: pro.cro || "",
+                  dentista_cro: (pro.cro || "").replace(/\s/g, ""),
                   dentista_nome: pro.nome || "Dentista Parceiro",
                   dentista_foto: pro.foto_url || "",
                   dentista_bio: pro.bio || "",

@@ -487,7 +487,7 @@ export default function NovoCadastro() {
     if (letras.length <= 2 && numeros.length === 0) {
       return `CRO-${letras}`;
     }
-    return `CRO-${letras} ${numeros}`;
+    return `CRO-${letras}${numeros}`;
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -498,7 +498,7 @@ export default function NovoCadastro() {
       "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG",
       "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"
     ];
-    const regex = /^CRO-([A-Z]{2})\s(\d{3,6})$/;
+    const regex = /^CRO-([A-Z]{2})(\d{3,6})$/;
     const match = valor.toUpperCase().match(regex);
     if (!match) return false;
     const uf = match[1];
@@ -1288,8 +1288,8 @@ export default function NovoCadastro() {
           type="text"
           value={cro}
           onChange={(e) => setCro(formatarCro(e.target.value))}
-          placeholder="CRO-SP 123456"
-          maxLength={13}
+          placeholder="CRO-SP123456"
+          maxLength={12}
           style={{
             ...inputStyle,
             borderColor: cro.length > 4 && !validarCro(cro) ? "#FF3B30" : "rgba(60,60,67,0.18)",
@@ -1297,7 +1297,7 @@ export default function NovoCadastro() {
         />
         {cro.length > 4 && !validarCro(cro) && (
           <p className="text-[12px] mt-1" style={{ color: "#FF3B30" }}>
-            CRO inválido. Deve conter sigla do estado e 3 a 6 números (ex: CRO-SP 123456).
+            CRO inválido. Deve conter sigla do estado e 3 a 6 números (ex: CRO-SP123456).
           </p>
         )}
         <p className="text-[12px] mt-1" style={{ color: "#8E8E93" }}>Formato: CRO-UF seguido do número de registro</p>

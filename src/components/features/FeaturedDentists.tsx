@@ -269,7 +269,7 @@ export default function FeaturedDentists() {
               <div
                 key={dentista.id}
                 style={{ background: "#fff", cursor: "pointer" }}
-                onClick={() => navigate(`/dentista/${dentista.id}`)}
+                onClick={() => navigate(`/dentista/${dentista.cro || dentista.id}`)}
               >
                 {/* Linha com posição e rating */}
                 <div className="flex items-center gap-2 px-4 pt-3">
@@ -559,7 +559,7 @@ export default function FeaturedDentists() {
                     <div
                       key={dentista.id}
                       className="relative cursor-pointer"
-                      onClick={() => navigate(`/dentista/${dentista.id}`)}
+                      onClick={() => navigate(`/dentista/${dentista.cro || dentista.id}`)}
                     >
                       {/* Medalha posicionada acima do card */}
                       <div
@@ -600,7 +600,7 @@ export default function FeaturedDentists() {
                         style={{
                           borderBottom: isUltimo ? "none" : "0.5px solid rgba(60,60,67,0.08)",
                         }}
-                        onClick={() => navigate(`/dentista/${dentista.id}`)}
+                        onClick={() => navigate(`/dentista/${dentista.cro || dentista.id}`)}
                         onMouseEnter={(e) => {
                           (e.currentTarget as HTMLDivElement).style.background = "rgba(0,122,255,0.04)";
                         }}
@@ -692,7 +692,7 @@ export default function FeaturedDentists() {
                           }}
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigate(`/dentista/${dentista.id}`);
+                            navigate(`/dentista/${dentista.cro || dentista.id}`);
                           }}
                         >
                           Ver perfil
