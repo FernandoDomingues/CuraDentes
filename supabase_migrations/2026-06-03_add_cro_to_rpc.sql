@@ -6,6 +6,8 @@
 --         fallback, mas o CRO e obrigatorio para todos os dentistas cadastrados.
 -- ==============================================================================
 
+DROP FUNCTION IF EXISTS get_dentistas_proximos(double precision, double precision, double precision);
+
 CREATE OR REPLACE FUNCTION get_dentistas_proximos(
   lat DOUBLE PRECISION, 
   lng DOUBLE PRECISION, 
