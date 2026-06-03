@@ -37,7 +37,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
-import { getCoordenadas } from "@/lib/geocoding";
 import { CepInputComBusca } from "@/components/ui/CepInputComBusca";
 
 import logoProUrl from "@/assets/logos/logo-pro.png";
@@ -286,15 +285,35 @@ export default function NovoCadastro() {
   ]);
 
   // ─ Verifica se o cadastro está completo ───────────────────────────────────
-  const cadastroCompleto =
-    nome.trim() !== "" &&
-    emailVerificado &&
-    senha.length >= 8 &&
-    validarTelefone(telefone) &&
-    validarCpf(cpf) &&
-    validarCro(cro) &&
-    enderecos.length > 0 &&
-    lgpdAceito;
+  function validarEnderecos(): { valido: boolean; erros: string[] } {
+    const erros: string[] = [];
+    enderecos.forEach((end, i) => {
+      const prefixo = `Endereço ${i + 1}`;
+      if (!end.nome_clinica.trim()) erros.push(`${prefixo}: Nome da clínica`);
+      if (!end.logradouro.trim()) erros.push(`${prefixo}: Logradouro`);
+      if (!end.bairro.trim()) erros.push(`${prefixo}: Bairro`);
+      if (!end.cidade.trim()) erros.push(`${prefixo}: Cidade`);
+      if (!end.estado.trim()) erros.push(`${prefixo}: Estado`);
+    });
+    return { valido: erros.length === 0, erros };
+  }
+
+  function camposFaltantes(): string[] {
+    const faltando: string[] = [];
+    if (!nome.trim()) faltando.push("Nome completo");
+    if (!emailVerificado) faltando.push("Verificação de e-mail");
+    if (senha.length < 8) faltando.push("Senha (mín. 8 caracteres)");
+    if (!validarTelefone(telefone)) faltando.push("Telefone");
+    if (!validarCpf(cpf)) faltando.push("CPF");
+    if (!validarCro(cro)) faltando.push("CRO");
+    if (!lgpdAceito) faltando.push("Aceite da LGPD");
+    const { valido: endOk, erros: endErros } = validarEnderecos();
+    if (!endOk) faltando.push(...endErros);
+    return faltando;
+  }
+
+  const camposFaltando = camposFaltantes();
+  const cadastroCompleto = camposFaltando.length === 0;
 
   // ─ Calcula progresso da barra ─────────────────────────────────────────────
   const progresso = ((etapa - 1) / (ETAPAS.length - 1)) * 100;
@@ -479,7 +498,7 @@ export default function NovoCadastro() {
       "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG",
       "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"
     ];
-    const regex = /^CRO-([A-Z]{2})\s(\d{4,6})$/;
+    const regex = /^CRO-([A-Z]{2})\s(\d{3,6})$/;
     const match = valor.toUpperCase().match(regex);
     if (!match) return false;
     const uf = match[1];
@@ -497,80 +516,75 @@ export default function NovoCadastro() {
 
     const toastId = toast.loading("Salvando seus dados...");
 
+    // Timeout de segurança: impede que a tela trave para sempre
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("O servidor demorou muito para responder. Verifique sua conexão e tente novamente.")), 45000)
+    );
+
     try {
-      // 1. Obter usuário logado atual
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        throw new Error("Sessão não encontrada. Por favor, valide seu e-mail novamente na Etapa 1.");
-      }
-
-      // 2. Inserir perfil na tabela curadentespro
-      const { error: errorPro } = await supabase.from('curadentespro').upsert({
-        id: user.id,
-        nome: nome,
-        email: email,
-        telefone: telefone,
-        telefone_verificado: validarTelefone(telefone),
-        cpf: cpf,
-        cro: cro,
-        ano_formacao: anoFormacao ? parseInt(anoFormacao) : null,
-        foto_url: fotoUrl || null,
-        bio: bio,
-        lgpd_aceito: lgpdAceito
-      });
-
-      if (errorPro) throw errorPro;
-
-      // 3. Inserir endereços na tabela curadentespro_enderecos
-      for (const end of enderecos) {
-        let lat = null;
-        let lng = null;
-        
-        // Evitar chamadas desnecessárias se os dados base não estiverem preenchidos
-        if (end.logradouro && end.bairro && end.cidade) {
-          const enderecoBusca = `${end.logradouro}, ${end.numero}, ${end.bairro}, ${end.cidade}, ${end.estado}`;
-          const coord = await getCoordenadas(enderecoBusca);
-          if (coord) {
-            lat = coord.latitude;
-            lng = coord.longitude;
+      await Promise.race([
+        timeoutPromise,
+        (async () => {
+          // 1. Obter usuário logado atual
+          const { data: { user } } = await supabase.auth.getUser();
+          
+          if (!user) {
+            throw new Error("Sessão não encontrada. Por favor, valide seu e-mail novamente na Etapa 1.");
           }
-        }
 
-        const { error: errorEnd } = await supabase.from('curadentespro_enderecos').insert({
-          curadentespro_id: user.id,
-          nome_clinica: end.nome_clinica,
-          logradouro: end.logradouro,
-          numero: end.numero,
-          complemento: end.complemento,
-          bairro: end.bairro,
-          cidade: end.cidade,
-          estado: end.estado,
-          cep: end.cep,
-          telefone: end.telefone,
-          whatsapp: end.whatsapp,
-          atende_urgencias: end.atende_urgencias,
-          aceita_urgencia_termo: end.aceita_urgencia_termo,
-          politica_cancelamento: end.politica_cancelamento,
-          observacoes: end.observacoes,
-          atividades: end.atividades,
-          convenios: end.convenios,
-          formas_pagamento: end.formas_pagamento,
-          agenda: end.agenda,
-          latitude: lat,
-          longitude: lng
-        });
+          // 2. Inserir perfil na tabela curadentespro
+          const { error: errorPro } = await supabase.from('curadentespro').upsert({
+            id: user.id,
+            user_id: user.id,
+            nome: nome,
+            email: email,
+            telefone: telefone,
+            telefone_verificado: validarTelefone(telefone),
+            cpf: cpf,
+            cro: cro,
+            ano_formacao: anoFormacao ? parseInt(anoFormacao) : null,
+            foto_url: fotoUrl || null,
+            bio: bio,
+            lgpd_aceito: lgpdAceito
+          });
 
-        if (errorEnd) throw errorEnd;
-      }
+          if (errorPro) throw errorPro;
 
-      toast.success("Cadastro concluído com sucesso!", { id: toastId });
-      
-      // Limpa rascunho
-      localStorage.removeItem("curadentes_pro_cadastro_rascunho");
-      
-      navigate("/pro/dashboard");
+          // 3. Inserir endereços na tabela curadentespro_enderecos
+          for (const end of enderecos) {
+            const { error: errorEnd } = await supabase.from('curadentespro_enderecos').insert({
+              curadentespro_id: user.id,
+              nome_clinica: end.nome_clinica,
+              logradouro: end.logradouro,
+              numero: end.numero,
+              complemento: end.complemento,
+              bairro: end.bairro,
+              cidade: end.cidade,
+              estado: end.estado,
+              cep: end.cep,
+              telefone: end.telefone,
+              whatsapp: end.whatsapp,
+              atende_urgencias: end.atende_urgencias,
+              aceita_urgencia_termo: end.aceita_urgencia_termo,
+              politica_cancelamento: end.politica_cancelamento,
+              observacoes: end.observacoes,
+              atividades: end.atividades,
+              convenios: end.convenios,
+              formas_pagamento: end.formas_pagamento,
+              agenda: end.agenda
+            });
 
+            if (errorEnd) throw errorEnd;
+          }
+
+          toast.success("Cadastro concluído com sucesso!", { id: toastId });
+          
+          // Limpa rascunho
+          localStorage.removeItem("curadentes_pro_cadastro_rascunho");
+          
+          navigate("/pro/dashboard");
+        })()
+      ]);
     } catch (error) {
       console.error("Erro ao salvar cadastro:", error);
       const message = error instanceof Error ? error.message : "Ocorreu um erro ao salvar o cadastro.";
@@ -914,7 +928,7 @@ export default function NovoCadastro() {
           <input
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => { setEmail(e.target.value); setEmailVerificado(false); }}
             placeholder="seu@email.com.br"
             disabled={emailVerificado}
             style={{ ...inputStyle, flex: 1, opacity: emailVerificado ? 0.6 : 1 }}
@@ -1283,7 +1297,7 @@ export default function NovoCadastro() {
         />
         {cro.length > 4 && !validarCro(cro) && (
           <p className="text-[12px] mt-1" style={{ color: "#FF3B30" }}>
-            CRO inválido. Deve conter sigla do estado e 4 a 6 números (ex: CRO-SP 123456).
+            CRO inválido. Deve conter sigla do estado e 3 a 6 números (ex: CRO-SP 123456).
           </p>
         )}
         <p className="text-[12px] mt-1" style={{ color: "#8E8E93" }}>Formato: CRO-UF seguido do número de registro</p>
@@ -1887,8 +1901,18 @@ export default function NovoCadastro() {
             <div>
               <h3 className="text-[19px] font-bold mb-2" style={{ color: "#0A2A66" }}>Cadastro incompleto</h3>
               <p className="text-[14px]" style={{ color: "#3A3A3C", lineHeight: 1.7 }}>
-                Sua conta foi criada, mas <strong>não será exibida para os pacientes</strong> até que todas as informações obrigatórias sejam preenchidas. Você pode completar o cadastro a qualquer momento no painel.
+                Sua conta foi criada, mas <strong>não será exibida para os pacientes</strong> até que todas as informações obrigatórias sejam preenchidas.
               </p>
+              {camposFaltando.length > 0 && (
+                <ul className="mt-3 flex flex-col gap-1.5">
+                  {camposFaltando.map((campo) => (
+                    <li key={campo} className="flex items-center gap-2 text-[13px]" style={{ color: "#FF3B30" }}>
+                      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "#FF3B30" }} />
+                      {campo}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             <div className="flex flex-col gap-2 mt-1">
