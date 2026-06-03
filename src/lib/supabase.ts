@@ -15,3 +15,38 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     storage: window.localStorage // Força o uso seguro do storage local do navegador
   }
 });
+
+async function fetchWithTimeout(url: string, options: RequestInit, ms: number) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(id);
+  }
+}
+
+export async function supabaseRest<T = any>(
+  table: string,
+  params: Record<string, string>
+): Promise<T[]> {
+  const qs = new URLSearchParams();
+  qs.set("select", "*");
+  for (const [key, value] of Object.entries(params)) {
+    qs.set(key, value);
+  }
+  const url = `${supabaseUrl}/rest/v1/${table}?${qs.toString()}`;
+  const res = await fetchWithTimeout(url, {
+    method: "GET",
+    headers: {
+      apikey: supabaseAnonKey,
+      Authorization: `Bearer ${supabaseAnonKey}`,
+      Accept: "application/json",
+    },
+  }, 15000);
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Supabase REST error ${res.status}: ${body}`);
+  }
+  return res.json() as Promise<T[]>;
+}

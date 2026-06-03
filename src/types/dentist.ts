@@ -70,6 +70,14 @@ export interface ResumoAvaliacaoAtividade {
   posicao_ranking?: number;
 }
 
+/** Avaliação individual de um paciente com dados do perfil Google */
+export interface AvaliacaoIndividual {
+  nota: number;
+  paciente_nome: string;
+  paciente_foto: string;
+  criado_em: string;
+}
+
 /**
  * Avaliação geral do dentista — calculada como média ponderada
  * de todas as ResumoAvaliacaoAtividade.

@@ -38,10 +38,11 @@ import {
   CheckCircle,
   BarChart2,
   X,
+  ChevronRight,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import type { EnderecoClinica, FormaPagamento, Convenio, ResumoAvaliacaoAtividade, DentistProfile } from "@/types/dentist";
-import { supabase } from "@/lib/supabase";
+import type { EnderecoClinica, FormaPagamento, Convenio, ResumoAvaliacaoAtividade, DentistProfile, AvaliacaoIndividual } from "@/types/dentist";
+import { supabase, supabaseRest } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -97,7 +98,10 @@ function corFormaPagamento(tipo: FormaPagamento["tipo"]): string {
  * Cor da barra varia conforme a nota: verde (≥4.5), amarelo (≥3.5), vermelho (<3.5)
  * Exibe badge de pódio quando a posição está no Top 1, 2 ou 3.
  */
-function BarraAvaliacao({ atividade }: { atividade: ResumoAvaliacaoAtividade }) {
+function BarraAvaliacao({ atividade, onVerAvaliacoes }: {
+  atividade: ResumoAvaliacaoAtividade;
+  onVerAvaliacoes?: (atividade: string) => void;
+}) {
   // Calcula a porcentagem da barra com base na escala 0-5
   const porcentagem = (atividade.media_nota / 5) * 100;
 
@@ -137,6 +141,17 @@ function BarraAvaliacao({ atividade }: { atividade: ResumoAvaliacaoAtividade }) 
           <span className="text-[11px]" style={{ color: "#8E8E93" }}>
             ({atividade.total_avaliacoes} aval.)
           </span>
+          {atividade.total_avaliacoes > 0 && (
+            <button
+              onClick={() => onVerAvaliacoes?.(atividade.nome_atividade)}
+              className="flex items-center gap-0.5 text-[11px] font-semibold px-1.5 py-0.5 rounded-full transition-colors"
+              style={{ color: "#007AFF", background: "rgba(0,122,255,0.08)" }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(0,122,255,0.15)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(0,122,255,0.08)"; }}
+            >
+              Ver <ChevronRight size={10} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -456,14 +471,13 @@ function GoogleIcon() {
 /** Página de perfil completo do dentista, acessada via /dentista/:id ou /dentista/:cro */
 export default function DentistProfilePage() {
   const { id } = useParams<{ id: string }>();
-  const dentistaId = id && isCRO(id) ? null : id; // UUID (null se for CRO)
-  const croParam = id && isCRO(id) ? id.toUpperCase().replace(/\s/g, "") : null;
   const navigate = useNavigate();
   const { user } = useAuth(); // para o paciente
 
   const [perfil, setPerfil] = useState<DentistProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [reloadFlag, setReloadFlag] = useState(0);
 
   // Estados para o formulário de avaliação
   const [showRatingForm, setShowRatingForm] = useState(false);
@@ -474,6 +488,12 @@ export default function DentistProfilePage() {
   // Estados para o modal de login obrigatório antes do contato
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [pendingContactUrl, setPendingContactUrl] = useState("");
+
+  // Estado para o modal de avaliações individuais
+  const [avaliacoesIndividuais, setAvaliacoesIndividuais] = useState<{
+    atividade: string;
+    ratings: AvaliacaoIndividual[];
+  } | null>(null);
 
   const handleContactRequest = useCallback((url: string) => {
     if (user) {
@@ -499,26 +519,73 @@ export default function DentistProfilePage() {
     }
   };
 
+  const fetchAvaliacoesIndividuais = async (atividade: string) => {
+    if (!perfil) return;
+    try {
+      const { data: avaliacoes, error } = await supabase
+        .from("avaliacoes")
+        .select("paciente_id, nota, criado_em")
+        .eq("dentista_id", perfil.dentista_id)
+        .eq("atividade", atividade)
+        .order("criado_em", { ascending: false });
+
+      if (error) throw error;
+      if (!avaliacoes || avaliacoes.length === 0) return;
+
+      const ids = [...new Set(avaliacoes.map((a: any) => a.paciente_id))];
+      const { data: pacientes, error: pacError } = await supabase
+        .from("clientes")
+        .select("id, nome, foto")
+        .in("id", ids);
+
+      if (pacError) throw pacError;
+
+      const mapaPacientes = Object.fromEntries(
+        (pacientes || []).map((p: any) => [p.id, { nome: p.nome, foto: p.foto }])
+      );
+
+      setAvaliacoesIndividuais({
+        atividade,
+        ratings: (avaliacoes || []).map((r: any) => ({
+          nota: r.nota,
+          paciente_nome: mapaPacientes[r.paciente_id]?.nome || "Anônimo",
+          paciente_foto: mapaPacientes[r.paciente_id]?.foto || "",
+          criado_em: r.criado_em,
+        })),
+      });
+    } catch (err) {
+      console.error("Erro ao buscar avaliações individuais:", err);
+      toast.error("Erro ao carregar avaliações.");
+    }
+  };
+
   // Extrair todas as atividades do dentista para o select
   const todasAtividades = perfil ? Array.from(new Set(perfil.enderecos.flatMap(e => e.atividades || []))) : [];
 
-  const fetchPerfil = useCallback(async () => {
+  useEffect(() => {
+    const dId = id && isCRO(id) ? null : id;
+    const cParam = id && isCRO(id) ? id.toUpperCase().replace(/\s/g, "") : null;
+    console.log("[DentistProfile] id:", id, "| queryField:", cParam ? "cro" : "id", "| queryValue:", cParam || dId, "| reloadFlag:", reloadFlag);
     if (!id) return;
-    try {
-      if (!perfil) {
-        setLoading(true);
-      }
+
+    let cancel = false;
+
+    (async () => {
+      setLoading(true);
       setError(false);
 
       // Tenta cache — busca por UUID ou CRO
       try {
         const cachedStr = localStorage.getItem("curadentes_search_cache");
+        console.log("[DentistProfile] Cache encontrado?", !!cachedStr);
         if (cachedStr) {
           const parsed = JSON.parse(cachedStr);
           if (parsed.resultados) {
+            console.log("[DentistProfile] Cache tem", parsed.resultados.length, "resultados. Buscando por", dId ? `dentista_id=${dId}` : `dentista_cro=${cParam}`);
             const doCache = (parsed.resultados as CachedDentistResult[]).find((r) =>
-              dentistaId ? r.dentista_id === dentistaId : r.dentista_cro === croParam
+              dId ? r.dentista_id === dId : r.dentista_cro === cParam
             );
+            console.log("[DentistProfile] Cache match?", !!doCache, doCache ? `nome=${doCache.dentista_nome}` : "");
             if (doCache) {
               const espec = doCache.atividades && doCache.atividades.length > 0 ? doCache.atividades[0] : "Clínico Geral";
               const partialProfile: DentistProfile = {
@@ -549,43 +616,49 @@ export default function DentistProfilePage() {
                     }
                   ]
                 };
+              if (!cancel) {
                 setPerfil(partialProfile);
                 setLoading(false);
               }
             }
           }
-        } catch (e) {
-          console.error("Erro ao ler cache do dentista:", e);
         }
+      } catch (e) {
+        console.error("Erro ao ler cache do dentista:", e);
+      }
+
+      if (cancel) return;
 
       // 1. Busca o dentista — por UUID (dentistaId) ou por CRO (croParam)
-      const queryField = croParam ? "cro" : "id";
-      const queryValue = croParam || dentistaId;
-      const { data: pro, error: proError } = await supabase
-        .from("curadentespro")
-        .select("*")
-        .eq(queryField, queryValue)
-        .maybeSingle();
+      const queryField = cParam ? "cro" : "id";
+      const queryValue = cParam || dId;
+      console.log("[DentistProfile] Query curadentespro:", queryField, "=", queryValue);
+      const proList = await supabaseRest<any>("curadentespro", {
+        [queryField]: `eq.${queryValue}`,
+      });
+      const pro = proList.length > 0 ? proList[0] : null;
 
-      if (proError || !pro) throw new Error("Dentista não encontrado");
+      if (cancel) return;
+      console.log("[DentistProfile] Result da query curadentespro:", pro ? "encontrado" : "não encontrado");
+      if (!pro) throw new Error("Dentista não encontrado");
 
       const proId = pro.id; // UUID real do dentista
 
       // 2. Busca os endereços
-      const { data: ends, error: endError } = await supabase
-        .from("curadentespro_enderecos")
-        .select("*")
-        .eq("curadentespro_id", proId);
+      const ends = await supabaseRest<any>("curadentespro_enderecos", {
+        curadentespro_id: `eq.${proId}`,
+      });
 
-      if (endError) throw endError;
+      if (cancel) return;
+      if (!ends) throw new Error("Erro ao buscar endereços");
 
       // 3. Busca as avaliações do dentista
-      const { data: avs, error: avError } = await supabase
-        .from("avaliacoes")
-        .select("*")
-        .eq("dentista_id", proId);
+      const avs = await supabaseRest<any>("avaliacoes", {
+        dentista_id: `eq.${proId}`,
+      });
 
-      if (avError) throw avError;
+      if (cancel) return;
+      console.log("[DentistProfile] Avaliações encontradas:", avs?.length || 0);
 
       // 4. Calcula médias de avaliações
       let mediaGeral = 0;
@@ -671,24 +744,20 @@ export default function DentistProfilePage() {
         } : undefined,
       };
 
-      setPerfil(perfilMontado);
-    } catch (err) {
+      if (!cancel) setPerfil(perfilMontado);
+    })().catch((err) => {
+      if (cancel) return;
       console.error(err);
-      // Se não temos perfil algum (nem do cache), então é erro de fato.
-      // Se já temos o perfil do cache, apenas ignoramos o erro (offline mode).
       setPerfil((atual) => {
         if (!atual) setError(true);
         return atual;
       });
-    } finally {
-      setLoading(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    }).finally(() => {
+      if (!cancel) setLoading(false);
+    });
 
-  useEffect(() => {
-    fetchPerfil();
-  }, [id, fetchPerfil]);
+    return () => { cancel = true; };
+  }, [id, reloadFlag]);
 
   const handleSubmitRating = async () => {
     if (!user) {
@@ -705,52 +774,46 @@ export default function DentistProfilePage() {
     }
 
     setSubmittingRating(true);
-    const toastId = toast.loading("Salvando sua avaliação...");
 
-    try {
-      const { error: insertError } = await supabase
-        .from("avaliacoes")
-        .insert({
-          paciente_id: user.id,
-          dentista_id: perfil?.dentista_id,
-          nota: ratingNota,
-          atividade: ratingAtividade,
-        });
-
-      if (insertError) throw insertError;
-
-      toast.dismiss(toastId);
-      toast.success("Avaliação salva com sucesso! Obrigado.");
-
-      setShowRatingForm(false);
-      setRatingNota(0);
-      setRatingAtividade("");
-
-      // Notifica o dentista por email em background
-      supabase.functions.invoke("send-rating-notification", {
-        body: {
-          dentistEmail: perfil?.email,
-          dentistName: perfil?.nome_completo,
-          specialty: ratingAtividade,
-          patientName: user.name,
-        },
-      }).then(async (res) => {
-        if (res.error) {
-          const msg = res.response ? await res.response.text() : res.error.message;
-          console.warn("[notificação] Erro:", msg);
-        } else {
-          console.log("[notificação] Email enviado com sucesso");
-        }
+    const { error: insertError } = await supabase
+      .from("avaliacoes")
+      .insert({
+        paciente_id: user.id,
+        dentista_id: perfil?.dentista_id,
+        nota: ratingNota,
+        atividade: ratingAtividade,
       });
 
-      fetchPerfil();
-    } catch (err) {
-      toast.dismiss(toastId);
-      console.error(err);
-      toast.error("Falha ao salvar a avaliação.");
-    } finally {
+    if (insertError) {
       setSubmittingRating(false);
+      toast.error("Falha ao salvar a avaliação.");
+      return;
     }
+
+    toast.success("Avaliação salva com sucesso! Obrigado.");
+
+    setShowRatingForm(false);
+    setRatingNota(0);
+    setRatingAtividade("");
+
+    supabase.functions.invoke("send-rating-notification", {
+      body: {
+        dentistEmail: perfil?.email,
+        dentistName: perfil?.nome_completo,
+        specialty: ratingAtividade,
+        patientName: user.name,
+      },
+    }).then(async (res) => {
+      if (res.error) {
+        const msg = res.response ? await res.response.text() : res.error.message;
+        console.warn("[notificação] Erro:", msg);
+      } else {
+        console.log("[notificação] Email enviado com sucesso");
+      }
+    });
+
+    setSubmittingRating(false);
+    setReloadFlag(n => n + 1);
   };
 
   if (loading) {
@@ -951,7 +1014,7 @@ export default function DentistProfilePage() {
                 {/* Barras de avaliação por atividade */}
                 <div>
                   {perfil.avaliacoes.por_atividade.map((av) => (
-                    <BarraAvaliacao key={av.nome_atividade} atividade={av} />
+                    <BarraAvaliacao key={av.nome_atividade} atividade={av} onVerAvaliacoes={fetchAvaliacoesIndividuais} />
                   ))}
                 </div>
 
@@ -1097,6 +1160,69 @@ export default function DentistProfilePage() {
               e{" "}
               <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: "#007AFF" }}>Política de Privacidade</a>.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal de avaliações individuais ── */}
+      {avaliacoesIndividuais && (
+        <div
+          className="fixed inset-0 flex items-center justify-center z-[200] px-4"
+          style={{ background: "rgba(10,42,102,0.45)", backdropFilter: "blur(6px)" }}
+          onClick={(e) => { if (e.target === e.currentTarget) setAvaliacoesIndividuais(null); }}
+        >
+          <div
+            className="w-full max-w-[420px] max-h-[70vh] overflow-y-auto rounded-[24px] p-6 flex flex-col gap-4"
+            style={{ background: "#fff", boxShadow: "0 24px 64px rgba(10,42,102,0.20)" }}
+          >
+            <div className="flex items-center justify-between sticky top-0 bg-white pb-2" style={{ zIndex: 1 }}>
+              <h2 className="text-[16px] font-bold" style={{ color: "#0A2A66", fontFamily: "Inter, sans-serif" }}>
+                {avaliacoesIndividuais.atividade}
+              </h2>
+              <button
+                onClick={() => setAvaliacoesIndividuais(null)}
+                className="w-8 h-8 flex items-center justify-center rounded-full transition-colors"
+                style={{ color: "#8E8E93" }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(60,60,67,0.08)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              {avaliacoesIndividuais.ratings.length === 0 ? (
+                <p className="text-[13px] text-center py-6" style={{ color: "#8E8E93" }}>
+                  Nenhuma avaliação encontrada.
+                </p>
+              ) : (
+                avaliacoesIndividuais.ratings.map((r, i) => (
+                  <div key={i} className="flex items-center gap-3 p-3 rounded-[12px]" style={{ background: "#F2F2F7" }}>
+                    <img
+                      src={r.paciente_foto || logoProAltUrl}
+                      alt={r.paciente_nome}
+                      className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                      style={{ border: "2px solid #fff" }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-semibold truncate" style={{ color: "#1C1C1E" }}>
+                        {r.paciente_nome}
+                      </p>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <Star
+                            key={s}
+                            size={12}
+                            fill={s <= r.nota ? "#FFCC00" : "#E5E5EA"}
+                            stroke="none"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       )}
