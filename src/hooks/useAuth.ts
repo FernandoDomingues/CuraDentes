@@ -86,6 +86,8 @@ export const useAuth = create<AuthState>((set, get) => ({
 
   logout: async () => {
     console.log("[useAuth] Iniciando logout...");
+    clearUserCache();
+    set({ user: null });
     try {
       const { error } = await supabase.auth.signOut();
       if (error) {
@@ -93,10 +95,6 @@ export const useAuth = create<AuthState>((set, get) => ({
       }
     } catch (err) {
       console.error("[useAuth] Exceção ao executar signOut do Supabase:", err);
-    } finally {
-      console.log("[useAuth] Limpando cache e estado local...");
-      clearUserCache();
-      set({ user: null });
     }
   },
 
@@ -179,6 +177,7 @@ export const useAuth = create<AuthState>((set, get) => ({
           .from("clientes")
           .upsert({
             id: authUser.id,
+            user_id: authUser.id,
             nome: basicUser.name,
             email: basicUser.email,
             foto: basicUser.picture,

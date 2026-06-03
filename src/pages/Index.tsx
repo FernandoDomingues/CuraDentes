@@ -9,6 +9,8 @@
 // clica explicitamente em "Usar minha localização" dentro do HeroSection.
 // ═══════════════════════════════════════════════════════════════════════════════
 
+import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import HeroSection from "@/components/features/HeroSection";
 import HowItWorks from "@/components/features/HowItWorks";
@@ -20,6 +22,17 @@ import AppSection from "@/components/features/AppSection";
 import Footer from "@/components/layout/Footer";
 
 const Index = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    const scrollTo = (location.state as { scrollTo?: string })?.scrollTo;
+    if (scrollTo) {
+      setTimeout(() => {
+        document.getElementById(scrollTo)?.scrollIntoView({ behavior: "smooth" });
+      }, 300);
+    }
+  }, [location.state]);
+
   return (
     <div className="min-h-screen" style={{ background: "#F2F2F7" }}>
       <Header />

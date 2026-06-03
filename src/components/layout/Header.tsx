@@ -15,7 +15,7 @@
 
 import { useState } from "react";
 import { Menu, X, Eye, EyeOff, ChevronRight } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 // ============================================================================
 // IMPORTAÇÕES PARA A AUTENTICAÇÃO COM O GOOGLE
 // ============================================================================
@@ -55,7 +55,19 @@ function GoogleIcon() {
 // ─── Componente principal ────────────────────────────────────────────────────
 export default function Header() {
   const navigate = useNavigate();
-  
+  const location = useLocation();
+
+  function handleNavClick(e: React.MouseEvent, href: string) {
+    if (!href.startsWith("#")) return;
+    e.preventDefault();
+    const sectionId = href.slice(1);
+    if (location.pathname === "/") {
+      document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth" });
+    } else {
+      navigate("/", { state: { scrollTo: sectionId } });
+    }
+  }
+
   // Importamos os estados de login: "user" (usuário ativo), "signInWithGoogle" (entrar) e "logout" (sair)
   const { user, signInWithGoogle, logout } = useAuth();
 
@@ -355,6 +367,7 @@ export default function Header() {
                 <a
                   key={link.href}
                   href={link.href}
+                  onClick={(e) => handleNavClick(e, link.href)}
                   className="text-[15px] font-medium transition-colors duration-200"
                   style={{ color: "var(--text-secondary)" }}
                   onMouseEnter={(e) => (e.currentTarget.style.color = "var(--primary-blue)")}
@@ -450,9 +463,9 @@ export default function Header() {
               <a
                 key={link.href}
                 href={link.href}
+                onClick={(e) => { handleNavClick(e, link.href); setMenuOpen(false); }}
                 className="flex items-center px-3 py-3 rounded-xl text-[16px] font-medium min-h-[48px] transition-colors duration-200"
                 style={{ color: "#1C1C1E" }}
-                onClick={() => setMenuOpen(false)}
               >
                 {link.label}
               </a>

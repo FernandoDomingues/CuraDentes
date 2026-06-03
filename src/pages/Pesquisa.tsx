@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { getCoordenadas } from "@/lib/geocoding";
 import { supabase } from "@/lib/supabase";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import { Loader2, MapPin, Star, Building2, ChevronRight, Filter, SlidersHorizontal, X } from "lucide-react";
+import { Loader2, MapPin, Star, Building2, ChevronRight, Filter, SlidersHorizontal, X, Search } from "lucide-react";
 import logoProAltUrl from "@/assets/logos/logo-pro-alt.png";
 import { useAuth } from "@/hooks/useAuth";
 import { saveToSearchCache, saveQueryCache, loadQueryCache, buildQueryCacheKey } from "@/lib/dentistCache";
@@ -78,22 +78,37 @@ const PAGAMENTOS_OPCOES = [
 ];
 
 export default function Pesquisa() {
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const query = searchParams.get("q");
+  const location = useLocation();
+
+  // Lê o estado da navegação (vindo da Hero) com fallback para sessionStorage (F5)
+  const estadoNavegacao = (location.state as { q?: string; lat?: string; lng?: string }) || {};
+  const estadoSalvo = (() => {
+    try {
+      const raw = sessionStorage.getItem("curadentes_search_state");
+      return raw ? JSON.parse(raw) as { q?: string; lat?: string; lng?: string } : {};
+    } catch { return {}; }
+  })();
+
+  const query = estadoNavegacao.q || estadoSalvo.q || null;
+  const latPesquisa = estadoNavegacao.lat || estadoSalvo.lat || null;
+  const lngPesquisa = estadoNavegacao.lng || estadoSalvo.lng || null;
+
+  const [searchInput, setSearchInput] = useState(query || "");
+  const [usandoLocalizacao, setUsandoLocalizacao] = useState(false);
 
   const [raio, setRaio] = useState(5); // 5km por padrão
 
   // Lazy initializers: só leem localStorage 1× na montagem do componente
   const [loading, setLoading] = useState(() => {
     const cached = loadQueryCache(
-      buildQueryCacheKey(query, searchParams.get("lat"), searchParams.get("lng"), 5)
+      buildQueryCacheKey(query, latPesquisa, lngPesquisa, 5)
     );
     return !cached || cached.length === 0;
   });
   const [resultadosBrutos, setResultadosBrutos] = useState<DentistaResultado[]>(() => {
     const cached = loadQueryCache(
-      buildQueryCacheKey(query, searchParams.get("lat"), searchParams.get("lng"), 5)
+      buildQueryCacheKey(query, latPesquisa, lngPesquisa, 5)
     );
     return (cached ?? []) as DentistaResultado[];
   });
@@ -110,8 +125,8 @@ export default function Pesquisa() {
     // Chave de cache para esta combinação de query + raio
     const currentKey = buildQueryCacheKey(
       query,
-      searchParams.get("lat"),
-      searchParams.get("lng"),
+      latPesquisa,
+      lngPesquisa,
       raio
     );
 
@@ -119,13 +134,10 @@ export default function Pesquisa() {
     const TIMEOUT_MS = 10_000;
 
     async function buscar() {
-      const urlLat = searchParams.get("lat");
-      const urlLng = searchParams.get("lng");
+      console.log("[Pesquisa] 🔍 Iniciando busca. Params:", { query, latPesquisa, lngPesquisa, raio });
 
-      console.log("[Pesquisa] 🔍 Iniciando busca. Params:", { query, urlLat, urlLng, raio });
-
-      if (!query && (!urlLat || !urlLng)) {
-        console.log("[Pesquisa] Sem query ou coordenadas na URL. Parando busca.");
+      if (!query && (!latPesquisa || !lngPesquisa)) {
+        console.log("[Pesquisa] Sem query ou coordenadas. Parando busca.");
         if (!cancelled) setLoading(false);
         return;
       }
@@ -176,10 +188,10 @@ export default function Pesquisa() {
 
         // 2. Inicia a busca de Coordenadas (roda em paralelo com o banco de dados)
         let coordPromise: Promise<{ latitude: number; longitude: number } | null> = Promise.resolve(null);
-        if (urlLat && urlLng) {
-          finalLat = parseFloat(urlLat);
-          finalLng = parseFloat(urlLng);
-          console.log("[Pesquisa] [Passo 2] Coordenadas vindas diretamente da URL:", { finalLat, finalLng });
+        if (latPesquisa && lngPesquisa) {
+          finalLat = parseFloat(latPesquisa);
+          finalLng = parseFloat(lngPesquisa);
+          console.log("[Pesquisa] [Passo 2] Coordenadas vindas do estado de navegação:", { finalLat, finalLng });
         } else if (query) {
           console.log("[Pesquisa] [Passo 2] Disparando geocodificação para obter lat/lng...");
           // Usa coordenadas do usuário apenas como dica de proximidade (viewbox),
@@ -361,7 +373,7 @@ export default function Pesquisa() {
   // Isso evita que a inicialização do auth após F5 dispare uma segunda busca
   // e cause o spinner infinito.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, searchParams.get("lat"), searchParams.get("lng"), raio]);
+  }, [query, latPesquisa, lngPesquisa, raio]);
 
   // Aplicação dos filtros locais
   const resultadosFiltrados = resultadosBrutos.filter((dentista) => {
@@ -400,6 +412,38 @@ export default function Pesquisa() {
     setSelectedPagamentos(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
   };
 
+  function handleSearchSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const termo = searchInput.trim();
+    if (!termo) return;
+    sessionStorage.setItem("curadentes_search_state", JSON.stringify({ q: termo }));
+    navigate("/pesquisa", { state: { q: termo } });
+  }
+
+  function usarLocalizacao() {
+    if (!navigator.geolocation) {
+      toast.error("Geolocalização não é suportada pelo seu navegador.");
+      return;
+    }
+    setUsandoLocalizacao(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude.toFixed(4);
+        const lng = pos.coords.longitude.toFixed(4);
+        const payload = query ? { q: query, lat, lng } : { lat, lng };
+        sessionStorage.setItem("curadentes_search_state", JSON.stringify(payload));
+        navigate("/pesquisa", { state: payload });
+      },
+      () => {
+        toast.error("Não foi possível obter sua localização. Verifique as permissões do navegador.");
+        setUsandoLocalizacao(false);
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  }
+
+  const temCoordenadas = !!latPesquisa && !!lngPesquisa;
+
   return (
     <div className="min-h-screen flex flex-col bg-[#F2F2F7]">
       <Header />
@@ -420,7 +464,7 @@ export default function Pesquisa() {
 
             {/* Distância */}
             <div className="mb-6">
-              <label className="block text-[13px] font-bold text-[#1C1C1E] mb-3">Distância Máxima: {raio} km</label>
+              <label className="block text-[13px] font-bold text-[#1C1C1E] mb-2">Distância Máxima: {raio} km</label>
               <input 
                 type="range" min="1" max="50" value={raio} 
                 onChange={(e) => setRaio(Number(e.target.value))}
@@ -430,6 +474,22 @@ export default function Pesquisa() {
                 <span>1 km</span>
                 <span>50 km</span>
               </div>
+              {!temCoordenadas && (
+                <button
+                  type="button"
+                  onClick={usarLocalizacao}
+                  disabled={usandoLocalizacao}
+                  className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[12px] text-[13px] font-semibold border transition-all"
+                  style={{
+                    background: "rgba(0,122,255,0.06)",
+                    borderColor: "rgba(0,122,255,0.20)",
+                    color: "#007AFF",
+                  }}
+                >
+                  <MapPin size={14} />
+                  {usandoLocalizacao ? "Obtendo localização..." : "Ativar filtro por distância"}
+                </button>
+              )}
             </div>
 
             <hr className="border-gray-100 my-6" />
@@ -478,17 +538,68 @@ export default function Pesquisa() {
         {/* ÁREA DE RESULTADOS */}
         <div className="flex-1 flex flex-col gap-6">
           
+          {/* Barra de busca */}
+          <form onSubmit={handleSearchSubmit} className="bg-white rounded-[20px] shadow-sm border border-gray-100 p-1 flex items-center gap-2">
+            <div className="flex-1 flex items-center gap-3 px-3">
+              <Search size={18} className="text-gray-400 shrink-0" />
+              <input
+                type="text"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Buscar por cidade, bairro, especialidade..."
+                className="w-full bg-transparent text-[15px] text-[#1C1C1E] outline-none placeholder:text-gray-400 py-2.5"
+              />
+            </div>
+            <button
+              type="submit"
+              className="px-5 py-2.5 rounded-[12px] text-white text-[14px] font-semibold transition-all"
+              style={{
+                background: "#007AFF",
+                boxShadow: "0 4px 12px rgba(0,122,255,0.25)",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "#1a8aff" }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "#007AFF" }}
+            >
+              Buscar
+            </button>
+          </form>
+
+          {/* Info bar: termo + contagem + controles */}
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white p-4 rounded-[20px] shadow-sm border border-gray-100">
-            <div>
-              <h1 className="text-[20px] font-bold text-[#0A2A66]">
-                Resultados para "{query || "Sua Localização"}"
+            <div className="flex-1">
+              <h1 className="text-[20px] font-bold text-[#0A2A66] flex items-center gap-2 flex-wrap">
+                {query && (
+                  <span>
+                    Resultados para "<span style={{ color: "#007AFF" }}>{query}</span>"
+                  </span>
+                )}
+                {!query && !temCoordenadas && "Buscar dentistas"}
+                {!query && temCoordenadas && "Dentistas próximos a você"}
               </h1>
-              <p className="text-[14px] text-gray-500">
-                {loading ? "Buscando..." : `${resultadosFiltrados.length} dentistas encontrados.`}
+              <p className="text-[14px] text-gray-500 mt-0.5">
+                {loading ? "Buscando..." : `${resultadosFiltrados.length} dentistas encontrados`}
+                {raio > 0 && !loading && ` em até ${raio} km`}.
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 shrink-0">
+              {!temCoordenadas && (
+                <button
+                  type="button"
+                  onClick={usarLocalizacao}
+                  disabled={usandoLocalizacao}
+                  className="flex items-center gap-2 px-4 py-2 rounded-[12px] text-[13px] font-semibold border transition-all"
+                  style={{
+                    background: usandoLocalizacao ? "rgba(0,122,255,0.08)" : "rgba(0,122,255,0.06)",
+                    borderColor: "rgba(0,122,255,0.20)",
+                    color: "#007AFF",
+                  }}
+                >
+                  <MapPin size={14} />
+                  {usandoLocalizacao ? "Obtendo..." : "Usar localização"}
+                </button>
+              )}
+
               <button 
                 onClick={() => setShowFilters(true)}
                 className="lg:hidden flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-xl text-[13px] font-semibold text-gray-700 border border-gray-200"

@@ -223,7 +223,8 @@ export default function HeroSection() {
     setSearchValue(suggestion.value);
     setShowSuggestions(false);
     setHighlightedIdx(-1);
-    navigate(`/pesquisa?q=${encodeURIComponent(suggestion.value)}`);
+    sessionStorage.setItem("curadentes_search_state", JSON.stringify({ q: suggestion.value }));
+    navigate("/pesquisa", { state: { q: suggestion.value } });
   }, [navigate]);
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -378,14 +379,16 @@ export default function HeroSection() {
       return;
     }
     if (searchValue.trim()) {
-      navigate(`/pesquisa?q=${encodeURIComponent(searchValue)}`);
+      sessionStorage.setItem("curadentes_search_state", JSON.stringify({ q: searchValue }));
+      navigate("/pesquisa", { state: { q: searchValue } });
     }
   };
 
   const handleUseMyLocation = () => {
     if (locationStatus === "autorizado" && userLat !== null && userLng !== null) {
       // Já temos coordenadas (cache ou captura anterior): navega direto
-      navigate(`/pesquisa?lat=${userLat}&lng=${userLng}`);
+      sessionStorage.setItem("curadentes_search_state", JSON.stringify({ lat: userLat, lng: userLng }));
+      navigate("/pesquisa", { state: { lat: userLat, lng: userLng } });
       return;
     }
 
@@ -407,7 +410,8 @@ export default function HeroSection() {
       if (toastId) {
         toast.dismiss(toastId);
         sessionStorage.removeItem("curadentes_location_toast_id");
-        navigate(`/pesquisa?lat=${userLat}&lng=${userLng}`);
+        sessionStorage.setItem("curadentes_search_state", JSON.stringify({ lat: userLat, lng: userLng }));
+        navigate("/pesquisa", { state: { lat: userLat, lng: userLng } });
       }
     } else if (locationError) {
       const toastId = sessionStorage.getItem("curadentes_location_toast_id");
