@@ -38,6 +38,7 @@ import MeuPerfil from "@/pages/pro/MeuPerfil";
 import RedefinirSenha from "@/pages/pro/RedefinirSenha";
 import Privacidade from "@/pages/Privacidade";
 import TermosDeUso from "@/pages/TermosDeUso";
+import Sobre from "@/pages/Sobre";
 
 export default function App() {
   const { initialize } = useAuth();
@@ -59,6 +60,7 @@ export default function App() {
         <Route path="/pro/redefinir-senha" element={<RedefinirSenha />} />
         <Route path="/privacidade" element={<Privacidade />} />
         <Route path="/termos" element={<TermosDeUso />} />
+        <Route path="/sobre" element={<Sobre />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

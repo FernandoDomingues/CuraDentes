@@ -37,7 +37,7 @@ const NAV_LINKS = [
   { label: "Como funciona", href: "#como-funciona" },
   { label: "Especialidades", href: "#especialidades" },
   { label: "Para Dentistas", href: "#para-dentistas" },
-  { label: "Sobre",          href: "#sobre" },
+  { label: "Sobre",          href: "/sobre" },
 ];
 
 // ─── SVG do logotipo do Google para os botões de login ───────────────────────

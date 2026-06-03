@@ -7,13 +7,15 @@ const FOOTER_LINKS: Record<string, { label: string; href: string }[]> = {
   Pacientes: [
     { label: "Buscar dentista", href: "/pesquisa" },
     { label: "Como funciona", href: "#como-funciona" },
+    { label: "Suporte", href: "mailto:suporte@curadentes.com.br" },
   ],
   Dentistas: [
     { label: "Cadastrar dentista", href: "/pro/novo-cadastro" },
     { label: "Acesso do dentista", href: "#" },
+    { label: "Suporte", href: "mailto:suporte@curadentes.com.br" },
   ],
   Empresa: [
-    { label: "Sobre nós", href: "#" },
+    { label: "Sobre nós", href: "/sobre" },
   ],
   Legal: [
     { label: "Termos de uso", href: "/termos" },
@@ -34,9 +36,9 @@ export default function Footer() {
     >
       <div className="container mx-auto px-5 md:px-8 lg:px-16">
         {/* Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 mb-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-8 mb-10">
           {/* Brand */}
-          <div className="lg:col-span-2">
+          <div className="sm:col-span-2 lg:col-span-2">
             <a href="/" className="inline-block mb-4">
               <img
                 src={LOGO_FULL}
