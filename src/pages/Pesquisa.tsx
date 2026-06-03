@@ -25,6 +25,7 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
 
 interface DentistaResultado {
   dentista_id: string;
+  dentista_cro: string;
   dentista_nome: string;
   dentista_foto: string;
   dentista_bio: string;
@@ -56,8 +57,8 @@ interface EnderecoRow {
   latitude: number | null;
   longitude: number | null;
   curadentespro:
-    | { id: string; nome: string; foto_url: string | null; bio: string | null }
-    | { id: string; nome: string; foto_url: string | null; bio: string | null }[]
+    | { id: string; nome: string; foto_url: string | null; bio: string | null; cro: string | null }
+    | { id: string; nome: string; foto_url: string | null; bio: string | null; cro: string | null }[]
     | null;
 }
 
@@ -161,7 +162,7 @@ export default function Pesquisa() {
             .from("curadentespro_enderecos")
             .select(`
               id, nome_clinica, logradouro, numero, bairro, cidade, estado, atividades, convenios, formas_pagamento, latitude, longitude,
-              curadentespro:curadentespro_id ( id, nome, foto_url, bio )
+              curadentespro:curadentespro_id ( id, nome, foto_url, bio, cro )
             `)
             .or([
               `bairro.ilike.%${q}%`,
@@ -250,7 +251,7 @@ export default function Pesquisa() {
                 return temPro;
               })
               .map((d) => {
-                const pro = Array.isArray(d.curadentespro) ? d.curadentespro[0] : (d.curadentespro || { id: "", nome: "", foto_url: null, bio: null });
+                const pro = Array.isArray(d.curadentespro) ? d.curadentespro[0] : (d.curadentespro || { id: "", nome: "", foto_url: null, bio: null, cro: "" });
 
                 let dist = 0;
                 if (finalLat !== null && finalLng !== null && d.latitude && d.longitude) {
@@ -259,6 +260,7 @@ export default function Pesquisa() {
 
                 return {
                   dentista_id: pro.id,
+                  dentista_cro: pro.cro || "",
                   dentista_nome: pro.nome || "Dentista Parceiro",
                   dentista_foto: pro.foto_url || "",
                   dentista_bio: pro.bio || "",
@@ -314,6 +316,7 @@ export default function Pesquisa() {
           // Cache global de perfis — carregamento rápido da página de detalhe
           saveToSearchCache(finalResults.map(r => ({
             dentista_id: r.dentista_id,
+            dentista_cro: r.dentista_cro,
             dentista_nome: r.dentista_nome,
             dentista_foto: r.dentista_foto,
             dentista_bio: r.dentista_bio,
@@ -525,7 +528,7 @@ export default function Pesquisa() {
               {resultadosOrdenados.map((dentista) => (
                 <div 
                   key={dentista.endereco_id} 
-                  onClick={() => navigate(`/dentista/${dentista.dentista_id}`)}
+                  onClick={() => navigate(`/dentista/${dentista.dentista_cro || dentista.dentista_id}`)}
                   className="bg-white rounded-[24px] p-5 border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer flex flex-col gap-4 group"
                 >
                   <div className="flex items-start gap-4">

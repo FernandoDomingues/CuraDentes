@@ -483,9 +483,15 @@ function EnderecoCard({ endereco, index }: { endereco: EnderecoClinica; index: n
 
 // ─── Página principal ─────────────────────────────────────────────────────────
 
-/** Página de perfil completo do dentista, acessada via /dentista/:id */
+function isCRO(valor: string): boolean {
+  return /^CRO-[A-Z]{2}\s\d{3,6}$/.test(valor.toUpperCase());
+}
+
+/** Página de perfil completo do dentista, acessada via /dentista/:id ou /dentista/:cro */
 export default function DentistProfilePage() {
   const { id } = useParams<{ id: string }>();
+  const dentistaId = id && isCRO(id) ? null : id; // UUID (null se for CRO)
+  const croParam = id && isCRO(id) ? id.toUpperCase() : null;
   const navigate = useNavigate();
   const { user } = useAuth(); // para o paciente
 
@@ -505,65 +511,66 @@ export default function DentistProfilePage() {
   const fetchPerfil = useCallback(async () => {
     if (!id) return;
     try {
-      // Começamos o loading apenas se não tivermos nenhum dado ainda
       if (!perfil) {
         setLoading(true);
       }
       setError(false);
 
-      // 0. TENTATIVA DE CARREGAR DO CACHE DA BUSCA (Offline-first / Instant loading)
-      try {
-        const cachedStr = localStorage.getItem("curadentes_search_cache");
-        if (cachedStr) {
-          const parsed = JSON.parse(cachedStr);
-          if (parsed.resultados) {
-            const doCache = (parsed.resultados as CachedDentistResult[]).find((r) => r.dentista_id === id);
-            if (doCache) {
-              const espec = doCache.atividades && doCache.atividades.length > 0 ? doCache.atividades[0] : "Clínico Geral";
-
-              const partialProfile: DentistProfile = {
-                dentista_id: doCache.dentista_id,
-                nome_completo: doCache.dentista_nome,
-                foto_url: doCache.dentista_foto || "",
-                cro: "",
-                especialidade_principal: espec,
-                bio: doCache.dentista_bio || "",
-                rating: doCache.dentista_avaliacao || 5.0,
-                total_avaliacoes: 0,
-                enderecos: [
-                  {
-                    id: doCache.endereco_id,
-                    nome_clinica: doCache.nome_clinica || "",
-                    logradouro: doCache.logradouro || "",
-                    numero: doCache.numero || "",
-                    complemento: "",
-                    bairro: doCache.bairro || "",
-                    cidade: doCache.cidade || "",
-                    estado: doCache.estado || "",
-                    cep: "",
-                    telefone: "",
-                    atividades: doCache.atividades || [],
-                    agenda: [],
-                    formas_pagamento: doCache.formas_pagamento ? doCache.formas_pagamento.map((fp: string, i: number) => ({ id: `${i}`, nome: fp, tipo: "dinheiro" as const })) : [],
-                    convenios: doCache.convenios ? doCache.convenios.map((c: string, i: number) => ({ id: `${i}`, nome: c })) : [],
-                  }
-                ]
-              };
-              // Exibe o perfil instantaneamente!
-              setPerfil(partialProfile);
-              setLoading(false);
+      // Cache só funciona para UUIDs (cache usa dentista_id = UUID)
+      if (dentistaId) {
+        try {
+          const cachedStr = localStorage.getItem("curadentes_search_cache");
+          if (cachedStr) {
+            const parsed = JSON.parse(cachedStr);
+            if (parsed.resultados) {
+              const doCache = (parsed.resultados as CachedDentistResult[]).find((r) => r.dentista_id === dentistaId);
+              if (doCache) {
+                const espec = doCache.atividades && doCache.atividades.length > 0 ? doCache.atividades[0] : "Clínico Geral";
+                const partialProfile: DentistProfile = {
+                  dentista_id: doCache.dentista_id,
+                  nome_completo: doCache.dentista_nome,
+                  foto_url: doCache.dentista_foto || "",
+                  cro: doCache.dentista_cro || "",
+                  especialidade_principal: espec,
+                  bio: doCache.dentista_bio || "",
+                  rating: doCache.dentista_avaliacao || 5.0,
+                  total_avaliacoes: 0,
+                  enderecos: [
+                    {
+                      id: doCache.endereco_id,
+                      nome_clinica: doCache.nome_clinica || "",
+                      logradouro: doCache.logradouro || "",
+                      numero: doCache.numero || "",
+                      complemento: "",
+                      bairro: doCache.bairro || "",
+                      cidade: doCache.cidade || "",
+                      estado: doCache.estado || "",
+                      cep: "",
+                      telefone: "",
+                      atividades: doCache.atividades || [],
+                      agenda: [],
+                      formas_pagamento: doCache.formas_pagamento ? doCache.formas_pagamento.map((fp: string, i: number) => ({ id: `${i}`, nome: fp, tipo: "dinheiro" as const })) : [],
+                      convenios: doCache.convenios ? doCache.convenios.map((c: string, i: number) => ({ id: `${i}`, nome: c })) : [],
+                    }
+                  ]
+                };
+                setPerfil(partialProfile);
+                setLoading(false);
+              }
             }
           }
+        } catch (e) {
+          console.error("Erro ao ler cache do dentista:", e);
         }
-      } catch (e) {
-        console.error("Erro ao ler cache do dentista:", e);
       }
 
-      // 1. Busca o dentista atualizado em background (ou se não tinha cache)
+      // 1. Busca o dentista — por UUID (dentistaId) ou por CRO (croParam)
+      const queryField = croParam ? "cro" : "id";
+      const queryValue = croParam || dentistaId;
       const { data: pro, error: proError } = await supabase
         .from("curadentespro")
         .select("*")
-        .eq("id", id)
+        .eq(queryField, queryValue)
         .maybeSingle();
 
       if (proError || !pro) throw new Error("Dentista não encontrado");

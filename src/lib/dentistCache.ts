@@ -1,5 +1,6 @@
 export interface CacheableDentist {
   dentista_id: string;
+  dentista_cro?: string;
   dentista_nome: string;
   dentista_foto?: string;
   dentista_bio?: string;
@@ -18,6 +19,7 @@ export interface CacheableDentist {
 
 export interface CachedDentistResult {
   dentista_id: string;
+  dentista_cro: string;
   dentista_nome: string;
   dentista_foto: string;
   dentista_bio: string;
@@ -60,6 +62,7 @@ export function saveToSearchCache(dentists: CacheableDentist[]) {
       const idx = currentResults.findIndex((r) => r.dentista_id === newD.dentista_id);
       const mapped: CachedDentistResult = {
         dentista_id: newD.dentista_id,
+        dentista_cro: newD.dentista_cro || "",
         dentista_nome: newD.dentista_nome,
         dentista_foto: newD.dentista_foto || "",
         dentista_bio: newD.dentista_bio || "",
