@@ -558,6 +558,18 @@ export default function HeroSection() {
               );
             })}
           </div>
+
+          {/* Contador de dentistas — Mobile */}
+          {totalDentists > 0 && (
+            <div className="flex justify-center pt-1 pb-2">
+              <div className="text-center">
+                <span className="text-[15px] font-bold" style={{ color: "#0A2A66", fontFamily: "Inter, sans-serif", letterSpacing: "-0.02em" }}>
+                  {totalDentists}
+                </span>
+                <span className="text-[12px] ml-1" style={{ color: "#8E8E93" }}>dentistas cadastrados</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
