@@ -33,3 +33,6 @@ dist-ssr
 !supabase_migrations/*.sql
 Curadentes_CuradentesPro_texto
 convert_sql.cjs
+
+# Local Netlify folder
+.netlify

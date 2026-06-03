@@ -153,6 +153,44 @@ export function saveQueryCache(key: string, results: CachedDentistResult[]): voi
  * Carrega resultados salvos para uma query específica.
  * Retorna null se não houver cache ou se tiver expirado (30 min).
  */
+// ─── Cache de perfil completo (com agenda) ────────────────────────────────────
+const PROFILE_CACHE_KEY = "curadentes_profile_cache";
+
+export function saveProfileCache(id: string, profile: any): void {
+  try {
+    const raw = localStorage.getItem(PROFILE_CACHE_KEY);
+    let entries: Record<string, { data: any; savedAt: number }> = {};
+    if (raw) {
+      try { entries = JSON.parse(raw); } catch { entries = {}; }
+    }
+    entries[id] = { data: profile, savedAt: Date.now() };
+    // Mantém só os 20 perfis mais recentes
+    const keys = Object.keys(entries);
+    if (keys.length > 20) {
+      const sorted = keys.sort((a, b) => (entries[b].savedAt || 0) - (entries[a].savedAt || 0));
+      const novos: typeof entries = {};
+      for (let i = 0; i < 20; i++) novos[sorted[i]] = entries[sorted[i]];
+      entries = novos;
+    }
+    localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(entries));
+  } catch (err) {
+    console.warn("[dentistCache] Erro ao salvar perfil no cache:", err);
+  }
+}
+
+export function loadProfileCache(id: string): any | null {
+  try {
+    const raw = localStorage.getItem(PROFILE_CACHE_KEY);
+    if (!raw) return null;
+    const entries = JSON.parse(raw);
+    const entry = entries[id];
+    if (!entry) return null;
+    return entry.data;
+  } catch {
+    return null;
+  }
+}
+
 export function loadQueryCache(key: string): CachedDentistResult[] | null {
   try {
     const raw = localStorage.getItem(QUERY_CACHE_KEY);

@@ -196,11 +196,13 @@ export const useAuth = create<AuthState>((set, get) => ({
     };
 
     // Escuta todos os eventos de autenticação do Supabase
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log("[useAuth] Evento de Autenticação Supabase:", event, session ? `Sessão Ativa (User ID: ${session.user.id})` : "Sem Sessão");
       if (event === "SIGNED_IN" && session) {
         // Login real (vindo do Google): sincroniza/cria no banco
-        await signInAndSync(session);
+        setTimeout(() => {
+          signInAndSync(session);
+        }, 0);
 
       } else if (event === "INITIAL_SESSION") {
         if (session) {
@@ -209,7 +211,9 @@ export const useAuth = create<AuthState>((set, get) => ({
           if (get().user) {
             set({ isInitializing: false });
           } else {
-            await restoreFromDB(session.user);
+            setTimeout(() => {
+              restoreFromDB(session.user);
+            }, 0);
           }
         } else {
           // Sem sessão no Supabase: limpa o cache caso estivesse desatualizado

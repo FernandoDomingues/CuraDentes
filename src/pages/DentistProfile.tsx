@@ -39,14 +39,15 @@ import {
   BarChart2,
   X,
   ChevronRight,
+  Trophy,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import type { EnderecoClinica, FormaPagamento, Convenio, ResumoAvaliacaoAtividade, DentistProfile, AvaliacaoIndividual } from "@/types/dentist";
-import { supabase, supabaseRest } from "@/lib/supabase";
+import type { EnderecoClinica, FormaPagamento, Convenio, ResumoAvaliacaoAtividade, DentistProfile, AvaliacaoIndividual, HorarioAtendimento } from "@/types/dentist";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { CachedDentistResult } from "@/lib/dentistCache";
+import { CachedDentistResult, loadProfileCache, saveProfileCache } from "@/lib/dentistCache";
 import Header from "@/components/layout/Header";
 import logoProAltUrl from "@/assets/logos/logo-pro-alt.png";
 
@@ -89,6 +90,61 @@ function corFormaPagamento(tipo: FormaPagamento["tipo"]): string {
     transferencia:  "#8E8E93",
   };
   return mapa[tipo] ?? "#8E8E93";
+}
+
+// ─── Subcomponente: Badge de pódio (Top 1, 2, 3) ─────────────────────────────
+interface BadgePodioProps {
+  posicao: number;
+  tamanho: "sm" | "md";
+}
+
+function BadgePodio({ posicao, tamanho }: BadgePodioProps) {
+  const config = {
+    1: { texto: "Top 1", bg: "linear-gradient(135deg, #FFD700 0%, #FFA500 100%)", cor: "#0A2A66" },
+    2: { texto: "Top 2", bg: "linear-gradient(135deg, #E0E0E0 0%, #B0B0B0 100%)", cor: "#3A3A3C" },
+    3: { texto: "Top 3", bg: "linear-gradient(135deg, #CD7F32 0%, #8B4513 100%)", cor: "#fff" },
+  }[posicao as 1 | 2 | 3] || { texto: `Top ${posicao}`, bg: "linear-gradient(135deg, #007AFF 0%, #0056B3 100%)", cor: "#fff" };
+
+  const estiloTamanho = tamanho === "sm"
+    ? { px: "6px", py: "1px", font: "10px", icon: 10 }
+    : { px: "10px", py: "3px", font: "12px", icon: 12 };
+
+  return (
+    <div
+      className="inline-flex items-center gap-1 font-bold rounded-full text-white shadow-sm"
+      style={{
+        background: config.bg,
+        color: config.cor,
+        padding: `${estiloTamanho.py} ${estiloTamanho.px}`,
+        fontSize: estiloTamanho.font,
+        lineHeight: 1,
+        fontFamily: "Inter, sans-serif",
+      }}
+    >
+      <Trophy size={estiloTamanho.icon} />
+      <span>{config.texto}</span>
+    </div>
+  );
+}
+
+/** normalizar agenda do banco para o frontend */
+function normalizarAgenda(agendaRaw: any): HorarioAtendimento[] {
+  if (!Array.isArray(agendaRaw)) return [];
+  return agendaRaw
+    .filter((item: any) => item && item.ativo !== false)
+    .map((item: any) => ({
+      dia_semana: item.dia || item.dia_semana || "",
+      horario_inicio: item.inicio || item.horario_inicio || "",
+      horario_fim: item.fim || item.horario_fim || "",
+    }))
+    .filter((item: any) => item.dia_semana && item.horario_inicio && item.horario_fim);
+}
+
+async function queryTimeout<T>(promise: PromiseLike<T>, ms: number): Promise<T> {
+  return Promise.race([
+    Promise.resolve(promise),
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error("timeout")), ms)),
+  ]);
 }
 
 // ─── Subcomponente: Barra de avaliação por atividade ─────────────────────────
@@ -143,6 +199,7 @@ function BarraAvaliacao({ atividade, onVerAvaliacoes }: {
           </span>
           {atividade.total_avaliacoes > 0 && (
             <button
+              type="button"
               onClick={() => onVerAvaliacoes?.(atividade.nome_atividade)}
               className="flex items-center gap-0.5 text-[11px] font-semibold px-1.5 py-0.5 rounded-full transition-colors"
               style={{ color: "#007AFF", background: "rgba(0,122,255,0.08)" }}
@@ -487,7 +544,6 @@ export default function DentistProfilePage() {
 
   // Estados para o modal de login obrigatório antes do contato
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [pendingContactUrl, setPendingContactUrl] = useState("");
 
   // Estado para o modal de avaliações individuais
   const [avaliacoesIndividuais, setAvaliacoesIndividuais] = useState<{
@@ -499,7 +555,6 @@ export default function DentistProfilePage() {
     if (user) {
       window.open(url, "_blank", "noopener,noreferrer");
     } else {
-      setPendingContactUrl(url);
       setShowLoginModal(true);
     }
   }, [user]);
@@ -520,30 +575,51 @@ export default function DentistProfilePage() {
   };
 
   const fetchAvaliacoesIndividuais = async (atividade: string) => {
-    if (!perfil) return;
+    console.log("[fetchAvaliacoesIndividuais] Called for activity:", atividade, "perfil:", perfil);
+    if (!perfil) {
+      console.warn("[fetchAvaliacoesIndividuais] Aborted: perfil is null");
+      return;
+    }
     try {
-      const { data: avaliacoes, error } = await supabase
-        .from("avaliacoes")
-        .select("paciente_id, nota, criado_em")
-        .eq("dentista_id", perfil.dentista_id)
-        .eq("atividade", atividade)
-        .order("criado_em", { ascending: false });
+      console.log("[fetchAvaliacoesIndividuais] Querying reviews for dentista_id:", perfil.dentista_id, "atividade:", atividade);
+      const { data: avaliacoes, error } = await queryTimeout(
+        supabase
+          .from("avaliacoes")
+          .select("paciente_id, nota, criado_em")
+          .eq("dentista_id", perfil.dentista_id)
+          .eq("atividade", atividade)
+          .order("criado_em", { ascending: false }),
+        5000
+      );
 
-      if (error) throw error;
-      if (!avaliacoes || avaliacoes.length === 0) return;
+      if (error) {
+        console.error("[fetchAvaliacoesIndividuais] Error fetching reviews:", error);
+        throw error;
+      }
+      console.log("[fetchAvaliacoesIndividuais] Reviews returned:", avaliacoes);
+      if (!avaliacoes || avaliacoes.length === 0) {
+        console.warn("[fetchAvaliacoesIndividuais] No reviews found for this activity.");
+        return;
+      }
 
       const ids = [...new Set(avaliacoes.map((a: any) => a.paciente_id))];
+      console.log("[fetchAvaliacoesIndividuais] Querying clients for patient_ids:", ids);
       const { data: pacientes, error: pacError } = await supabase
         .from("clientes")
         .select("id, nome, foto")
         .in("id", ids);
 
-      if (pacError) throw pacError;
+      if (pacError) {
+        console.error("[fetchAvaliacoesIndividuais] Error fetching clients:", pacError);
+        throw pacError;
+      }
+      console.log("[fetchAvaliacoesIndividuais] Clients returned:", pacientes);
 
       const mapaPacientes = Object.fromEntries(
         (pacientes || []).map((p: any) => [p.id, { nome: p.nome, foto: p.foto }])
       );
 
+      console.log("[fetchAvaliacoesIndividuais] Setting avaliacoesIndividuais state...");
       setAvaliacoesIndividuais({
         atividade,
         ratings: (avaliacoes || []).map((r: any) => ({
@@ -569,192 +645,227 @@ export default function DentistProfilePage() {
     if (!id) return;
 
     let cancel = false;
+    const cacheKey = cParam || dId || "";
 
+    // ─── Tenta cache de perfil completo (inclui agenda) ────────────────
     (async () => {
+      setPerfil(null);
       setLoading(true);
       setError(false);
 
-      // Tenta cache — busca por UUID ou CRO
+      // 0. Cache de perfil completo — mostra instantaneamente se existir
+      if (cacheKey) {
+        const cachedProfile = loadProfileCache(cacheKey);
+        if (cachedProfile) {
+          console.log("[DentistProfile] Profile cache hit:", cacheKey);
+          if (!cancel) {
+            setPerfil(cachedProfile);
+            setLoading(false);
+          }
+        }
+      }
+
+      if (cancel) return;
+
       try {
-        const cachedStr = localStorage.getItem("curadentes_search_cache");
-        console.log("[DentistProfile] Cache encontrado?", !!cachedStr);
-        if (cachedStr) {
-          const parsed = JSON.parse(cachedStr);
-          if (parsed.resultados) {
-            console.log("[DentistProfile] Cache tem", parsed.resultados.length, "resultados. Buscando por", dId ? `dentista_id=${dId}` : `dentista_cro=${cParam}`);
-            const doCache = (parsed.resultados as CachedDentistResult[]).find((r) =>
-              dId ? r.dentista_id === dId : r.dentista_cro === cParam
-            );
-            console.log("[DentistProfile] Cache match?", !!doCache, doCache ? `nome=${doCache.dentista_nome}` : "");
-            if (doCache) {
-              const espec = doCache.atividades && doCache.atividades.length > 0 ? doCache.atividades[0] : "Clínico Geral";
-              const partialProfile: DentistProfile = {
-                dentista_id: doCache.dentista_id,
-                nome_completo: doCache.dentista_nome,
-                foto_url: doCache.dentista_foto || "",
-                cro: doCache.dentista_cro || "",
-                especialidade_principal: espec,
-                bio: doCache.dentista_bio || "",
-                rating: doCache.dentista_avaliacao || 5.0,
-                total_avaliacoes: 0,
-                enderecos: [
-                  {
-                      id: doCache.endereco_id,
-                      nome_clinica: doCache.nome_clinica || "",
-                      logradouro: doCache.logradouro || "",
-                      numero: doCache.numero || "",
-                      complemento: "",
-                      bairro: doCache.bairro || "",
-                      cidade: doCache.cidade || "",
-                      estado: doCache.estado || "",
-                      cep: "",
-                      telefone: "",
-                      atividades: doCache.atividades || [],
-                      agenda: [],
-                      formas_pagamento: doCache.formas_pagamento ? doCache.formas_pagamento.map((fp: string, i: number) => ({ id: `${i}`, nome: fp, tipo: "dinheiro" as const })) : [],
-                      convenios: doCache.convenios ? doCache.convenios.map((c: string, i: number) => ({ id: `${i}`, nome: c })) : [],
-                    }
-                  ]
+        // Tenta cache de busca (dados parciais, sem agenda)
+        try {
+          const cachedStr = localStorage.getItem("curadentes_search_cache");
+          if (cachedStr) {
+            const parsed = JSON.parse(cachedStr);
+            if (parsed.resultados) {
+              const doCache = (parsed.resultados as CachedDentistResult[]).find((r) =>
+                dId ? r.dentista_id === dId : r.dentista_cro === cParam
+              );
+              if (doCache && !loadProfileCache(cacheKey)) {
+                // Só mostra search cache se NÃO temos profile cache completo
+                const espec = doCache.atividades && doCache.atividades.length > 0 ? doCache.atividades[0] : "Clínico Geral";
+                const partialProfile: DentistProfile = {
+                  dentista_id: doCache.dentista_id,
+                  nome_completo: doCache.dentista_nome,
+                  foto_url: doCache.dentista_foto || "",
+                  cro: doCache.dentista_cro || "",
+                  especialidade_principal: espec,
+                  bio: doCache.dentista_bio || "",
+                  rating: doCache.dentista_avaliacao || 5.0,
+                  total_avaliacoes: 0,
+                  enderecos: [{
+                    id: doCache.endereco_id,
+                    nome_clinica: doCache.nome_clinica || "",
+                    logradouro: doCache.logradouro || "",
+                    numero: doCache.numero || "",
+                    complemento: "",
+                    bairro: doCache.bairro || "",
+                    cidade: doCache.cidade || "",
+                    estado: doCache.estado || "",
+                    cep: "",
+                    telefone: "",
+                    atividades: doCache.atividades || [],
+                    agenda: [],
+                    formas_pagamento: doCache.formas_pagamento ? doCache.formas_pagamento.map((fp: string, i: number) => ({ id: `${i}`, nome: fp, tipo: "dinheiro" as const })) : [],
+                    convenios: doCache.convenios ? doCache.convenios.map((c: string, i: number) => ({ id: `${i}`, nome: c })) : [],
+                  }],
                 };
-              if (!cancel) {
-                setPerfil(partialProfile);
-                setLoading(false);
+                if (!cancel) {
+                  setPerfil(partialProfile);
+                  if (!loadProfileCache(cacheKey)) setLoading(false);
+                }
               }
             }
           }
+        } catch (e) {
+          console.error("Erro ao ler cache do dentista:", e);
         }
-      } catch (e) {
-        console.error("Erro ao ler cache do dentista:", e);
-      }
 
-      if (cancel) return;
+        if (cancel) return;
 
-      // 1. Busca o dentista — por UUID (dentistaId) ou por CRO (croParam)
-      const queryField = cParam ? "cro" : "id";
-      const queryValue = cParam || dId;
-      console.log("[DentistProfile] Query curadentespro:", queryField, "=", queryValue);
-      const proList = await supabaseRest<any>("curadentespro", {
-        [queryField]: `eq.${queryValue}`,
-      });
-      const pro = proList.length > 0 ? proList[0] : null;
+        // ─── 1. Query principal com timeout ──────────────────────────────
+        const queryField = cParam ? "cro" : "id";
+        const queryValue = cParam || dId;
+        console.log("[DentistProfile] Query curadentespro:", queryField, "=", queryValue);
+        const { data: pro, error: proError } = await queryTimeout(
+          supabase
+            .from("curadentespro")
+            .select("*")
+            .eq(queryField, queryValue)
+            .maybeSingle(),
+          15000
+        );
 
-      if (cancel) return;
-      console.log("[DentistProfile] Result da query curadentespro:", pro ? "encontrado" : "não encontrado");
-      if (!pro) throw new Error("Dentista não encontrado");
+        if (cancel) return;
+        if (proError || !pro) throw new Error("Dentista não encontrado");
 
-      const proId = pro.id; // UUID real do dentista
+        const proId = pro.id;
 
-      // 2. Busca os endereços
-      const ends = await supabaseRest<any>("curadentespro_enderecos", {
-        curadentespro_id: `eq.${proId}`,
-      });
+        // ─── 2. Endereços com timeout ────────────────────────────────────
+        const { data: ends, error: endError } = await queryTimeout(
+          supabase
+            .from("curadentespro_enderecos")
+            .select("*")
+            .eq("curadentespro_id", proId),
+          15000
+        );
 
-      if (cancel) return;
-      if (!ends) throw new Error("Erro ao buscar endereços");
+        if (cancel) return;
+        if (endError) throw endError;
 
-      // 3. Busca as avaliações do dentista
-      const avs = await supabaseRest<any>("avaliacoes", {
-        dentista_id: `eq.${proId}`,
-      });
+        // ─── 3. Avaliações com timeout ────────────────────────────────────
+        const { data: avs, error: avError } = await queryTimeout(
+          supabase
+            .from("avaliacoes")
+            .select("*")
+            .eq("dentista_id", proId),
+          15000
+        );
 
-      if (cancel) return;
-      console.log("[DentistProfile] Avaliações encontradas:", avs?.length || 0);
+        if (cancel) return;
+        if (avError) throw avError;
 
-      // 4. Calcula médias de avaliações
-      let mediaGeral = 0;
-      let totalAvs = 0;
-      const porAtividadeMap = new Map<string, { soma: number, count: number }>();
+        // ─── 4. Calcula médias ────────────────────────────────────────────
+        let mediaGeral = 0;
+        let totalAvs = 0;
+        const porAtividadeMap = new Map<string, { soma: number, count: number }>();
 
-      if (avs && avs.length > 0) {
-        totalAvs = avs.length;
-        let somaTotal = 0;
-        avs.forEach((av: { nota: number; atividade?: string }) => {
-          somaTotal += av.nota;
-          const atv = av.atividade || "Geral";
-          if (!porAtividadeMap.has(atv)) {
-            porAtividadeMap.set(atv, { soma: 0, count: 0 });
-          }
-          porAtividadeMap.get(atv)!.soma += av.nota;
-          porAtividadeMap.get(atv)!.count += 1;
-        });
-        mediaGeral = somaTotal / totalAvs;
-      }
+        if (avs && avs.length > 0) {
+          totalAvs = avs.length;
+          let somaTotal = 0;
+          avs.forEach((av: { nota: number; atividade?: string }) => {
+            somaTotal += av.nota;
+            const atv = av.atividade || "Geral";
+            if (!porAtividadeMap.has(atv)) {
+              porAtividadeMap.set(atv, { soma: 0, count: 0 });
+            }
+            porAtividadeMap.get(atv)!.soma += av.nota;
+            porAtividadeMap.get(atv)!.count += 1;
+          });
+          mediaGeral = somaTotal / totalAvs;
+        }
 
-      const porAtividade: ResumoAvaliacaoAtividade[] = Array.from(porAtividadeMap.entries()).map(([nome, dados]) => ({
-        nome_atividade: nome,
-        media_nota: dados.soma / dados.count,
-        total_avaliacoes: dados.count
-      }));
+        const porAtividade: ResumoAvaliacaoAtividade[] = Array.from(porAtividadeMap.entries()).map(([nome, dados]) => ({
+          nome_atividade: nome,
+          media_nota: dados.soma / dados.count,
+          total_avaliacoes: dados.count
+        }));
 
-      // A especialidade principal será a primeira atividade do primeiro endereço (se existir)
-      let espec = "Clínico Geral";
-      if (ends && ends.length > 0 && ends[0].atividades && ends[0].atividades.length > 0) {
-        espec = ends[0].atividades[0];
-      }
+        let espec = "Clínico Geral";
+        if (ends && ends.length > 0 && ends[0].atividades && ends[0].atividades.length > 0) {
+          espec = ends[0].atividades[0];
+        }
 
-      const formatarEnderecos = (ends || []).map((e: {
-        id: string;
-        nome_clinica: string;
-        logradouro: string;
-        numero: string;
-        complemento?: string;
-        bairro: string;
-        cidade: string;
-        estado: string;
-        cep: string;
-        telefone: string;
-        whatsapp?: string;
-        atividades?: string[];
-        agenda?: EnderecoClinica["agenda"];
-        formas_pagamento?: string[];
-        convenios?: string[];
-      }) => ({
-        id: e.id,
-        nome_clinica: e.nome_clinica,
-        logradouro: e.logradouro,
-        numero: e.numero,
-        complemento: e.complemento,
-        bairro: e.bairro,
-        cidade: e.cidade,
-        estado: e.estado,
-        cep: e.cep,
-        telefone: e.telefone,
-        whatsapp: e.whatsapp,
-        atividades: e.atividades || [],
-        agenda: e.agenda || [],
-        formas_pagamento: e.formas_pagamento ? e.formas_pagamento.map((fp: string, i: number) => ({ id: `${i}`, nome: fp, tipo: "dinheiro" as const })) : [],
-        convenios: e.convenios ? e.convenios.map((c: string, i: number) => ({ id: `${i}`, nome: c })) : [],
-      }));
+        const formatarEnderecos = (ends || []).map((e: {
+          id: string;
+          nome_clinica: string;
+          logradouro: string;
+          numero: string;
+          complemento?: string;
+          bairro: string;
+          cidade: string;
+          estado: string;
+          cep: string;
+          telefone: string;
+          whatsapp?: string;
+          atividades?: string[];
+          agenda?: any;
+          formas_pagamento?: string[];
+          convenios?: string[];
+        }) => ({
+          id: e.id,
+          nome_clinica: e.nome_clinica,
+          logradouro: e.logradouro,
+          numero: e.numero,
+          complemento: e.complemento,
+          bairro: e.bairro,
+          cidade: e.cidade,
+          estado: e.estado,
+          cep: e.cep,
+          telefone: e.telefone,
+          whatsapp: e.whatsapp,
+          atividades: e.atividades || [],
+          agenda: normalizarAgenda(e.agenda),
+          formas_pagamento: e.formas_pagamento ? e.formas_pagamento.map((fp: string, i: number) => ({ id: `${i}`, nome: fp, tipo: "dinheiro" as const })) : [],
+          convenios: e.convenios ? e.convenios.map((c: string, i: number) => ({ id: `${i}`, nome: c })) : [],
+        }));
 
-      const perfilMontado: DentistProfile = {
-        dentista_id: pro.id,
-        nome_completo: pro.nome,
-        foto_url: pro.foto_url || "",
-        cro: (pro.cro || "").replace(/\s/g, ""),
-        email: pro.email,
-        especialidade_principal: espec,
-        bio: pro.bio,
-        rating: mediaGeral,
-        total_avaliacoes: totalAvs,
-        enderecos: formatarEnderecos,
-        avaliacoes: totalAvs > 0 ? {
-          media_geral: mediaGeral,
+        const perfilMontado: DentistProfile = {
+          dentista_id: pro.id,
+          nome_completo: pro.nome,
+          foto_url: (pro.foto_url && !pro.foto_url.startsWith("blob:")) ? pro.foto_url : "",
+          cro: (pro.cro || "").replace(/\s/g, ""),
+          email: pro.email,
+          especialidade_principal: espec,
+          bio: pro.bio,
+          rating: mediaGeral,
           total_avaliacoes: totalAvs,
-          por_atividade: porAtividade
-        } : undefined,
-      };
+          enderecos: formatarEnderecos,
+          avaliacoes: totalAvs > 0 ? {
+            media_geral: mediaGeral,
+            total_avaliacoes: totalAvs,
+            por_atividade: porAtividade
+          } : undefined,
+        };
 
-      if (!cancel) setPerfil(perfilMontado);
-    })().catch((err) => {
-      if (cancel) return;
-      console.error(err);
-      setPerfil((atual) => {
-        if (!atual) setError(true);
-        return atual;
-      });
-    }).finally(() => {
-      if (!cancel) setLoading(false);
-    });
+        if (!cancel) {
+          setPerfil(perfilMontado);
+          setLoading(false);
+          // Salva no cache de perfil completo para F5
+          if (cacheKey) saveProfileCache(cacheKey, perfilMontado);
+        }
+      } catch (err: any) {
+        if (cancel) return;
+        // Se já temos um perfil do cache, não marca erro
+        if (err?.message === "timeout") {
+          console.warn("[DentistProfile] Query timeout, usando dados do cache");
+          // Loading já foi removido pelo cache
+        } else {
+          console.error(err);
+          setPerfil((atual) => {
+            if (!atual) setError(true);
+            return atual;
+          });
+          setLoading(false);
+        }
+      }
+    })();
 
     return () => { cancel = true; };
   }, [id, reloadFlag]);

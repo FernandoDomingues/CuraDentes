@@ -101,6 +101,18 @@ function BarraAvaliacao({
   );
 }
 
+function normalizarAgenda(agendaRaw: any): any[] {
+  if (!Array.isArray(agendaRaw)) return [];
+  return agendaRaw
+    .filter((item: any) => item && item.ativo !== false)
+    .map((item: any) => ({
+      dia_semana: item.dia || item.dia_semana || "",
+      horario_inicio: item.inicio || item.horario_inicio || "",
+      horario_fim: item.fim || item.horario_fim || "",
+    }))
+    .filter((item: any) => item.dia_semana && item.horario_inicio && item.horario_fim);
+}
+
 // ─── Componente: Card de endereço no dashboard ────────────────────────────────
 
 /** Exibe um endereço com todas as informações e opção de editar */
@@ -406,7 +418,7 @@ export default function Dashboard() {
         nome_completo: perfil.nome,
         email: perfil.email || "",
         telefone: perfil.telefone || "",
-        foto_url: perfil.foto_url || logoProAltUrl,
+        foto_url: (perfil.foto_url && !perfil.foto_url.startsWith("blob:")) ? perfil.foto_url : logoProAltUrl,
         cro: perfil.cro,
         cpf: perfil.cpf || "",
         ano_formacao: perfil.ano_formacao || 0,
@@ -428,7 +440,7 @@ export default function Dashboard() {
           whatsapp: e.whatsapp || "",
           maps_url: "",
           atividades: e.atividades || [],
-          agenda: e.agenda || [],
+          agenda: normalizarAgenda(e.agenda),
           formas_pagamento: e.formas_pagamento || [],
           convenios: e.convenios ? e.convenios.map((c: string) => ({ id: c, nome: c })) : []
         }))
