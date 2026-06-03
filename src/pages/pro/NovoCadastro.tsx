@@ -225,6 +225,8 @@ export default function NovoCadastro() {
   const [confirmaSenha, setConfirmaSenha] = useState("");
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [mostrarConfirma, setMostrarConfirma] = useState(false);
+  // Evita re-sincronizar a senha no Supabase ao voltar da etapa 6 para a 1
+  const [senhaSincronizada, setSenhaSincronizada] = useState(false);
 
   // ─ Etapa 2: Telefone ──────────────────────────────────────────────────────
   const [telefone, setTelefone] = useState("");
@@ -248,6 +250,11 @@ export default function NovoCadastro() {
 
   // ─ Modal de cadastro incompleto ───────────────────────────────────────────
   const [exibirModalIncompleto, setExibirModalIncompleto] = useState(false);
+
+  // Se o usuario editar a senha depois de ja sincronizada, re-sincroniza no proximo avanco
+  useEffect(() => {
+    if (senhaSincronizada) setSenhaSincronizada(false);
+  }, [senha]);
 
   // ─ Auto-save: persiste o rascunho no localStorage a cada mudança de estado ─
   // Garante que ao pressionar F5 o formulário seja restaurado exatamente como estava.
@@ -370,11 +377,14 @@ export default function NovoCadastro() {
   // ─────────────────────────────────────────────────────────────────────────
   async function avancarEtapa1() {
     if (!emailVerificado || senha.length < 8) return;
+    // Ja foi sincronizada numa passagem anterior pela etapa 1
+    if (senhaSincronizada) return;
     const { error } = await supabase.auth.updateUser({ password: senha });
     if (error) {
       toast.error("Erro ao salvar a senha: " + error.message);
       throw error;
     }
+    setSenhaSincronizada(true);
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -724,13 +734,21 @@ export default function NovoCadastro() {
   // ─── Renderização da barra de progresso ──────────────────────────────────
   const renderBarraProgresso = () => (
     <div className="mb-8">
-      {/* Indicadores de etapa */}
+      {/* Indicadores de etapa (clicaveis para etapas concluidas) */}
       <div className="flex items-center justify-between mb-3">
         {ETAPAS.map((e) => {
           const concluida = etapa > e.id;
           const atual = etapa === e.id;
+          const podeNavegar = concluida || atual;
           return (
-            <div key={e.id} className="flex flex-col items-center gap-1 flex-1">
+            <button
+              key={e.id}
+              type="button"
+              disabled={!podeNavegar}
+              onClick={() => podeNavegar && setEtapa(e.id)}
+              className="flex flex-col items-center gap-1 flex-1 transition-opacity"
+              style={{ cursor: podeNavegar ? "pointer" : "default", opacity: podeNavegar ? 1 : 0.5, background: "none", border: "none", padding: 0 }}
+            >
               <div
                 className="flex items-center justify-center rounded-full text-[12px] font-bold transition-all duration-300"
                 style={{
@@ -753,7 +771,7 @@ export default function NovoCadastro() {
               >
                 {e.label}
               </span>
-            </div>
+            </button>
           );
         })}
       </div>
@@ -834,7 +852,11 @@ export default function NovoCadastro() {
         ) : (
           <button
             onClick={async () => {
-              if (onAvancar) await onAvancar();
+              try {
+                if (onAvancar) await onAvancar();
+              } catch {
+                return;
+              }
               setEtapa(etapa + 1);
             }}
             disabled={!podeProsseguir}
