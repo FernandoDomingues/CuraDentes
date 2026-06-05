@@ -11,7 +11,7 @@ const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
  * @param dentistaId O ID (UUID) do dentista (curadentespro_id)
  * @returns A URL pública da imagem recém enviada
  */
-export async function uploadFotoDentista(file: File, dentistaId: string): Promise<string> {
+export async function uploadFotoDentista(file: File | Blob, dentistaId: string): Promise<string> {
   // 1. Validação do tamanho do arquivo (Trava de segurança no Front-end)
   if (file.size > MAX_FILE_SIZE) {
     throw new Error("A foto é muito grande! Por favor, escolha uma imagem de até 2MB.");
@@ -24,8 +24,19 @@ export async function uploadFotoDentista(file: File, dentistaId: string): Promis
 
   try {
     // 3. Criar um nome único para o arquivo para evitar cache ou sobreposição acidental
-    // Exemplo: fa25f28d.../1684534534_minhafoto.jpg
-    const fileExt = file.name.split('.').pop();
+    // Sempre salva como .webp se o tipo for image/webp, ou detecta do nome/tipo
+    let fileExt = "webp";
+    if (file instanceof File && file.name) {
+      fileExt = file.name.split('.').pop() || "webp";
+    } else if (file.type) {
+      fileExt = file.type.split('/').pop() || "webp";
+    }
+
+    // Forçar extensão webp se o tipo for image/webp
+    if (file.type === "image/webp") {
+      fileExt = "webp";
+    }
+
     const fileName = `${dentistaId}/${Date.now()}_foto.${fileExt}`;
     const filePath = `${fileName}`;
 
@@ -34,7 +45,8 @@ export async function uploadFotoDentista(file: File, dentistaId: string): Promis
       .from('fotos-dentistas')
       .upload(filePath, file, {
         cacheControl: '3600',
-        upsert: true // Se já existir um arquivo com esse exato nome, ele sobrescreve
+        upsert: true, // Se já existir um arquivo com esse exato nome, ele sobrescreve
+        contentType: file.type // Define o MIME-type adequado no storage
       });
 
     if (uploadError) {

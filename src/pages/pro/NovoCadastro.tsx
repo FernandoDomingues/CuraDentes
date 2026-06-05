@@ -34,12 +34,15 @@ import {
   Clock,
   FileText,
   Info,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { CepInputComBusca } from "@/components/ui/CepInputComBusca";
 
 import logoProUrl from "@/assets/logos/logo-pro.png";
+import { uploadFotoDentista } from "@/lib/uploadService";
+import { ImageCropperModal } from "@/components/ImageCropperModal";
 
 // ─── URL do logo CuraDentes Pro ───────────────────────────────────────────────
 const LOGO_PRO = logoProUrl;
@@ -236,6 +239,9 @@ export default function NovoCadastro() {
   const [cro, setCro] = useState("");
   const [anoFormacao, setAnoFormacao] = useState("");
   const [fotoUrl, setFotoUrl] = useState("");
+  const [cropperSrc, setCropperSrc] = useState("");
+  const [isCropperOpen, setIsCropperOpen] = useState(false);
+  const [isUploadingFoto, setIsUploadingFoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ─ Etapa 4: Endereços ─────────────────────────────────────────────────────
@@ -406,6 +412,26 @@ export default function NovoCadastro() {
     setSenhaSincronizada(true);
   }
 
+  async function handleConfirmCrop(croppedBlob: Blob) {
+    const toastId = toast.loading("Enviando foto de perfil...");
+    try {
+      setIsUploadingFoto(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("Sessão expirada. Por favor, volte à Etapa 1 e confirme seu e-mail.");
+      }
+
+      const publicUrl = await uploadFotoDentista(croppedBlob, user.id);
+      setFotoUrl(publicUrl);
+      toast.success("Foto de perfil atualizada com sucesso!", { id: toastId });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erro ao enviar a foto de perfil.";
+      toast.error(message, { id: toastId });
+    } finally {
+      setIsUploadingFoto(false);
+    }
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   // (formatarCep e CepInputComBusca movidos para src/components/ui/CepInputComBusca)
   // ─────────────────────────────────────────────────────────────────────────
@@ -546,11 +572,19 @@ export default function NovoCadastro() {
             foto_url: fotoUrl || null,
             bio: bio,
             lgpd_aceito: lgpdAceito
-          });
+          }, { onConflict: 'id' });
 
           if (errorPro) throw errorPro;
 
-          // 3. Inserir endereços na tabela curadentespro_enderecos
+          // 3. Deletar endereços existentes para evitar duplicações se for uma re-tentativa/atualização
+          const { error: errorDelete } = await supabase
+            .from('curadentespro_enderecos')
+            .delete()
+            .eq('curadentespro_id', user.id);
+
+          if (errorDelete) throw errorDelete;
+
+          // 4. Inserir endereços na tabela curadentespro_enderecos
           for (const end of enderecos) {
             const { error: errorEnd } = await supabase.from('curadentespro_enderecos').insert({
               curadentespro_id: user.id,
@@ -585,9 +619,30 @@ export default function NovoCadastro() {
           navigate("/pro/dashboard");
         })()
       ]);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao salvar cadastro:", error);
-      const message = error instanceof Error ? error.message : "Ocorreu um erro ao salvar o cadastro.";
+      
+      let message = "Ocorreu um erro ao salvar o cadastro.";
+      
+      if (error && typeof error === "object") {
+        if (error.code === "23505") {
+          const errMsg = error.message || "";
+          if (errMsg.includes("curadentespro_cpf_key") || errMsg.includes("cpf")) {
+            message = "Este CPF já está cadastrado na plataforma. Caso seja seu, acesse o painel com o e-mail que você utilizou anteriormente.";
+          } else if (errMsg.includes("curadentespro_cro_key") || errMsg.includes("cro")) {
+            message = "Este CRO já está cadastrado na plataforma. Caso seja seu, por favor entre em contato com o suporte.";
+          } else if (errMsg.includes("curadentespro_email_key") || errMsg.includes("email")) {
+            message = "Este e-mail já está cadastrado na plataforma. Por favor, faça login ou use outro e-mail.";
+          } else {
+            message = "Este CPF, CRO ou e-mail já está cadastrado em outra conta.";
+          }
+        } else if (error.message) {
+          message = error.message;
+        }
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
+      
       toast.error(message, { id: toastId });
     }
   }
@@ -1225,7 +1280,9 @@ export default function NovoCadastro() {
             className="flex-shrink-0 flex items-center justify-center overflow-hidden"
             style={{ width: "80px", height: "80px", borderRadius: "50%", background: "rgba(0,122,255,0.08)", border: "2px dashed rgba(0,122,255,0.25)" }}
           >
-            {fotoUrl ? (
+            {isUploadingFoto ? (
+              <Loader2 className="animate-spin text-[#007AFF]" size={24} />
+            ) : fotoUrl ? (
               <img src={fotoUrl} alt="Foto" className="w-full h-full object-cover" />
             ) : (
               <User size={28} style={{ color: "rgba(0,122,255,0.40)" }} />
@@ -1234,11 +1291,21 @@ export default function NovoCadastro() {
           <div className="flex flex-col gap-2">
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-[12px] font-semibold text-[13px] min-h-[40px] transition-all duration-200"
+              disabled={isUploadingFoto}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-[12px] font-semibold text-[13px] min-h-[40px] transition-all duration-200 disabled:opacity-50"
               style={{ background: "rgba(0,122,255,0.08)", color: "#007AFF", border: "0.5px solid rgba(0,122,255,0.20)" }}
             >
-              <Upload size={14} />
-              Fazer upload
+              {isUploadingFoto ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  Carregando...
+                </>
+              ) : (
+                <>
+                  <Upload size={14} />
+                  Fazer upload
+                </>
+              )}
             </button>
             <p className="text-[12px]" style={{ color: "#8E8E93" }}>JPG, PNG ou WEBP · máx. 5 MB</p>
           </div>
@@ -1250,7 +1317,12 @@ export default function NovoCadastro() {
           className="hidden"
           onChange={(e) => {
             const file = e.target.files?.[0];
-            if (file) setFotoUrl(URL.createObjectURL(file));
+            if (file) {
+              const localUrl = URL.createObjectURL(file);
+              setCropperSrc(localUrl);
+              setIsCropperOpen(true);
+              if (fileInputRef.current) fileInputRef.current.value = "";
+            }
           }}
         />
       </div>
@@ -1934,6 +2006,13 @@ export default function NovoCadastro() {
           </div>
         </div>
       )}
+
+      <ImageCropperModal
+        isOpen={isCropperOpen}
+        onClose={() => setIsCropperOpen(false)}
+        imageSrc={cropperSrc}
+        onConfirm={handleConfirmCrop}
+      />
     </div>
   );
 }

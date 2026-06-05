@@ -30,6 +30,7 @@ import {
 import logoProUrl from "@/assets/logos/logo-pro.png";
 import { CepInputComBusca } from "@/components/ui/CepInputComBusca";
 import logoProAltUrl from "@/assets/logos/logo-pro-alt.png";
+import { ImageCropperModal } from "@/components/ImageCropperModal";
 
 // --- Constantes ---
 const ESPECIALIDADES = [
@@ -126,6 +127,8 @@ export default function MeuPerfil() {
   const [bio, setBio] = useState("");
   const [fotoUrl, setFotoUrl] = useState("");
   const [isUploadingFoto, setIsUploadingFoto] = useState(false);
+  const [cropperSrc, setCropperSrc] = useState("");
+  const [isCropperOpen, setIsCropperOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Endereços
@@ -208,18 +211,26 @@ export default function MeuPerfil() {
     const file = e.target.files?.[0];
     if (!file || !userId) return;
 
+    const localUrl = URL.createObjectURL(file);
+    setCropperSrc(localUrl);
+    setIsCropperOpen(true);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  async function handleConfirmCrop(croppedBlob: Blob) {
+    if (!userId) return;
+
+    const toastId = toast.loading("Enviando foto de perfil...");
     try {
       setIsUploadingFoto(true);
-      const toastId = toast.loading("Enviando foto...");
-      const publicUrl = await uploadFotoDentista(file, userId);
+      const publicUrl = await uploadFotoDentista(croppedBlob, userId);
       setFotoUrl(publicUrl);
-      toast.success("Foto atualizada com sucesso!", { id: toastId });
+      toast.success("Foto de perfil atualizada com sucesso!", { id: toastId });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Erro ao atualizar foto.";
-      toast.error(message);
+      const message = error instanceof Error ? error.message : "Erro ao atualizar foto de perfil.";
+      toast.error(message, { id: toastId });
     } finally {
       setIsUploadingFoto(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }
 
@@ -698,6 +709,13 @@ export default function MeuPerfil() {
           </div>
         </div>
       </main>
+
+      <ImageCropperModal
+        isOpen={isCropperOpen}
+        onClose={() => setIsCropperOpen(false)}
+        imageSrc={cropperSrc}
+        onConfirm={handleConfirmCrop}
+      />
     </div>
   );
 }
