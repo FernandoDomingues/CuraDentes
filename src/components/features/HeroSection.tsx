@@ -248,7 +248,7 @@ export default function HeroSection() {
   useEffect(() => {
     async function fetchStats() {
       const CACHE_KEY = "curadentes_hero_stats_cache";
-      const CACHE_VERSION = "v2";
+      const CACHE_VERSION = "v3";
       const EXPIRATION_TIME = 24 * 60 * 60 * 1000; // 24 horas
 
       // Tenta ler do cache primeiro
@@ -274,7 +274,8 @@ export default function HeroSection() {
       try {
         const { count, error } = await supabase
           .from("curadentespro")
-          .select("*", { count: "exact", head: true });
+          .select("*", { count: "exact", head: true })
+          .eq("lgpd_aceito", true);
           
         if (!error && count !== null && count > 0) {
           setTotalDentists(count);

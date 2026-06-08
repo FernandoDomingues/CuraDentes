@@ -156,6 +156,12 @@ export default function MeuPerfil() {
 
         if (perfilError) throw perfilError;
 
+        // Cadastro incompleto → redireciona para retomar o fluxo de registro
+        if (!perfil.lgpd_aceito) {
+          navigate("/pro/novo-cadastro");
+          return;
+        }
+
         setNome(perfil.nome || "");
         setTelefone(perfil.telefone || "");
         setCpf(perfil.cpf || "");

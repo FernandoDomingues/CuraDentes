@@ -12,7 +12,8 @@
     "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "test:smoke": "npx --yes tsx --env-file=.env tests/smoke/supabase.test.ts",
     "test:security": "npx --yes tsx --env-file=.env tests/security/rls.test.ts",
-    "test:all": "npm run test:smoke && npm run test:security"
+    "test:cadastro": "npx --yes tsx tests/cadastro/validation.test.ts",
+    "test:all": "npm run test:cadastro && npm run test:smoke && npm run test:security"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

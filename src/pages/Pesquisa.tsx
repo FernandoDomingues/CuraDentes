@@ -57,8 +57,8 @@ interface EnderecoRow {
   latitude: number | null;
   longitude: number | null;
   curadentespro:
-    | { id: string; nome: string; foto_url: string | null; bio: string | null; cro: string | null }
-    | { id: string; nome: string; foto_url: string | null; bio: string | null; cro: string | null }[]
+    | { id: string; nome: string; foto_url: string | null; bio: string | null; cro: string | null; lgpd_aceito: boolean }
+    | { id: string; nome: string; foto_url: string | null; bio: string | null; cro: string | null; lgpd_aceito: boolean }[]
     | null;
 }
 
@@ -174,7 +174,7 @@ export default function Pesquisa() {
             .from("curadentespro_enderecos")
             .select(`
               id, nome_clinica, logradouro, numero, bairro, cidade, estado, atividades, convenios, formas_pagamento, latitude, longitude,
-              curadentespro:curadentespro_id ( id, nome, foto_url, bio, cro )
+              curadentespro!inner ( id, nome, foto_url, bio, cro, lgpd_aceito )
             `)
             .or([
               `bairro.ilike.%${q}%`,
@@ -182,7 +182,8 @@ export default function Pesquisa() {
               `estado.ilike.%${q}%`,
               `logradouro.ilike.%${q}%`,
               `nome_clinica.ilike.%${q}%`
-            ].join(','));
+            ].join(','))
+            .eq('curadentespro.lgpd_aceito', true); // Apenas dentistas com cadastro completo
           textSearchPromise = queryBuilder as unknown as Promise<{ data: EnderecoRow[] | null; error: SupabaseError | null }>;
         }
 

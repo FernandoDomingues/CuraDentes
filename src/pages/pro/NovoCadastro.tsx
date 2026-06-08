@@ -43,6 +43,13 @@ import { CepInputComBusca } from "@/components/ui/CepInputComBusca";
 import logoProUrl from "@/assets/logos/logo-pro.png";
 import { uploadFotoDentista } from "@/lib/uploadService";
 import { ImageCropperModal } from "@/components/ImageCropperModal";
+import {
+  validarTelefone,
+  validarCpf,
+  validarCro,
+  validarEnderecos,
+  isEtapaConcluida,
+} from "@/utils/cadastroValidation";
 
 // ─── URL do logo CuraDentes Pro ───────────────────────────────────────────────
 const LOGO_PRO = logoProUrl;
@@ -189,29 +196,123 @@ export default function NovoCadastro() {
   const [etapa, setEtapa] = useState(1);
   const [salvoFeedbackIdx, setSalvoFeedbackIdx] = useState<number | null>(null);
 
-  // ─ Carrega rascunho salvo no localStorage ──────────────────────────────────
+  // ─ Restauração automática: localStorage + banco de dados ───────────────────
+  //
+  // Prioridade: banco de dados > localStorage.
+  // Se houver uma sessão ativa (dentista já passou pela Etapa 1 nesta ou em
+  // outra aba/dispositivo), buscamos os dados salvos no banco e posicionamos
+  // o formulário na primeira etapa ainda incompleta.
+  // Se não houver sessão mas existir rascunho local, usamos o localStorage.
+  // ────────────────────────────────────────────────────────────────────────────
   useEffect(() => {
-    const rascunhoSalvo = localStorage.getItem("curadentes_pro_cadastro_rascunho");
-    if (rascunhoSalvo) {
-      try {
-        const dados = JSON.parse(rascunhoSalvo);
-        if (dados.etapa) setEtapa(dados.etapa);
-        if (dados.nome) setNome(dados.nome);
-        if (dados.email) setEmail(dados.email);
-        if (dados.emailVerificado) setEmailVerificado(dados.emailVerificado);
-        if (dados.telefone) setTelefone(dados.telefone);
-        if (dados.telefoneVerificado) setTelefoneVerificado(dados.telefoneVerificado);
-        if (dados.cpf) setCpf(dados.cpf);
-        if (dados.cro) setCro(dados.cro);
-        if (dados.anoFormacao) setAnoFormacao(dados.anoFormacao);
-        if (dados.fotoUrl) setFotoUrl(dados.fotoUrl);
-        if (dados.enderecos) setEnderecos(dados.enderecos);
-        if (dados.bio) setBio(dados.bio);
-        if (dados.lgpdAceito) setLgpdAceito(dados.lgpdAceito);
-      } catch (e) {
-        console.error("Erro ao recuperar rascunho de cadastro:", e);
+    async function restaurar() {
+      // 1. Verifica sessão ativa no Supabase
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (user) {
+        // Sessão encontrada: busca dados já salvos no banco
+        const { data: pro } = await supabase
+          .from('curadentespro')
+          .select('*')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (pro) {
+          // Preenche os campos com os dados do banco
+          if (pro.nome) setNome(pro.nome);
+          if (pro.email) setEmail(pro.email);
+          if (pro.telefone) setTelefone(pro.telefone);
+          if (pro.cpf) setCpf(pro.cpf);
+          if (pro.cro) setCro(pro.cro);
+          if (pro.ano_formacao) setAnoFormacao(String(pro.ano_formacao));
+          if (pro.foto_url) setFotoUrl(pro.foto_url);
+          if (pro.bio) setBio(pro.bio);
+          if (pro.lgpd_aceito) setLgpdAceito(pro.lgpd_aceito);
+          setEmailVerificado(true);
+          setSenhaSincronizada(true);
+
+          // Busca endereços salvos
+          const { data: ends } = await supabase
+            .from('curadentespro_enderecos')
+            .select('*')
+            .eq('curadentespro_id', user.id);
+
+          if (ends && ends.length > 0) {
+            // Mapeia os endereços do banco para o formato do formulário
+            setEnderecos(ends.map((e: any) => ({
+              id: e.id || `end-${Date.now()}-${Math.random()}`,
+              nome_clinica: e.nome_clinica || '',
+              logradouro: e.logradouro || '',
+              numero: e.numero || '',
+              complemento: e.complemento || '',
+              bairro: e.bairro || '',
+              cidade: e.cidade || '',
+              estado: e.estado || '',
+              cep: e.cep || '',
+              telefone: e.telefone || '',
+              whatsapp: e.whatsapp || '',
+              atende_urgencias: e.atende_urgencias || false,
+              aceita_urgencia_termo: e.aceita_urgencia_termo || false,
+              atividades: e.atividades || [],
+              convenios: e.convenios || [],
+              formas_pagamento: e.formas_pagamento || [],
+              politica_cancelamento: e.politica_cancelamento || POLITICA_CANCELAMENTO_PADRAO,
+              observacoes: e.observacoes || '',
+              agenda: e.agenda || DIAS_SEMANA.map((dia) => ({
+                dia,
+                inicio: '08:00',
+                fim: '18:00',
+                ativo: ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira'].includes(dia),
+              })),
+            })));
+          }
+
+          // Determina a primeira etapa incompleta para retomar
+          if (pro.lgpd_aceito) {
+            // Cadastro completo → redireciona para o painel do dentista
+            navigate('/pro/dashboard');
+            return;
+          } else {
+            setEtapa(2); // Cadastro incompleto → sempre retoma no passo 2
+          }
+
+          return; // Dados do banco têm prioridade, ignora localStorage
+        }
+      }
+
+      // 2. Sem sessão ativa → tenta restaurar rascunho local
+      const rascunhoSalvo = localStorage.getItem('curadentes_pro_cadastro_rascunho');
+      if (rascunhoSalvo) {
+        try {
+          const dados = JSON.parse(rascunhoSalvo);
+          if (dados.lgpdAceito) {
+            navigate('/pro/dashboard');
+            return;
+          } else if (dados.emailVerificado) {
+            setEtapa(2); // Rascunho incompleto e email verificado → sempre retoma no passo 2
+          } else {
+            setEtapa(1);
+          }
+          if (dados.nome) setNome(dados.nome);
+          if (dados.email) setEmail(dados.email);
+          if (dados.emailVerificado) setEmailVerificado(dados.emailVerificado);
+          if (dados.telefone) setTelefone(dados.telefone);
+          if (dados.telefoneVerificado) setTelefoneVerificado(dados.telefoneVerificado);
+          if (dados.cpf) setCpf(dados.cpf);
+          if (dados.cro) setCro(dados.cro);
+          if (dados.anoFormacao) setAnoFormacao(dados.anoFormacao);
+          if (dados.fotoUrl) setFotoUrl(dados.fotoUrl);
+          if (dados.enderecos) setEnderecos(dados.enderecos);
+          if (dados.bio) setBio(dados.bio);
+          if (dados.lgpdAceito) setLgpdAceito(dados.lgpdAceito);
+          if (dados.senhaSincronizada) setSenhaSincronizada(dados.senhaSincronizada);
+        } catch (e) {
+          console.error('Erro ao recuperar rascunho de cadastro:', e);
+        }
       }
     }
+
+    restaurar();
   }, []);
 
   // ─ Etapa 1: Conta ─────────────────────────────────────────────────────────
@@ -258,7 +359,7 @@ export default function NovoCadastro() {
 
   // Se o usuario editar a senha depois de ja sincronizada, re-sincroniza no proximo avanco
   useEffect(() => {
-    if (senhaSincronizada) setSenhaSincronizada(false);
+    if (senhaSincronizada && senha.length > 0) setSenhaSincronizada(false);
   }, [senha]);
 
   // ─ Auto-save: persiste o rascunho no localStorage a cada mudança de estado ─
@@ -281,6 +382,7 @@ export default function NovoCadastro() {
       enderecos,
       bio,
       lgpdAceito,
+      senhaSincronizada,
     };
     localStorage.setItem("curadentes_pro_cadastro_rascunho", JSON.stringify(rascunho));
   }, [
@@ -288,38 +390,40 @@ export default function NovoCadastro() {
     telefone, telefoneVerificado,
     cpf, cro, anoFormacao, fotoUrl,
     enderecos, bio, lgpdAceito,
+    senhaSincronizada,
   ]);
 
   // ─ Verifica se o cadastro está completo ───────────────────────────────────
-  function validarEnderecos(): { valido: boolean; erros: string[] } {
-    const erros: string[] = [];
-    enderecos.forEach((end, i) => {
-      const prefixo = `Endereço ${i + 1}`;
-      if (!end.nome_clinica.trim()) erros.push(`${prefixo}: Nome da clínica`);
-      if (!end.logradouro.trim()) erros.push(`${prefixo}: Logradouro`);
-      if (!end.bairro.trim()) erros.push(`${prefixo}: Bairro`);
-      if (!end.cidade.trim()) erros.push(`${prefixo}: Cidade`);
-      if (!end.estado.trim()) erros.push(`${prefixo}: Estado`);
-    });
-    return { valido: erros.length === 0, erros };
-  }
-
   function camposFaltantes(): string[] {
     const faltando: string[] = [];
     if (!nome.trim()) faltando.push("Nome completo");
     if (!emailVerificado) faltando.push("Verificação de e-mail");
-    if (senha.length < 8) faltando.push("Senha (mín. 8 caracteres)");
+    
+    // Se a senha já estiver sincronizada e o usuário não digitou nada para alterar, não é obrigatório preencher
+    const precisaSenha = !senhaSincronizada || senha.length > 0;
+    if (precisaSenha && senha.length < 8) faltando.push("Senha (mín. 8 caracteres)");
+
     if (!validarTelefone(telefone)) faltando.push("Telefone");
     if (!validarCpf(cpf)) faltando.push("CPF");
     if (!validarCro(cro)) faltando.push("CRO");
     if (!lgpdAceito) faltando.push("Aceite da LGPD");
-    const { valido: endOk, erros: endErros } = validarEnderecos();
+    const { valido: endOk, erros: endErros } = validarEnderecos(enderecos);
     if (!endOk) faltando.push(...endErros);
     return faltando;
   }
 
   const camposFaltando = camposFaltantes();
   const cadastroCompleto = camposFaltando.length === 0;
+
+  const temProgressoPosterior = !!(
+    telefone ||
+    cpf ||
+    cro ||
+    anoFormacao ||
+    fotoUrl ||
+    bio ||
+    enderecos.some(end => end.nome_clinica.trim() || end.logradouro.trim() || end.cep.trim())
+  );
 
   // ─ Calcula progresso da barra ─────────────────────────────────────────────
   const progresso = ((etapa - 1) / (ETAPAS.length - 1)) * 100;
@@ -401,15 +505,162 @@ export default function NovoCadastro() {
   // forem necessarias sem efeito colateral.
   // ─────────────────────────────────────────────────────────────────────────
   async function avancarEtapa1() {
-    if (!emailVerificado || senha.length < 8) return;
-    // Ja foi sincronizada numa passagem anterior pela etapa 1
-    if (senhaSincronizada) return;
+    if (!emailVerificado) return;
+    
+    // Se a senha já estiver sincronizada e o campo estiver vazio, apenas avança
+    if (senhaSincronizada && senha.length === 0) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await salvarEtapa1NoBanco(user.id);
+      }
+      return;
+    }
+    
+    if (senha.length < 8) return;
+    // Ja foi sincronizada numa passagem anterior pela etapa 1 e não mudou
+    if (senhaSincronizada) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await salvarEtapa1NoBanco(user.id);
+      }
+      return;
+    }
     const { error } = await supabase.auth.updateUser({ password: senha });
     if (error) {
       toast.error("Erro ao salvar a senha: " + error.message);
       throw error;
     }
     setSenhaSincronizada(true);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await salvarEtapa1NoBanco(user.id);
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Salvamento progressivo no banco de dados por etapa
+  //
+  // Cada função faz um upsert parcial da tabela curadentespro (e endereços
+  // na Etapa 4). O perfil só fica visível ao público quando lgpd_aceito=true,
+  // o que só ocorre ao concluir o cadastro na Etapa 6.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /** Etapa 1 → banco: nome + email (pré-cadastro mínimo) */
+  async function salvarEtapa1NoBanco(userId: string) {
+    const { error } = await supabase.from('curadentespro').upsert({
+      id: userId,
+      user_id: userId,
+      nome,
+      email,
+    }, { onConflict: 'id' });
+    if (error) {
+      console.error('[pré-cadastro etapa1]', error);
+      toast.error('Erro ao salvar conta no servidor: ' + error.message);
+      throw error;
+    }
+  }
+
+  /** Etapa 2 → banco: telefone */
+  async function salvarEtapa2NoBanco() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { error } = await supabase.from('curadentespro').upsert({
+      id: user.id,
+      user_id: user.id,
+      nome,
+      email,
+      telefone,
+      telefone_verificado: validarTelefone(telefone),
+    }, { onConflict: 'id' });
+    if (error) {
+      console.error('[pré-cadastro etapa2]', error);
+      toast.error('Erro ao salvar telefone: ' + error.message);
+      throw error;
+    }
+  }
+
+  /** Etapa 3 → banco: cpf, cro, ano_formacao, foto_url */
+  async function salvarEtapa3NoBanco() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { error } = await supabase.from('curadentespro').upsert({
+      id: user.id,
+      user_id: user.id,
+      nome,
+      email,
+      cpf: cpf || null,
+      cro: cro || null,
+      ano_formacao: anoFormacao ? parseInt(anoFormacao) : null,
+      foto_url: fotoUrl || null,
+    }, { onConflict: 'id' });
+    if (error) {
+      console.error('[pré-cadastro etapa3]', error);
+      toast.error('Erro ao salvar identidade profissional: ' + error.message);
+      throw error;
+    }
+  }
+
+  /** Etapa 4 → banco: endereços (apaga e reinserc para manter sincronia) */
+  async function salvarEtapa4NoBanco() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    // Remove endereços anteriores e reinserc os atuais
+    const { error: delErr } = await supabase
+      .from('curadentespro_enderecos')
+      .delete()
+      .eq('curadentespro_id', user.id);
+    if (delErr) {
+      console.error('[pré-cadastro etapa4 delete]', delErr);
+      toast.error('Erro ao atualizar endereços: ' + delErr.message);
+      throw delErr;
+    }
+    for (const end of enderecos) {
+      const { error: insErr } = await supabase.from('curadentespro_enderecos').insert({
+        curadentespro_id: user.id,
+        nome_clinica: end.nome_clinica,
+        logradouro: end.logradouro,
+        numero: end.numero,
+        complemento: end.complemento,
+        bairro: end.bairro,
+        cidade: end.cidade,
+        estado: end.estado,
+        cep: end.cep,
+        telefone: end.telefone,
+        whatsapp: end.whatsapp,
+        atende_urgencias: end.atende_urgencias,
+        aceita_urgencia_termo: end.aceita_urgencia_termo,
+        politica_cancelamento: end.politica_cancelamento,
+        observacoes: end.observacoes,
+        atividades: end.atividades,
+        convenios: end.convenios,
+        formas_pagamento: end.formas_pagamento,
+        agenda: end.agenda,
+      });
+      if (insErr) {
+        console.error('[pré-cadastro etapa4 insert]', insErr);
+        toast.error('Erro ao salvar endereços: ' + insErr.message);
+        throw insErr;
+      }
+    }
+  }
+
+  /** Etapa 5 → banco: bio */
+  async function salvarEtapa5NoBanco() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { error } = await supabase.from('curadentespro').upsert({
+      id: user.id,
+      user_id: user.id,
+      nome,
+      email,
+      bio: bio || null,
+    }, { onConflict: 'id' });
+    if (error) {
+      console.error('[pré-cadastro etapa5]', error);
+      toast.error('Erro ao salvar bio: ' + error.message);
+      throw error;
+    }
   }
 
   async function handleConfirmCrop(croppedBlob: Blob) {
@@ -448,33 +699,6 @@ export default function NovoCadastro() {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Função: Valida matematicamente o CPF (algoritmo Módulo 11)
-  // ─────────────────────────────────────────────────────────────────────────
-  function validarCpf(valor: string) {
-    const numeros = valor.replace(/\D/g, "");
-    if (numeros.length !== 11) return false;
-    if (/^(\d)\1{10}$/.test(numeros)) return false;
-
-    let soma = 0;
-    for (let i = 0; i < 9; i++) {
-      soma += parseInt(numeros.charAt(i)) * (10 - i);
-    }
-    let resto = soma % 11;
-    const digito1 = resto < 2 ? 0 : 11 - resto;
-    if (parseInt(numeros.charAt(9)) !== digito1) return false;
-
-    soma = 0;
-    for (let i = 0; i < 10; i++) {
-      soma += parseInt(numeros.charAt(i)) * (11 - i);
-    }
-    resto = soma % 11;
-    const digito2 = resto < 2 ? 0 : 11 - resto;
-    if (parseInt(numeros.charAt(10)) !== digito2) return false;
-
-    return true;
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
   // Função: Formata o telefone em tempo real ((##) #####-####)
   // ─────────────────────────────────────────────────────────────────────────
   function formatarTelefone(valor: string) {
@@ -486,14 +710,6 @@ export default function NovoCadastro() {
       return numeros.replace(/^(\d{2})(\d{0,5})/, "($1) $2");
     }
     return numeros.replace(/^(\d{2})(\d{5})(\d{0,4})/, "($1) $2-$3");
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Função: Valida se é um celular brasileiro válido ((##) 9####-####)
-  // ─────────────────────────────────────────────────────────────────────────
-  function validarTelefone(valor: string) {
-    const numeros = valor.replace(/\D/g, "");
-    return numeros.length === 11 && numeros.charAt(2) === "9";
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -514,21 +730,6 @@ export default function NovoCadastro() {
       return `CRO-${letras}`;
     }
     return `CRO-${letras}${numeros}`;
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Função: Valida se é um CRO profissional válido (UFs reais brasileiras)
-  // ─────────────────────────────────────────────────────────────────────────
-  function validarCro(valor: string) {
-    const ufsValidas = [
-      "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG",
-      "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"
-    ];
-    const regex = /^CRO-([A-Z]{2})(\d{3,6})$/;
-    const match = valor.toUpperCase().match(regex);
-    if (!match) return false;
-    const uf = match[1];
-    return ufsValidas.includes(uf);
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -801,64 +1002,81 @@ export default function NovoCadastro() {
   };
 
   // ─── Renderização da barra de progresso ──────────────────────────────────
-  const renderBarraProgresso = () => (
-    <div className="mb-8">
-      {/* Indicadores de etapa (clicaveis para etapas concluidas) */}
-      <div className="flex items-center justify-between mb-3">
-        {ETAPAS.map((e) => {
-          const concluida = etapa > e.id;
-          const atual = etapa === e.id;
-          const podeNavegar = concluida || atual;
-          return (
-            <button
-              key={e.id}
-              type="button"
-              disabled={!podeNavegar}
-              onClick={() => podeNavegar && setEtapa(e.id)}
-              className="flex flex-col items-center gap-1 flex-1 transition-opacity"
-              style={{ cursor: podeNavegar ? "pointer" : "default", opacity: podeNavegar ? 1 : 0.5, background: "none", border: "none", padding: 0 }}
-            >
-              <div
-                className="flex items-center justify-center rounded-full text-[12px] font-bold transition-all duration-300"
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  background: concluida
-                    ? "#34C759"
-                    : atual
-                      ? "#007AFF"
-                      : "rgba(60,60,67,0.08)",
-                  color: concluida || atual ? "#fff" : "#8E8E93",
-                  border: atual ? "2px solid rgba(0,122,255,0.30)" : "none",
-                }}
-              >
-                {concluida ? <Check size={14} /> : e.id}
-              </div>
-              <span
-                className="text-[10px] font-semibold hidden sm:block text-center"
-                style={{ color: atual ? "#007AFF" : concluida ? "#34C759" : "#8E8E93" }}
-              >
-                {e.label}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+  const renderBarraProgresso = () => {
+    const validationParams: EtapaValidationParams = {
+      nome,
+      emailVerificado,
+      senhaSincronizada,
+      senha,
+      confirmaSenha,
+      telefone,
+      cpf,
+      cro,
+      enderecos,
+      lgpdAceito,
+    };
 
-      {/* Barra de progresso contínua */}
-      <div style={{ height: "4px", background: "rgba(60,60,67,0.10)", borderRadius: "2px" }}>
-        <div
-          style={{
-            height: "100%",
-            width: `${progresso}%`,
-            background: "linear-gradient(90deg, #007AFF, #34C759)",
-            borderRadius: "2px",
-            transition: "width 0.4s ease",
-          }}
-        />
+    return (
+      <div className="mb-8">
+        {/* Indicadores de etapa (clicaveis para etapas concluidas) */}
+        <div className="flex items-center justify-between mb-3">
+          {ETAPAS.map((e) => {
+            const concluida = isEtapaConcluida(e.id, validationParams);
+            const atual = etapa === e.id;
+            const podeNavegar = emailVerificado || etapa > 1;
+
+            const bgColor = concluida ? "#34C759" : "#FF9500";
+            const textColor = "#fff";
+            const ringStyle = atual ? "3px solid #007AFF" : "none";
+
+            return (
+              <button
+                key={e.id}
+                type="button"
+                disabled={!podeNavegar}
+                onClick={() => podeNavegar && setEtapa(e.id)}
+                className="flex flex-col items-center gap-1 flex-1 transition-opacity"
+                style={{ cursor: podeNavegar ? "pointer" : "default", opacity: podeNavegar ? 1 : 0.5, background: "none", border: "none", padding: 0 }}
+              >
+                <div
+                  className="flex items-center justify-center rounded-full text-[12px] font-bold transition-all duration-300"
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    background: bgColor,
+                    color: textColor,
+                    border: ringStyle,
+                    boxShadow: atual ? "0 0 0 4px rgba(0, 122, 255, 0.25)" : "none",
+                  }}
+                >
+                  {concluida ? <Check size={14} /> : <span className="font-bold text-[14px]">!</span>}
+                </div>
+                <span
+                  className="text-[10px] font-semibold hidden sm:block text-center"
+                  style={{ color: concluida ? "#34C759" : "#FF9500", fontWeight: atual ? "bold" : "semibold" }}
+                >
+                  {e.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Barra de progresso contínua */}
+        <div style={{ height: "4px", background: "rgba(60,60,67,0.10)", borderRadius: "2px" }}>
+          <div
+            style={{
+              height: "100%",
+              width: `${progresso}%`,
+              background: "linear-gradient(90deg, #007AFF, #34C759)",
+              borderRadius: "2px",
+              transition: "width 0.4s ease",
+            }}
+          />
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // ─── Botões de navegação entre etapas ────────────────────────────────────
   // onAvancar: callback opcional executado antes de mudar de etapa
@@ -1043,7 +1261,7 @@ export default function NovoCadastro() {
             type={mostrarSenha ? "text" : "password"}
             value={senha}
             onChange={(e) => setSenha(e.target.value)}
-            placeholder="Mínimo 8 caracteres"
+            placeholder={senhaSincronizada ? "Sua senha já está salva (deixe em branco)" : "Mínimo 8 caracteres"}
             style={{ ...inputStyle, paddingRight: "48px" }}
           />
           <button
@@ -1088,7 +1306,7 @@ export default function NovoCadastro() {
             type={mostrarConfirma ? "text" : "password"}
             value={confirmaSenha}
             onChange={(e) => setConfirmaSenha(e.target.value)}
-            placeholder="Repita a senha"
+            placeholder={senhaSincronizada ? "Sua senha já está salva (deixe em branco)" : "Repita a senha"}
             style={{
               ...inputStyle,
               paddingRight: "48px",
@@ -1106,6 +1324,11 @@ export default function NovoCadastro() {
         </div>
         {confirmaSenha && confirmaSenha !== senha && (
           <p className="text-[12px] mt-1" style={{ color: "#FF3B30" }}>As senhas não coincidem.</p>
+        )}
+        {senhaSincronizada && senha.length === 0 && (
+          <p className="text-[12px] mt-1.5 text-blue-600 font-medium">
+            Sua senha já foi definida de forma segura. Preencha os campos apenas se desejar alterá-la.
+          </p>
         )}
       </div>
 
@@ -1135,7 +1358,9 @@ export default function NovoCadastro() {
       </button>*/}
 
       {renderNavegacao(
-        nome.trim() !== "" && emailVerificado && senha.length >= 8 && senha === confirmaSenha,
+        nome.trim() !== "" && 
+          emailVerificado && 
+          (senhaSincronizada || (senha.length >= 8 && senha === confirmaSenha)),
         false,
         true,  // Etapa 1: ocultar "Deixar para mais tarde" — e-mail deve ser verificado
         avancarEtapa1  // Sincroniza a senha real com o Supabase antes de avancar
@@ -1177,10 +1402,20 @@ export default function NovoCadastro() {
           maxLength={15}
           style={{
             ...inputStyle,
-            borderColor: telefone.replace(/\D/g, "").length === 11 && !validarTelefone(telefone) ? "#FF3B30" : "rgba(60,60,67,0.18)",
+            borderColor: temProgressoPosterior && !validarTelefone(telefone)
+              ? "#FF9500"
+              : (telefone.replace(/\D/g, "").length === 11 && !validarTelefone(telefone) ? "#FF3B30" : "rgba(60,60,67,0.18)"),
+            boxShadow: temProgressoPosterior && !validarTelefone(telefone)
+              ? "0 0 0 3px rgba(255,149,0,0.15)"
+              : undefined,
           }}
         />
-        {telefone.replace(/\D/g, "").length === 11 && !validarTelefone(telefone) && (
+        {temProgressoPosterior && !validarTelefone(telefone) && (
+          <p className="text-[12px] mt-1 font-medium" style={{ color: "#FF9500" }}>
+            Telefone obrigatório pendente. Por favor, insira um celular válido (ex.: (11) 99999-9999).
+          </p>
+        )}
+        {telefone.replace(/\D/g, "").length === 11 && !validarTelefone(telefone) && !temProgressoPosterior && (
           <p className="text-[12px] mt-1" style={{ color: "#FF3B30" }}>
             Número inválido. O celular deve conter DDD e começar com 9.
           </p>
@@ -1258,7 +1493,7 @@ export default function NovoCadastro() {
       )}
       */}
 
-      {renderNavegacao(true)}
+      {renderNavegacao(true, false, false, salvarEtapa2NoBanco)}
     </div>
   );
 
@@ -1338,10 +1573,20 @@ export default function NovoCadastro() {
           maxLength={14}
           style={{
             ...inputStyle,
-            borderColor: cpf.length === 14 && !validarCpf(cpf) ? "#FF3B30" : "rgba(60,60,67,0.18)",
+            borderColor: temProgressoPosterior && !validarCpf(cpf)
+              ? "#FF9500"
+              : (cpf.length === 14 && !validarCpf(cpf) ? "#FF3B30" : "rgba(60,60,67,0.18)"),
+            boxShadow: temProgressoPosterior && !validarCpf(cpf)
+              ? "0 0 0 3px rgba(255,149,0,0.15)"
+              : undefined,
           }}
         />
-        {cpf.length === 14 && !validarCpf(cpf) && (
+        {temProgressoPosterior && !validarCpf(cpf) && (
+          <p className="text-[12px] mt-1 font-medium" style={{ color: "#FF9500" }}>
+            CPF obrigatório pendente. Informe um CPF válido.
+          </p>
+        )}
+        {cpf.length === 14 && !validarCpf(cpf) && !temProgressoPosterior && (
           <p className="text-[12px] mt-1" style={{ color: "#FF3B30" }}>
             CPF inválido. Verifique os dígitos digitados.
           </p>
@@ -1364,10 +1609,20 @@ export default function NovoCadastro() {
           maxLength={12}
           style={{
             ...inputStyle,
-            borderColor: cro.length > 4 && !validarCro(cro) ? "#FF3B30" : "rgba(60,60,67,0.18)",
+            borderColor: temProgressoPosterior && !validarCro(cro)
+              ? "#FF9500"
+              : (cro.length > 4 && !validarCro(cro) ? "#FF3B30" : "rgba(60,60,67,0.18)"),
+            boxShadow: temProgressoPosterior && !validarCro(cro)
+              ? "0 0 0 3px rgba(255,149,0,0.15)"
+              : undefined,
           }}
         />
-        {cro.length > 4 && !validarCro(cro) && (
+        {temProgressoPosterior && !validarCro(cro) && (
+          <p className="text-[12px] mt-1 font-medium" style={{ color: "#FF9500" }}>
+            CRO obrigatório pendente. Informe o CRO no formato CRO-SP123456.
+          </p>
+        )}
+        {cro.length > 4 && !validarCro(cro) && !temProgressoPosterior && (
           <p className="text-[12px] mt-1" style={{ color: "#FF3B30" }}>
             CRO inválido. Deve conter sigla do estado e 3 a 6 números (ex: CRO-SP123456).
           </p>
@@ -1389,7 +1644,7 @@ export default function NovoCadastro() {
         />
       </div>
 
-      {renderNavegacao(validarCpf(cpf) && validarCro(cro))}
+      {renderNavegacao(validarCpf(cpf) && validarCro(cro), false, false, salvarEtapa3NoBanco)}
     </div>
   );
 
@@ -1472,9 +1727,16 @@ export default function NovoCadastro() {
                   type="text"
                   value={end.nome_clinica}
                   onChange={(e) => atualizarEndereco(idx, "nome_clinica", e.target.value)}
-                  placeholder="Clínica Sorriso & Estética"
-                  style={inputStyle}
+                  placeholder="Clínica Sorriso &amp; Estética"
+                  style={{
+                    ...inputStyle,
+                    borderColor: temProgressoPosterior && !end.nome_clinica.trim() ? "#FF9500" : "rgba(60,60,67,0.18)",
+                    boxShadow: temProgressoPosterior && !end.nome_clinica.trim() ? "0 0 0 3px rgba(255,149,0,0.15)" : undefined,
+                  }}
                 />
+                {temProgressoPosterior && !end.nome_clinica.trim() && (
+                  <p className="text-[11px] mt-1 font-medium" style={{ color: "#FF9500" }}>Campo obrigatório pendente</p>
+                )}
               </div>
               <div>
                 <CepInputComBusca
@@ -1503,7 +1765,20 @@ export default function NovoCadastro() {
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
                 <label style={labelStyle}>Logradouro *</label>
-                <input type="text" value={end.logradouro} onChange={(e) => atualizarEndereco(idx, "logradouro", e.target.value)} placeholder="Rua, Avenida..." style={inputStyle} />
+                <input
+                  type="text"
+                  value={end.logradouro}
+                  onChange={(e) => atualizarEndereco(idx, "logradouro", e.target.value)}
+                  placeholder="Rua, Avenida..."
+                  style={{
+                    ...inputStyle,
+                    borderColor: temProgressoPosterior && !end.logradouro.trim() ? "#FF9500" : "rgba(60,60,67,0.18)",
+                    boxShadow: temProgressoPosterior && !end.logradouro.trim() ? "0 0 0 3px rgba(255,149,0,0.15)" : undefined,
+                  }}
+                />
+                {temProgressoPosterior && !end.logradouro.trim() && (
+                  <p className="text-[11px] mt-1 font-medium" style={{ color: "#FF9500" }}>Campo obrigatório pendente</p>
+                )}
               </div>
               <div>
                 <label style={labelStyle}>Número *</label>
@@ -1515,15 +1790,55 @@ export default function NovoCadastro() {
               </div>
               <div className="col-span-2">
                 <label style={labelStyle}>Bairro *</label>
-                <input type="text" value={end.bairro} onChange={(e) => atualizarEndereco(idx, "bairro", e.target.value)} placeholder="Centro" style={inputStyle} />
+                <input
+                  type="text"
+                  value={end.bairro}
+                  onChange={(e) => atualizarEndereco(idx, "bairro", e.target.value)}
+                  placeholder="Centro"
+                  style={{
+                    ...inputStyle,
+                    borderColor: temProgressoPosterior && !end.bairro.trim() ? "#FF9500" : "rgba(60,60,67,0.18)",
+                    boxShadow: temProgressoPosterior && !end.bairro.trim() ? "0 0 0 3px rgba(255,149,0,0.15)" : undefined,
+                  }}
+                />
+                {temProgressoPosterior && !end.bairro.trim() && (
+                  <p className="text-[11px] mt-1 font-medium" style={{ color: "#FF9500" }}>Campo obrigatório pendente</p>
+                )}
               </div>
               <div>
                 <label style={labelStyle}>Cidade *</label>
-                <input type="text" value={end.cidade} onChange={(e) => atualizarEndereco(idx, "cidade", e.target.value)} placeholder="São Paulo" style={inputStyle} />
+                <input
+                  type="text"
+                  value={end.cidade}
+                  onChange={(e) => atualizarEndereco(idx, "cidade", e.target.value)}
+                  placeholder="São Paulo"
+                  style={{
+                    ...inputStyle,
+                    borderColor: temProgressoPosterior && !end.cidade.trim() ? "#FF9500" : "rgba(60,60,67,0.18)",
+                    boxShadow: temProgressoPosterior && !end.cidade.trim() ? "0 0 0 3px rgba(255,149,0,0.15)" : undefined,
+                  }}
+                />
+                {temProgressoPosterior && !end.cidade.trim() && (
+                  <p className="text-[11px] mt-1 font-medium" style={{ color: "#FF9500" }}>Campo obrigatório pendente</p>
+                )}
               </div>
               <div>
                 <label style={labelStyle}>Estado *</label>
-                <input type="text" value={end.estado} onChange={(e) => atualizarEndereco(idx, "estado", e.target.value.toUpperCase().slice(0, 2))} placeholder="SP" maxLength={2} style={inputStyle} />
+                <input
+                  type="text"
+                  value={end.estado}
+                  onChange={(e) => atualizarEndereco(idx, "estado", e.target.value.toUpperCase().slice(0, 2))}
+                  placeholder="SP"
+                  maxLength={2}
+                  style={{
+                    ...inputStyle,
+                    borderColor: temProgressoPosterior && !end.estado.trim() ? "#FF9500" : "rgba(60,60,67,0.18)",
+                    boxShadow: temProgressoPosterior && !end.estado.trim() ? "0 0 0 3px rgba(255,149,0,0.15)" : undefined,
+                  }}
+                />
+                {temProgressoPosterior && !end.estado.trim() && (
+                  <p className="text-[11px] mt-1 font-medium" style={{ color: "#FF9500" }}>Campo obrigatório pendente</p>
+                )}
               </div>
             </div>
 
@@ -1767,7 +2082,7 @@ export default function NovoCadastro() {
         </button>
       )}
 
-      {renderNavegacao(enderecos.length > 0)}
+      {renderNavegacao(enderecos.length > 0, false, false, salvarEtapa4NoBanco)}
     </div>
   );
 
@@ -1813,7 +2128,7 @@ export default function NovoCadastro() {
         </p>
       </div>
 
-      {renderNavegacao(true)}
+      {renderNavegacao(true, false, false, salvarEtapa5NoBanco)}
     </div>
   );
 

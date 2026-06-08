@@ -58,6 +58,7 @@ export default function LatestDentists() {
         const { data: pros, error } = await supabase
           .from("curadentespro")
           .select("id, nome, foto_url, bio, cro, criado_em")
+          .eq("lgpd_aceito", true)
           .order("criado_em", { ascending: false })
           .limit(15);
 

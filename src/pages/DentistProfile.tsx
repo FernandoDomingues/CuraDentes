@@ -734,6 +734,7 @@ export default function DentistProfilePage() {
 
         if (cancel) return;
         if (proError || !pro) throw new Error("Dentista não encontrado");
+        if (!pro.lgpd_aceito) throw new Error("Perfil incompleto ou indisponível");
 
         const proId = pro.id;
 

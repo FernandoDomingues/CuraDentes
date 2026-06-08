@@ -64,9 +64,10 @@ npm run typecheck    # roda tsc em src/ E em tests/
 | `npm run preview` | Serve o build localmente |
 | `npm run lint` | ESLint em todo o projeto |
 | `npm run typecheck` | TypeScript em `src/` + `tests/` |
+| `npm run test:cadastro` | ⚠️ **TDD obrigatório** — testes unitários de validação do cadastro Pro |
 | `npm run test:smoke` | 4 checagens rápidas contra o Supabase |
 | `npm run test:security` | 6 testes E2E de RLS + Storage |
-| `npm run test:all` | Roda smoke + security |
+| `npm run test:all` | Roda cadastro + smoke + security |
 
 ---
 
@@ -105,7 +106,8 @@ site-k7/
 │   ├── nova_migracao_raio3km.sql        # lat/lng + RPC Haversine
 │   ├── fix_rpc_get_dentistas_proximos.sql # Cast types v2
 │   └── nova_migracao_avaliacoes.sql    # Tabela avaliacoes + RLS
-├── tests/                    # Smoke + security tests
+├── tests/                    # Smoke + security + unit tests
+│   ├── cadastro/validation.test.ts  # ⚠️ TDD: valida regras do cadastro Pro
 │   ├── smoke/supabase.test.ts
 │   └── security/rls.test.ts
 ├── docs/
@@ -144,6 +146,27 @@ site-k7/
 - **Auth**: Zustand store com cache local em `localStorage` para login instantâneo
 - **TypeScript**: `noFallthroughCasesInSwitch`, `noUnusedLocals`, `noUnusedParameters` ativos
 - **Lint**: 0 errors, 7 warnings shadcn vendor (esperado, ignore)
+- **Validação centralizada**: lógica de validação em `src/utils/cadastroValidation.ts` — reutilizada no frontend e nos testes
+
+---
+
+## ⚠️ Metodologia TDD — OBRIGATÓRIO
+
+> **Para qualquer agente de IA ou desenvolvedor que atuar neste projeto:** a metodologia **Test-Driven Design (TDD)** é obrigatória.
+
+### Regras:
+1. **Escreva os testes antes** (ou simultaneamente) a qualquer nova lógica de validação ou regra de negócio.
+2. **Centralize a lógica** em `src/utils/` para que possa ser importada tanto pelo frontend quanto pelos testes.
+3. **Execute `npm run test:all` antes de considerar qualquer tarefa concluída.** Se algum teste falhar, a tarefa não está concluída.
+4. **Não duplique validações** — a fonte da verdade é `src/utils/cadastroValidation.ts`.
+5. **Documente novos testes** em `tests/` e atualize os scripts em `package.json`.
+
+### Arquivos de teste atuais:
+| Arquivo | O que valida |
+|---|---|
+| `tests/cadastro/validation.test.ts` | Regras de validação do cadastro Pro (CPF, CRO, telefone, endereços, etapas) |
+| `tests/smoke/supabase.test.ts` | Conectividade Supabase (schema, RPC, últimos dentistas) |
+| `tests/security/rls.test.ts` | Segurança RLS (leitura pública, bloqueio de delete/insert anônimo) |
 
 ---
 

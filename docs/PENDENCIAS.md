@@ -85,7 +85,13 @@ Em uma sessão de QA, mapeamos 10 itens de melhoria no projeto. Itens 1, 2, 3 fo
   - **Customização de templates:** ver seção "Customização de email templates" em `docs/SEGURANCA.md` (template ativo é "Magic link", não "Confirm sign up").
 - **Item 15 — Redefinição de senha (`resetPasswordForEmail` + `updateUser`):** nova seção "Segurança" no `MeuPerfil.tsx` com botão "Trocar senha" que dispara o template "Password recovery" do Supabase. O link do email leva para a nova página `/pro/redefinir-senha` (público, valida sessão de recovery via evento `PASSWORD_RECOVERY` do `onAuthStateChange`). Form com barra de força reutilizada do `NovoCadastro.tsx`. Após salvar, `signOut()` e redirect para home. SMTP usa o mesmo `do-not-reply@curadentes.com.br`. Requer adicionar `${SiteURL}/pro/redefinir-senha` à lista de "Redirect URLs" no Supabase Dashboard. Ver seção "Fluxo de redefinição de senha" em `docs/SEGURANCA.md`.
 
----
+- **Item 16 — Retomada de cadastro no Passo 2 + Indicadores de Pendência + TDD Obrigatório**:
+  - Dentistas com cadastro incompleto sempre retornam ao **Passo 2 (Telefone)** ao acessar `/pro/novo-cadastro`, independentemente de quais passos já foram preenchidos.
+  - Campos não preenchidos ficam com destaque em **laranja** (borda + sombra) quando há progresso posterior detectado.
+  - A **barra de progresso** exibe cada etapa com **ícone de check verde** (se concluída) ou **exclamação laranja** (se pendente).
+  - Lógica de validação centralizada em `src/utils/cadastroValidation.ts` (reutilizada no frontend e nos testes TDD).
+  - Testes unitários em `tests/cadastro/validation.test.ts` cobrem: telefone, CPF (Módulo 11), CRO, endereços e status por etapa.
+  - **TDD é agora obrigatório para todo desenvolvimento futuro neste projeto** (documentado no `README.md`). Nenhuma tarefa deve ser considerada concluída sem que `npm run test:all` passe com 0 falhas.
 
 ## Pendências TÉCNICAS (não estavam no checklist, mas valem nota)
 

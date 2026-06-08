@@ -390,11 +390,24 @@ export default function Dashboard() {
     async function carregarSessao() {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
+        // Verifica se o cadastro está completo antes de exibir o dashboard
+        const { data: perfil } = await supabase
+          .from('curadentespro')
+          .select('lgpd_aceito')
+          .eq('id', session.user.id)
+          .maybeSingle();
+
+        if (!perfil || !perfil.lgpd_aceito) {
+          // Cadastro incompleto ou inexistente → retoma o fluxo de cadastro
+          navigate('/pro/novo-cadastro');
+          return;
+        }
+
         carregarDadosDentista(session.user.id);
       }
     }
     carregarSessao();
-  }, []);
+  }, [navigate]);
 
   async function carregarDadosDentista(userId: string) {
     try {
@@ -466,6 +479,21 @@ export default function Dashboard() {
       });
       if (error) {
         throw new Error("E-mail ou senha incorretos.");
+      }
+
+      // Verifica se o cadastro está completo
+      const { data: perfil } = await supabase
+        .from('curadentespro')
+        .select('lgpd_aceito')
+        .eq('id', data.user.id)
+        .maybeSingle();
+
+      if (!perfil || !perfil.lgpd_aceito) {
+        // Cadastro incompleto → retoma de onde parou (a lógica de restauração
+        // do NovoCadastro já detecta a sessão ativa e pula para a etapa correta)
+        toast.success("Bem-vindo! Continue preenchendo seu cadastro.", { id: toastId });
+        navigate('/pro/novo-cadastro');
+        return;
       }
       
       await carregarDadosDentista(data.user.id);
