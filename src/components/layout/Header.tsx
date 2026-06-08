@@ -116,6 +116,11 @@ export default function Header() {
   const [senhaLogin, setSenhaLogin]   = useState("");
   const [mostrarSenha, setMostrarSenha] = useState(false);
 
+  // Estados para fluxo de recuperação de senha (Esqueci a senha)
+  const [modoRecovery, setModoRecovery] = useState(false);
+  const [emailRecovery, setEmailRecovery] = useState("");
+  const [enviandoRecovery, setEnviandoRecovery] = useState(false);
+
   // ─────────────────────────────────────────────────────────────────────────
   // Função: Fecha o modal ativo e limpa o formulário
   // ─────────────────────────────────────────────────────────────────────────
@@ -124,6 +129,8 @@ export default function Header() {
     setEmailLogin("");
     setSenhaLogin("");
     setMostrarSenha(false);
+    setModoRecovery(false);
+    setEmailRecovery("");
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -154,6 +161,37 @@ export default function Header() {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Erro desconhecido ao fazer login.";
       toast.error(message, { id: toastId });
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Função: Dispara email de recuperação de senha via Supabase Auth
+  // ─────────────────────────────────────────────────────────────────────────
+  async function recuperarSenha() {
+    if (!emailRecovery.trim()) {
+      toast.error("Por favor, informe seu e-mail.");
+      return;
+    }
+
+    setEnviandoRecovery(true);
+    const toastId = toast.loading("Enviando e-mail de recuperação...");
+
+    try {
+      const redirectTo = window.location.origin + "/pro/redefinir-senha";
+      const { error } = await supabase.auth.resetPasswordForEmail(emailRecovery.trim(), {
+        redirectTo,
+      });
+
+      if (error) throw error;
+
+      toast.success("E-mail de redefinição enviado com sucesso! Verifique sua caixa de entrada.", { id: toastId });
+      setModoRecovery(false);
+      setEmailRecovery("");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erro ao enviar e-mail de recuperação.";
+      toast.error(message, { id: toastId });
+    } finally {
+      setEnviandoRecovery(false);
     }
   }
 
@@ -248,65 +286,129 @@ export default function Header() {
           </button>
         </div>
 
-        <p className="text-[14px]" style={{ color: "#8E8E93" }}>
-          Acesse o painel exclusivo para profissionais.
-        </p>
+        {modoRecovery ? (
+          <>
+            <p className="text-[14px]" style={{ color: "#8E8E93" }}>
+              Digite seu e-mail cadastrado para receber um link de redefinição de senha.
+            </p>
 
-        {/* Formulário de email e senha */}
-        <div className="flex flex-col gap-3">
-          <div>
-            <label className="block text-[13px] font-semibold mb-1.5" style={{ color: "#3A3A3C" }}>
-              E-mail
-            </label>
-            <input
-              type="email"
-              value={emailLogin}
-              onChange={(e) => setEmailLogin(e.target.value)}
-              placeholder="seu@email.com.br"
-              className="w-full px-4 py-3 rounded-[12px] text-[15px] outline-none"
-              style={{ border: "1px solid rgba(60,60,67,0.18)", color: "#1C1C1E" }}
-            />
-          </div>
+            <div className="flex flex-col gap-3">
+              <div>
+                <label className="block text-[13px] font-semibold mb-1.5" style={{ color: "#3A3A3C" }}>
+                  E-mail
+                </label>
+                <input
+                  type="email"
+                  value={emailRecovery}
+                  onChange={(e) => setEmailRecovery(e.target.value)}
+                  placeholder="seu@email.com.br"
+                  className="w-full px-4 py-3 rounded-[12px] text-[15px] outline-none"
+                  style={{ border: "1px solid rgba(60,60,67,0.18)", color: "#1C1C1E" }}
+                  onKeyDown={(e) => { if (e.key === "Enter") recuperarSenha(); }}
+                />
+              </div>
 
-          <div>
-            <label className="block text-[13px] font-semibold mb-1.5" style={{ color: "#3A3A3C" }}>
-              Senha
-            </label>
-            <div className="relative">
-              <input
-                type={mostrarSenha ? "text" : "password"}
-                value={senhaLogin}
-                onChange={(e) => setSenhaLogin(e.target.value)}
-                placeholder="Sua senha"
-                className="w-full px-4 py-3 rounded-[12px] text-[15px] outline-none"
-                style={{ border: "1px solid rgba(60,60,67,0.18)", color: "#1C1C1E", paddingRight: "48px" }}
-                onKeyDown={(e) => { if (e.key === "Enter") loginDentista(); }}
-              />
               <button
-                type="button"
-                onClick={() => setMostrarSenha(!mostrarSenha)}
-                className="absolute right-3 top-1/2 -translate-y-1/2"
-                style={{ color: "#8E8E93" }}
+                onClick={recuperarSenha}
+                disabled={enviandoRecovery}
+                className="w-full py-3 rounded-[14px] font-semibold text-[15px] min-h-[48px] text-white transition-all duration-200 disabled:opacity-50"
+                style={{
+                  background: "#0A2A66",
+                  boxShadow: "0 4px 16px rgba(10,42,102,0.25)",
+                }}
+                onMouseEnter={(e) => { if(!enviandoRecovery) e.currentTarget.style.background = "#0d3480"; }}
+                onMouseLeave={(e) => { if(!enviandoRecovery) e.currentTarget.style.background = "#0A2A66"; }}
               >
-                {mostrarSenha ? <EyeOff size={17} /> : <Eye size={17} />}
+                Enviar Link de Recuperação
+              </button>
+
+              <button
+                onClick={() => { setModoRecovery(false); setEmailRecovery(""); }}
+                className="text-[13px] font-semibold text-center mt-1 transition-colors"
+                style={{ color: "#007AFF" }}
+              >
+                Voltar para o Login
               </button>
             </div>
-          </div>
+          </>
+        ) : (
+          <>
+            <p className="text-[14px]" style={{ color: "#8E8E93" }}>
+              Acesse o painel exclusivo para profissionais.
+            </p>
 
-          {/* Botão de login por email */}
-          <button
-            onClick={loginDentista}
-            className="w-full py-3 rounded-[14px] font-semibold text-[15px] min-h-[48px] text-white transition-all duration-200"
-            style={{
-              background: "#0A2A66",
-              boxShadow: "0 4px 16px rgba(10,42,102,0.25)",
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "#0d3480"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "#0A2A66"; }}
-          >
-            Entrar no Painel
-          </button>
-        </div>
+            {/* Formulário de email e senha */}
+            <div className="flex flex-col gap-3">
+              <div>
+                <label className="block text-[13px] font-semibold mb-1.5" style={{ color: "#3A3A3C" }}>
+                  E-mail
+                </label>
+                <input
+                  type="email"
+                  value={emailLogin}
+                  onChange={(e) => setEmailLogin(e.target.value)}
+                  placeholder="seu@email.com.br"
+                  className="w-full px-4 py-3 rounded-[12px] text-[15px] outline-none"
+                  style={{ border: "1px solid rgba(60,60,67,0.18)", color: "#1C1C1E" }}
+                />
+              </div>
+
+              <div>
+                <label className="block text-[13px] font-semibold mb-1.5" style={{ color: "#3A3A3C" }}>
+                  Senha
+                </label>
+                <div className="relative">
+                  <input
+                    type={mostrarSenha ? "text" : "password"}
+                    value={senhaLogin}
+                    onChange={(e) => setSenhaLogin(e.target.value)}
+                    placeholder="Sua senha"
+                    className="w-full px-4 py-3 rounded-[12px] text-[15px] outline-none"
+                    style={{ border: "1px solid rgba(60,60,67,0.18)", color: "#1C1C1E", paddingRight: "48px" }}
+                    onKeyDown={(e) => { if (e.key === "Enter") loginDentista(); }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setMostrarSenha(!mostrarSenha)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2"
+                    style={{ color: "#8E8E93" }}
+                  >
+                    {mostrarSenha ? <EyeOff size={17} /> : <Eye size={17} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Botão de login por email */}
+              <button
+                onClick={loginDentista}
+                className="w-full py-3 rounded-[14px] font-semibold text-[15px] min-h-[48px] text-white transition-all duration-200"
+                style={{
+                  background: "#0A2A66",
+                  boxShadow: "0 4px 16px rgba(10,42,102,0.25)",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "#0d3480"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "#0A2A66"; }}
+              >
+                Entrar no Painel
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setModoRecovery(true)}
+                className="w-full py-3 rounded-[14px] font-semibold text-[15px] min-h-[48px] transition-all duration-200"
+                style={{
+                  background: "rgba(10,42,102,0.06)",
+                  color: "#0A2A66",
+                  border: "1px solid rgba(10,42,102,0.15)",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(10,42,102,0.10)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(10,42,102,0.06)"; }}
+              >
+                Esqueci a senha
+              </button>
+            </div>
+          </>
+        )}
 
         {/* Separador */}
         <div className="flex items-center gap-3">
