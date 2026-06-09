@@ -41,6 +41,7 @@ import { supabase } from "@/lib/supabase";
 import { CepInputComBusca } from "@/components/ui/CepInputComBusca";
 
 import logoProUrl from "@/assets/logos/logo-pro.png";
+import { ESPECIALIDADES } from "@/constants/data";
 
 
 import {
@@ -54,24 +55,7 @@ import {
 // ─── URL do logo CuraDentes Pro ───────────────────────────────────────────────
 const LOGO_PRO = logoProUrl;
 
-// ─── Especialidades disponíveis para seleção nos endereços ───────────────────
-const ESPECIALIDADES = [
-  "Clínico Geral",
-  "Clareamento dental",
-  "Lentes de contato dental",
-  "Facetas de porcelana",
-  "Limpeza e profilaxia",
-  "Ortodontia (aparelho)",
-  "Implante dentário",
-  "Tratamento de canal",
-  "Prótese dentária",
-  "Cirurgia oral",
-  "Periodontia",
-  "Odontopediatria",
-  "Botox odontológico",
-  "Harmonização orofacial",
-  "Clareamento a laser",
-];
+// ─── Especialidades: importadas de @/constants/data (fonte canônica) ──────────
 
 // ─── Convênios disponíveis para seleção ──────────────────────────────────────
 const CONVENIOS_OPCOES = [

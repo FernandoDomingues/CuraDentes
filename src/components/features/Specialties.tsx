@@ -1,4 +1,14 @@
-// Custom SVG dental icons
+import { ESPECIALIDADES } from "@/constants/data";
+import {
+  Stethoscope,
+  Sparkles,
+  Star,
+  Baby,
+  Zap,
+  type LucideIcon,
+} from "lucide-react";
+
+// ── Custom SVG dental icons ──────────────────────────────────────────────────
 const BracesIcon = ({ size = 22, color = "currentColor" }: { size?: number; color?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M4 6 C4 4 6 3 8 3 C10 3 11 4 12 5 C13 4 14 3 16 3 C18 3 20 4 20 6 L20 18 C20 20 18 21 16 21 C14 21 13 20 12 19 C11 20 10 21 8 21 C6 21 4 20 4 18 Z" />
@@ -62,39 +72,53 @@ const DoctorMaskIcon = ({ size = 22, color = "currentColor" }: { size?: number; 
   </svg>
 );
 
-import {
-  Siren,
-  Zap,
-  Sparkles,
-  Star,
-  Baby,
-  Stethoscope,
-} from "lucide-react";
+const FaceSmileIcon = ({ size = 22, color = "currentColor" }: { size?: number; color?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="9" />
+    <path d="M8 14s1.5 3 4 3 4-3 4-3" />
+    <line x1="9" y1="9" x2="9.01" y2="9" />
+    <line x1="15" y1="9" x2="15.01" y2="9" />
+  </svg>
+);
 
 type IconComponent = ({ size, color }: { size?: number; color?: string }) => JSX.Element;
+type AnyIcon = LucideIcon | IconComponent;
 
-interface SpecialtyItem {
-  id: string;
-  label: string;
-  Icon: IconComponent;
-  count: number;
-  color: string;
-}
+const ICON_MAP: Record<string, AnyIcon> = {
+  "Clínico Geral": Stethoscope,
+  "Clareamento dental": Sparkles,
+  "Lentes de contato dental": Sparkles,
+  "Facetas de porcelana": Star,
+  "Limpeza e profilaxia": ToothbrushIcon,
+  "Ortodontia (aparelho)": BracesIcon,
+  "Implante dentário": SmileImplantIcon,
+  "Tratamento de canal": DrillToothIcon,
+  "Prótese dentária": ImplantScrewIcon,
+  "Cirurgia oral": DoctorMaskIcon,
+  "Periodontia": ToothbrushIcon,
+  "Odontopediatria": Baby,
+  "Botox odontológico": Zap,
+  "Harmonização orofacial": FaceSmileIcon,
+  "Clareamento a laser": Sparkles,
+};
 
-const SPECIALTIES: SpecialtyItem[] = [
-  { id: "clinico",     label: "Clínico Geral", Icon: Stethoscope as unknown as IconComponent, count: 450, color: "#007AFF" },
-  { id: "urgencia",     label: "Urgência",     Icon: Siren as unknown as IconComponent,       count: 76,  color: "#E6004C" },
-  { id: "dor",         label: "Dor de Dente", Icon: Zap as unknown as IconComponent,         count: 134, color: "#FF9500" },
-  { id: "aparelho",    label: "Aparelho",     Icon: BracesIcon,     count: 142, color: "#007AFF" },
-  { id: "clareamento", label: "Clareamento",  Icon: Sparkles as unknown as IconComponent,    count: 201, color: "#007AFF" },
-  { id: "limpeza",     label: "Limpeza",      Icon: ToothbrushIcon, count: 389, color: "#34C759" },
-  { id: "implante",    label: "Implante",     Icon: SmileImplantIcon, count: 89, color: "#0A2A66" },
-  { id: "canal",       label: "Canal",        Icon: DrillToothIcon, count: 67,  color: "#FF3B30" },
-  { id: "protese",     label: "Prótese",      Icon: ImplantScrewIcon, count: 54, color: "#0A2A66" },
-  { id: "estetica",    label: "Estética",     Icon: Star as unknown as IconComponent,        count: 201, color: "#E6004C" },
-  { id: "infantil",    label: "Infantil",     Icon: Baby as unknown as IconComponent,        count: 118, color: "#34C759" },
-  { id: "cirurgia",    label: "Cirurgia",     Icon: DoctorMaskIcon, count: 43,  color: "#FF9500" },
-];
+const COLOR_MAP: Record<string, string> = {
+  "Clínico Geral": "#007AFF",
+  "Clareamento dental": "#007AFF",
+  "Lentes de contato dental": "#FF9500",
+  "Facetas de porcelana": "#E6004C",
+  "Limpeza e profilaxia": "#34C759",
+  "Ortodontia (aparelho)": "#007AFF",
+  "Implante dentário": "#0A2A66",
+  "Tratamento de canal": "#FF3B30",
+  "Prótese dentária": "#0A2A66",
+  "Cirurgia oral": "#FF9500",
+  "Periodontia": "#34C759",
+  "Odontopediatria": "#34C759",
+  "Botox odontológico": "#E6004C",
+  "Harmonização orofacial": "#E6004C",
+  "Clareamento a laser": "#007AFF",
+};
 
 export default function Specialties() {
   return (
@@ -123,11 +147,12 @@ export default function Specialties() {
         </h2>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-4">
-          {SPECIALTIES.map((spec) => {
-            const { Icon } = spec;
+          {ESPECIALIDADES.map((label) => {
+            const Icon = (ICON_MAP[label] || Star) as IconComponent;
+            const color = COLOR_MAP[label] || "#007AFF";
             return (
               <button
-                key={spec.id}
+                key={label}
                 className="flex flex-col items-start gap-3 text-left"
                 style={{
                   padding: "20px",
@@ -156,19 +181,16 @@ export default function Specialties() {
               >
                 <div
                   className="w-11 h-11 rounded-xl flex items-center justify-center"
-                  style={{ background: `${spec.color}14` }}
+                  style={{ background: `${color}14` }}
                 >
-                  <Icon size={22} color={spec.color} />
+                  <Icon size={22} color={color} />
                 </div>
                 <div>
                   <div
                     className="font-semibold text-[15px] leading-tight mb-1"
                     style={{ color: "#0A2A66" }}
                   >
-                    {spec.label}
-                  </div>
-                  <div className="text-[12px] font-medium" style={{ color: "#8E8E93" }}>
-                    {spec.count} profissionais
+                    {label}
                   </div>
                 </div>
               </button>

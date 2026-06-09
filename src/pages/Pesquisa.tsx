@@ -9,7 +9,7 @@ import { Loader2, MapPin, Star, Building2, ChevronRight, Filter, SlidersHorizont
 import logoProAltUrl from "@/assets/logos/logo-pro-alt.png";
 import { useAuth } from "@/hooks/useAuth";
 import { saveToSearchCache, saveQueryCache, loadQueryCache, buildQueryCacheKey } from "@/lib/dentistCache";
-import { FILTER_CHIPS } from "@/constants/data";
+import { ESPECIALIDADES } from "@/constants/data";
 import { useAddressSuggestions } from "@/hooks/useAddressSuggestions";
 import type { AddressSuggestion } from "@/hooks/useAddressSuggestions";
 
@@ -168,19 +168,18 @@ export default function Pesquisa() {
   const location = useLocation();
 
   // Lê o estado da navegação (vindo da Hero) com fallback para sessionStorage (F5)
-  const estadoNavegacao = (location.state as { q?: string; lat?: string; lng?: string; atividades?: string[] }) || {};
+  const estadoNavegacao = (location.state as { q?: string; lat?: string; lng?: string; atividade?: string }) || {};
   const estadoSalvo = (() => {
     try {
       const raw = sessionStorage.getItem("curadentes_search_state");
-      if (!raw) return {};
-      const parsed = JSON.parse(raw);
-      return (parsed && typeof parsed === "object") ? parsed as { q?: string; lat?: string; lng?: string; atividades?: string[] } : {};
+      return raw ? JSON.parse(raw) as { q?: string; lat?: string; lng?: string } : {};
     } catch { return {}; }
   })();
 
   const query = estadoNavegacao.q || estadoSalvo.q || null;
   const latPesquisa = estadoNavegacao.lat || estadoSalvo.lat || null;
   const lngPesquisa = estadoNavegacao.lng || estadoSalvo.lng || null;
+  const atividadeInicial = estadoNavegacao.atividade || null;
 
   const [searchInput, setSearchInput] = useState(query || "");
   const [usandoLocalizacao, setUsandoLocalizacao] = useState(false);
@@ -227,10 +226,9 @@ export default function Pesquisa() {
     setSearchInput(suggestion.value);
     setShowSuggestions(false);
     setHighlightedIdx(-1);
-    const payload = { q: suggestion.value, atividades: selectedAtividades };
-    sessionStorage.setItem("curadentes_search_state", JSON.stringify(payload));
-    navigate("/pesquisa", { state: payload });
-  }, [navigate, selectedAtividades]);
+    sessionStorage.setItem("curadentes_search_state", JSON.stringify({ q: suggestion.value }));
+    navigate("/pesquisa", { state: { q: suggestion.value } });
+  }, [navigate]);
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!showSuggestions || suggestions.length === 0) return;
@@ -251,37 +249,11 @@ export default function Pesquisa() {
 
   // Filtros
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedAtividades, setSelectedAtividades] = useState<string[]>(() => {
-    const fromNav = estadoNavegacao.atividades;
-    if (Array.isArray(fromNav)) return fromNav;
-    const fromSaved = estadoSalvo.atividades;
-    if (Array.isArray(fromSaved)) return fromSaved;
-    return [];
-  });
+  const [selectedAtividades, setSelectedAtividades] = useState<string[]>(
+    () => atividadeInicial ? [atividadeInicial] : []
+  );
   const [selectedConvenios, setSelectedConvenios] = useState<string[]>([]);
   const [selectedPagamentos, setSelectedPagamentos] = useState<string[]>([]);
-
-  // Sincroniza atividades selecionadas no sessionStorage para persistir no recarregamento (F5)
-  useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem("curadentes_search_state");
-      let current: Record<string, any> = {};
-      if (raw) {
-        try {
-          const parsed = JSON.parse(raw);
-          if (parsed && typeof parsed === "object") {
-            current = parsed;
-          }
-        } catch {
-          // Se não for JSON válido, mantém objeto vazio
-        }
-      }
-      current.atividades = selectedAtividades;
-      sessionStorage.setItem("curadentes_search_state", JSON.stringify(current));
-    } catch (e) {
-      console.error("Erro ao sincronizar atividades no sessionStorage:", e);
-    }
-  }, [selectedAtividades]);
 
   useEffect(() => {
     // ── (B) Flag de cancelamento: evita atualizar estado de uma busca "velha" ──
@@ -663,9 +635,8 @@ export default function Pesquisa() {
     }
     const termo = searchInput.trim();
     if (!termo) return;
-    const payload = { q: termo, atividades: selectedAtividades };
-    sessionStorage.setItem("curadentes_search_state", JSON.stringify(payload));
-    navigate("/pesquisa", { state: payload });
+    sessionStorage.setItem("curadentes_search_state", JSON.stringify({ q: termo }));
+    navigate("/pesquisa", { state: { q: termo } });
   }
 
   function usarLocalizacao() {
@@ -689,15 +660,15 @@ export default function Pesquisa() {
           const latStr = lat.toFixed(4);
           const lngStr = lng.toFixed(4);
           const payload = enderecoTexto
-            ? { q: enderecoTexto, lat: latStr, lng: lngStr, atividades: selectedAtividades }
-            : { lat: latStr, lng: lngStr, atividades: selectedAtividades };
+            ? { q: enderecoTexto, lat: latStr, lng: lngStr }
+            : { lat: latStr, lng: lngStr };
             
           sessionStorage.setItem("curadentes_search_state", JSON.stringify(payload));
           navigate("/pesquisa", { state: payload });
         } catch (err) {
           toast.dismiss(toastId);
           console.error(err);
-          const payload = { lat: lat.toFixed(4), lng: lng.toFixed(4), atividades: selectedAtividades };
+          const payload = { lat: lat.toFixed(4), lng: lng.toFixed(4) };
           sessionStorage.setItem("curadentes_search_state", JSON.stringify(payload));
           navigate("/pesquisa", { state: payload });
         } finally {
@@ -777,16 +748,16 @@ export default function Pesquisa() {
             <div className="mb-6">
               <label className="block text-[13px] font-bold text-[#1C1C1E] mb-3">Especialidade</label>
               <div className="flex flex-col gap-2">
-                {FILTER_CHIPS.map(chip => (
-                  <label key={chip.id} className="flex items-center gap-2 cursor-pointer group">
+                {ESPECIALIDADES.map(esp => (
+                  <label key={esp} className="flex items-center gap-2 cursor-pointer group">
                     <input
                       type="checkbox"
-                      checked={selectedAtividades.includes(chip.label)}
-                      onChange={() => toggleAtividade(chip.label)}
+                      checked={selectedAtividades.includes(esp)}
+                      onChange={() => toggleAtividade(esp)}
                       className="w-4 h-4 accent-[#007AFF] rounded"
                     />
                     <span className="text-[13px] text-gray-600 group-hover:text-gray-900 transition-colors">
-                      {chip.label}
+                      {esp}
                     </span>
                   </label>
                 ))}

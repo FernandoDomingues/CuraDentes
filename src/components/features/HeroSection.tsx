@@ -9,11 +9,9 @@ import {
   Star,
   Baby,
   Building2,
-  Stethoscope,
-  Smile,
   type LucideIcon,
 } from "lucide-react";
-import { FILTER_CHIPS } from "@/constants/data";
+import { ESPECIALIDADES } from "@/constants/data";
 // ============================================================================
 // IMPORTAÇÕES PARA A AUTENTICAÇÃO COM O GOOGLE
 // ============================================================================
@@ -103,8 +101,6 @@ const ICON_MAP: Record<string, AnyIcon> = {
   Star,
   Baby,
   Scissors: DoctorMaskIcon,
-  Stethoscope,
-  Smile,
 };
 
 // ─── Subcomponente: Item de Sugestão do Autocomplete ──────────────────────────
@@ -224,16 +220,13 @@ export default function HeroSection() {
   // Reseta o índice destacado quando as sugestões mudam
   useEffect(() => { setHighlightedIdx(-1); }, [suggestions]);
 
+  // Selecionar sugestão no dropdown: apenas preenche o campo, NÃO navega.
+  // A navegação só ocorre ao clicar em "Buscar" ou "Usar minha Localização".
   const handleSuggestionSelect = useCallback((suggestion: AddressSuggestion) => {
     setSearchValue(suggestion.value);
     setShowSuggestions(false);
     setHighlightedIdx(-1);
-    const selectedChipObj = FILTER_CHIPS.find(c => c.id === activeChip);
-    const atividadesList = selectedChipObj ? [selectedChipObj.label] : [];
-    const payload = { q: suggestion.value, atividades: atividadesList };
-    sessionStorage.setItem("curadentes_search_state", JSON.stringify(payload));
-    navigate("/pesquisa", { state: payload });
-  }, [navigate, activeChip]);
+  }, []);
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!showSuggestions || suggestions.length === 0) return;
@@ -244,8 +237,16 @@ export default function HeroSection() {
       e.preventDefault();
       setHighlightedIdx(i => Math.max(i - 1, -1));
     } else if (e.key === "Enter" && highlightedIdx >= 0) {
+      // Enter com sugestão destacada: preenche o campo E navega (equivale a clicar "Buscar")
       e.preventDefault();
-      handleSuggestionSelect(suggestions[highlightedIdx]);
+      const val = suggestions[highlightedIdx].value;
+      setSearchValue(val);
+      setShowSuggestions(false);
+      setHighlightedIdx(-1);
+      const payload: Record<string, string> = { q: val };
+      if (activeChip) payload.atividade = activeChip;
+      sessionStorage.setItem("curadentes_search_state", JSON.stringify(payload));
+      navigate("/pesquisa", { state: payload });
     } else if (e.key === "Escape") {
       setShowSuggestions(false);
       setHighlightedIdx(-1);
@@ -376,21 +377,22 @@ export default function HeroSection() {
     );
   };
 
-  const handleChipClick = (id: string) => {
-    setActiveChip(activeChip === id ? null : id);
+  const handleChipClick = (label: string) => {
+    setActiveChip(activeChip === label ? null : label);
   };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setShowSuggestions(false);
-    if (highlightedIdx >= 0 && suggestions[highlightedIdx]) {
-      handleSuggestionSelect(suggestions[highlightedIdx]);
-      return;
-    }
-    if (searchValue.trim() || activeChip) {
-      const selectedChipObj = FILTER_CHIPS.find(c => c.id === activeChip);
-      const atividadesList = selectedChipObj ? [selectedChipObj.label] : [];
-      const payload = { q: searchValue.trim() || null, atividades: atividadesList };
+    // Se há sugestão destacada, usa o valor dela; senão usa o que foi digitado
+    const valorBusca = highlightedIdx >= 0 && suggestions[highlightedIdx]
+      ? suggestions[highlightedIdx].value
+      : searchValue.trim();
+    if (valorBusca) {
+      setSearchValue(valorBusca);
+      setHighlightedIdx(-1);
+      const payload: Record<string, string> = { q: valorBusca };
+      if (activeChip) payload.atividade = activeChip;
       sessionStorage.setItem("curadentes_search_state", JSON.stringify(payload));
       navigate("/pesquisa", { state: payload });
     }
@@ -405,21 +407,18 @@ export default function HeroSection() {
       const latStr = lat.toFixed(4);
       const lngStr = lng.toFixed(4);
       
-      const selectedChipObj = FILTER_CHIPS.find(c => c.id === activeChip);
-      const atividadesList = selectedChipObj ? [selectedChipObj.label] : [];
-      
-      const payload = enderecoTexto
-        ? { q: enderecoTexto, lat: latStr, lng: lngStr, atividades: atividadesList }
-        : { lat: latStr, lng: lngStr, atividades: atividadesList };
+      const payload: Record<string, string> = enderecoTexto
+        ? { q: enderecoTexto, lat: latStr, lng: lngStr }
+        : { lat: latStr, lng: lngStr };
+      if (activeChip) payload.atividade = activeChip;
         
       sessionStorage.setItem("curadentes_search_state", JSON.stringify(payload));
       navigate("/pesquisa", { state: payload });
     } catch (err) {
       toast.dismiss(loaderToastId);
       console.error(err);
-      const selectedChipObj = FILTER_CHIPS.find(c => c.id === activeChip);
-      const atividadesList = selectedChipObj ? [selectedChipObj.label] : [];
-      const payload = { lat: lat.toFixed(4), lng: lng.toFixed(4), atividades: atividadesList };
+      const payload: Record<string, string> = { lat: lat.toFixed(4), lng: lng.toFixed(4) };
+      if (activeChip) payload.atividade = activeChip;
       sessionStorage.setItem("curadentes_search_state", JSON.stringify(payload));
       navigate("/pesquisa", { state: payload });
     }
@@ -563,13 +562,12 @@ export default function HeroSection() {
             className="flex gap-2 overflow-x-auto pb-1"
             style={{ paddingLeft: "16px", paddingRight: "16px", scrollbarWidth: "none" }}
           >
-            {FILTER_CHIPS.map((chip) => {
-              const IconComp = ICON_MAP[chip.icon];
-              const isActive = activeChip === chip.id;
+            {ESPECIALIDADES.map((label) => {
+              const isActive = activeChip === label;
               return (
                 <button
-                  key={chip.id}
-                  onClick={() => handleChipClick(chip.id)}
+                  key={label}
+                  onClick={() => handleChipClick(label)}
                   aria-pressed={isActive}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[14px] font-medium whitespace-nowrap min-h-[40px] flex-shrink-0 transition-all duration-150"
                   style={
@@ -586,10 +584,7 @@ export default function HeroSection() {
                         }
                   }
                 >
-                  {IconComp && (
-                    <IconComp size={15} color={isActive ? "#fff" : "#3A3A3C"} />
-                  )}
-                  {chip.label}
+                  {label}
                 </button>
               );
             })}
@@ -727,14 +722,19 @@ export default function HeroSection() {
 
             {/* Specialty Chips */}
             <div className="flex flex-wrap gap-1.5 justify-center">
-              {FILTER_CHIPS.map((chip) => {
-                const IconComp = ICON_MAP[chip.icon];
-                const isActive = activeChip === chip.id;
+              {ESPECIALIDADES.map((label) => {
+                const isActive = activeChip === label;
                 return (
-                  <button key={chip.id} onClick={() => handleChipClick(chip.id)} aria-pressed={isActive} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-[13px] font-medium min-h-[36px] transition-all duration-200"
-                    style={isActive ? { background: "#007AFF", color: "#fff", border: "0.5px solid transparent", boxShadow: "0 0 12px rgba(0,122,255,0.4)" } : { background: "rgba(255,255,255,0.60)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", border: "0.5px solid rgba(255,255,255,0.45)", color: "#3A3A3C", boxShadow: "0 2px 6px rgba(16,24,64,0.05)" }}>
-                    {IconComp && <IconComp size={13} color={isActive ? "#fff" : "#3A3A3C"} />}
-                    {chip.label}
+                  <button
+                    key={label}
+                    onClick={() => handleChipClick(label)}
+                    aria-pressed={isActive}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-[13px] font-medium min-h-[36px] transition-all duration-200"
+                    style={isActive
+                      ? { background: "#007AFF", color: "#fff", border: "0.5px solid transparent", boxShadow: "0 0 12px rgba(0,122,255,0.4)" }
+                      : { background: "rgba(255,255,255,0.60)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", border: "0.5px solid rgba(255,255,255,0.45)", color: "#3A3A3C", boxShadow: "0 2px 6px rgba(16,24,64,0.05)" }}
+                  >
+                    {label}
                   </button>
                 );
               })}

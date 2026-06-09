@@ -30,16 +30,11 @@ import {
 import logoProUrl from "@/assets/logos/logo-pro.png";
 import { CepInputComBusca } from "@/components/ui/CepInputComBusca";
 import logoProAltUrl from "@/assets/logos/logo-pro-alt.png";
+import { ESPECIALIDADES } from "@/constants/data";
 
 
 // --- Constantes ---
-const ESPECIALIDADES = [
-  "Clínico Geral", "Clareamento dental", "Lentes de contato dental", "Facetas de porcelana",
-  "Limpeza e profilaxia", "Ortodontia (aparelho)", "Implante dentário",
-  "Tratamento de canal", "Prótese dentária", "Cirurgia oral",
-  "Periodontia", "Odontopediatria", "Botox odontológico",
-  "Harmonização orofacial", "Clareamento a laser",
-];
+// ESPECIALIDADES importado de @/constants/data (fonte canônica)
 const CONVENIOS_OPCOES = [
   "Amil Dental", "Bradesco Dental", "SulAmérica Odonto", "Hapvida Odonto",
   "Odontoprev", "Unimed Odonto", "Porto Seguro Saúde", "NotreDame Intermédica",
