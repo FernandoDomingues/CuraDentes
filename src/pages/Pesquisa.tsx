@@ -168,11 +168,11 @@ export default function Pesquisa() {
   const location = useLocation();
 
   // Lê o estado da navegação (vindo da Hero) com fallback para sessionStorage (F5)
-  const estadoNavegacao = (location.state as { q?: string; lat?: string; lng?: string }) || {};
+  const estadoNavegacao = (location.state as { q?: string; lat?: string; lng?: string; atividades?: string[] }) || {};
   const estadoSalvo = (() => {
     try {
       const raw = sessionStorage.getItem("curadentes_search_state");
-      return raw ? JSON.parse(raw) as { q?: string; lat?: string; lng?: string } : {};
+      return raw ? JSON.parse(raw) as { q?: string; lat?: string; lng?: string; atividades?: string[] } : {};
     } catch { return {}; }
   })();
 
@@ -225,9 +225,10 @@ export default function Pesquisa() {
     setSearchInput(suggestion.value);
     setShowSuggestions(false);
     setHighlightedIdx(-1);
-    sessionStorage.setItem("curadentes_search_state", JSON.stringify({ q: suggestion.value }));
-    navigate("/pesquisa", { state: { q: suggestion.value } });
-  }, [navigate]);
+    const payload = { q: suggestion.value, atividades: selectedAtividades };
+    sessionStorage.setItem("curadentes_search_state", JSON.stringify(payload));
+    navigate("/pesquisa", { state: payload });
+  }, [navigate, selectedAtividades]);
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!showSuggestions || suggestions.length === 0) return;
@@ -248,9 +249,23 @@ export default function Pesquisa() {
 
   // Filtros
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedAtividades, setSelectedAtividades] = useState<string[]>([]);
+  const [selectedAtividades, setSelectedAtividades] = useState<string[]>(() => {
+    return estadoNavegacao.atividades || estadoSalvo.atividades || [];
+  });
   const [selectedConvenios, setSelectedConvenios] = useState<string[]>([]);
   const [selectedPagamentos, setSelectedPagamentos] = useState<string[]>([]);
+
+  // Sincroniza atividades selecionadas no sessionStorage para persistir no recarregamento (F5)
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("curadentes_search_state");
+      const current = raw ? JSON.parse(raw) : {};
+      current.atividades = selectedAtividades;
+      sessionStorage.setItem("curadentes_search_state", JSON.stringify(current));
+    } catch (e) {
+      console.error("Erro ao sincronizar atividades no sessionStorage:", e);
+    }
+  }, [selectedAtividades]);
 
   useEffect(() => {
     // ── (B) Flag de cancelamento: evita atualizar estado de uma busca "velha" ──
@@ -632,8 +647,9 @@ export default function Pesquisa() {
     }
     const termo = searchInput.trim();
     if (!termo) return;
-    sessionStorage.setItem("curadentes_search_state", JSON.stringify({ q: termo }));
-    navigate("/pesquisa", { state: { q: termo } });
+    const payload = { q: termo, atividades: selectedAtividades };
+    sessionStorage.setItem("curadentes_search_state", JSON.stringify(payload));
+    navigate("/pesquisa", { state: payload });
   }
 
   function usarLocalizacao() {
@@ -657,15 +673,15 @@ export default function Pesquisa() {
           const latStr = lat.toFixed(4);
           const lngStr = lng.toFixed(4);
           const payload = enderecoTexto
-            ? { q: enderecoTexto, lat: latStr, lng: lngStr }
-            : { lat: latStr, lng: lngStr };
+            ? { q: enderecoTexto, lat: latStr, lng: lngStr, atividades: selectedAtividades }
+            : { lat: latStr, lng: lngStr, atividades: selectedAtividades };
             
           sessionStorage.setItem("curadentes_search_state", JSON.stringify(payload));
           navigate("/pesquisa", { state: payload });
         } catch (err) {
           toast.dismiss(toastId);
           console.error(err);
-          const payload = { lat: lat.toFixed(4), lng: lng.toFixed(4) };
+          const payload = { lat: lat.toFixed(4), lng: lng.toFixed(4), atividades: selectedAtividades };
           sessionStorage.setItem("curadentes_search_state", JSON.stringify(payload));
           navigate("/pesquisa", { state: payload });
         } finally {

@@ -9,6 +9,8 @@ import {
   Star,
   Baby,
   Building2,
+  Stethoscope,
+  Smile,
   type LucideIcon,
 } from "lucide-react";
 import { FILTER_CHIPS } from "@/constants/data";
@@ -101,6 +103,8 @@ const ICON_MAP: Record<string, AnyIcon> = {
   Star,
   Baby,
   Scissors: DoctorMaskIcon,
+  Stethoscope,
+  Smile,
 };
 
 // ─── Subcomponente: Item de Sugestão do Autocomplete ──────────────────────────
@@ -224,9 +228,12 @@ export default function HeroSection() {
     setSearchValue(suggestion.value);
     setShowSuggestions(false);
     setHighlightedIdx(-1);
-    sessionStorage.setItem("curadentes_search_state", JSON.stringify({ q: suggestion.value }));
-    navigate("/pesquisa", { state: { q: suggestion.value } });
-  }, [navigate]);
+    const selectedChipObj = FILTER_CHIPS.find(c => c.id === activeChip);
+    const atividadesList = selectedChipObj ? [selectedChipObj.label] : [];
+    const payload = { q: suggestion.value, atividades: atividadesList };
+    sessionStorage.setItem("curadentes_search_state", JSON.stringify(payload));
+    navigate("/pesquisa", { state: payload });
+  }, [navigate, activeChip]);
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!showSuggestions || suggestions.length === 0) return;
@@ -380,9 +387,12 @@ export default function HeroSection() {
       handleSuggestionSelect(suggestions[highlightedIdx]);
       return;
     }
-    if (searchValue.trim()) {
-      sessionStorage.setItem("curadentes_search_state", JSON.stringify({ q: searchValue }));
-      navigate("/pesquisa", { state: { q: searchValue } });
+    if (searchValue.trim() || activeChip) {
+      const selectedChipObj = FILTER_CHIPS.find(c => c.id === activeChip);
+      const atividadesList = selectedChipObj ? [selectedChipObj.label] : [];
+      const payload = { q: searchValue.trim() || null, atividades: atividadesList };
+      sessionStorage.setItem("curadentes_search_state", JSON.stringify(payload));
+      navigate("/pesquisa", { state: payload });
     }
   };
 
@@ -395,16 +405,21 @@ export default function HeroSection() {
       const latStr = lat.toFixed(4);
       const lngStr = lng.toFixed(4);
       
+      const selectedChipObj = FILTER_CHIPS.find(c => c.id === activeChip);
+      const atividadesList = selectedChipObj ? [selectedChipObj.label] : [];
+      
       const payload = enderecoTexto
-        ? { q: enderecoTexto, lat: latStr, lng: lngStr }
-        : { lat: latStr, lng: lngStr };
+        ? { q: enderecoTexto, lat: latStr, lng: lngStr, atividades: atividadesList }
+        : { lat: latStr, lng: lngStr, atividades: atividadesList };
         
       sessionStorage.setItem("curadentes_search_state", JSON.stringify(payload));
       navigate("/pesquisa", { state: payload });
     } catch (err) {
       toast.dismiss(loaderToastId);
       console.error(err);
-      const payload = { lat: lat.toFixed(4), lng: lng.toFixed(4) };
+      const selectedChipObj = FILTER_CHIPS.find(c => c.id === activeChip);
+      const atividadesList = selectedChipObj ? [selectedChipObj.label] : [];
+      const payload = { lat: lat.toFixed(4), lng: lng.toFixed(4), atividades: atividadesList };
       sessionStorage.setItem("curadentes_search_state", JSON.stringify(payload));
       navigate("/pesquisa", { state: payload });
     }
