@@ -125,7 +125,6 @@ const DEMO_USER_1: DentistaPro = {
       atividades: [
         "Botox odontológico",
         "Preenchimento labial",
-        "Clareamento a laser",
       ],
       agenda: [
         { dia_semana: "Sábado", horario_inicio: "09:00", horario_fim: "14:00" },

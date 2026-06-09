@@ -99,7 +99,6 @@ const ICON_MAP: Record<string, AnyIcon> = {
   "Odontopediatria": Baby,
   "Botox odontológico": Zap,
   "Harmonização orofacial": FaceSmileIcon,
-  "Clareamento a laser": Sparkles,
 };
 
 const COLOR_MAP: Record<string, string> = {
@@ -117,7 +116,6 @@ const COLOR_MAP: Record<string, string> = {
   "Odontopediatria": "#34C759",
   "Botox odontológico": "#E6004C",
   "Harmonização orofacial": "#E6004C",
-  "Clareamento a laser": "#007AFF",
 };
 
 export default function Specialties() {

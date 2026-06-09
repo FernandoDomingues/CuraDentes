@@ -79,7 +79,7 @@ export const DENTIST_PROFILES: DentistProfile[] = [
         telefone: "(11) 3321-9900",
         whatsapp: "5511999001002",
         maps_url: "https://maps.google.com",
-        atividades: ["Botox odontológico", "Preenchimento labial", "Clareamento a laser"],
+        atividades: ["Botox odontológico",         "Preenchimento labial"],
         agenda: [
           { dia_semana: "Sábado", horario_inicio: "09:00", horario_fim: "14:00" },
         ],

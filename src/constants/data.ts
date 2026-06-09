@@ -215,6 +215,5 @@ export const ESPECIALIDADES: string[] = [
   "Odontopediatria",
   "Botox odontológico",
   "Harmonização orofacial",
-  "Clareamento a laser",
 ];
 
