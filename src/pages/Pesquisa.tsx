@@ -160,7 +160,7 @@ const CONVENIOS_OPCOES = [
 
 const PAGAMENTOS_OPCOES = [
   "Dinheiro", "PIX", "Cartão de débito", "Cartão de crédito (à vista)",
-  "Cartão de crédito (parcelado)", "Boleto bancário"
+  "Cartão de crédito (parcelado)", "Boleto bancário", "Transferência bancária"
 ];
 
 export default function Pesquisa() {
