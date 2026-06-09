@@ -43,7 +43,7 @@ export default function CtaBanner() {
 
   function loginDentista() {
     fecharModal();
-    navigate("/pro/dashboard");
+    navigate("/pro/perfil");
   }
 
   function irParaCadastro() {

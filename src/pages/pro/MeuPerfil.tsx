@@ -21,7 +21,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
-import { uploadFotoDentista } from "@/lib/uploadService";
+
 import { getCoordenadas } from "@/lib/geocoding";
 import {
   User, Building2, Save, ArrowLeft, Loader2,
@@ -30,7 +30,7 @@ import {
 import logoProUrl from "@/assets/logos/logo-pro.png";
 import { CepInputComBusca } from "@/components/ui/CepInputComBusca";
 import logoProAltUrl from "@/assets/logos/logo-pro-alt.png";
-import { ImageCropperModal } from "@/components/ImageCropperModal";
+
 
 // --- Constantes ---
 const ESPECIALIDADES = [
@@ -126,9 +126,7 @@ export default function MeuPerfil() {
   const [anoFormacao, setAnoFormacao] = useState("");
   const [bio, setBio] = useState("");
   const [fotoUrl, setFotoUrl] = useState("");
-  const [isUploadingFoto, setIsUploadingFoto] = useState(false);
-  const [cropperSrc, setCropperSrc] = useState("");
-  const [isCropperOpen, setIsCropperOpen] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Endereços
@@ -213,31 +211,11 @@ export default function MeuPerfil() {
     fetchPerfil();
   }, [navigate]);
 
-  async function handleFotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleFotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file || !userId) return;
-
-    const localUrl = URL.createObjectURL(file);
-    setCropperSrc(localUrl);
-    setIsCropperOpen(true);
+    if (!file) return;
     if (fileInputRef.current) fileInputRef.current.value = "";
-  }
-
-  async function handleConfirmCrop(croppedBlob: Blob) {
-    if (!userId) return;
-
-    const toastId = toast.loading("Enviando foto de perfil...");
-    try {
-      setIsUploadingFoto(true);
-      const publicUrl = await uploadFotoDentista(croppedBlob, userId);
-      setFotoUrl(publicUrl);
-      toast.success("Foto de perfil atualizada com sucesso!", { id: toastId });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Erro ao atualizar foto de perfil.";
-      toast.error(message, { id: toastId });
-    } finally {
-      setIsUploadingFoto(false);
-    }
+    navigate("/pro/editor-de-fotos", { state: { imageFile: file, from: "/pro/perfil" } });
   }
 
   async function handleSalvar() {
@@ -320,7 +298,7 @@ export default function MeuPerfil() {
       }
 
       toast.success("Perfil atualizado com sucesso!", { id: toastId });
-      setTimeout(() => navigate("/pro/dashboard"), 1500);
+      setTimeout(() => navigate("/pro/perfil"), 1500);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Erro ao salvar o perfil.";
       toast.error(message, { id: toastId });
@@ -420,7 +398,7 @@ export default function MeuPerfil() {
     <div className="min-h-screen pb-20" style={{ background: "#F2F2F7" }}>
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-lg border-b border-gray-200">
         <div className="container mx-auto px-4 md:px-8 h-[60px] flex items-center justify-between">
-          <button onClick={() => navigate("/pro/dashboard")} className="flex items-center gap-1.5 text-[13px] font-semibold text-gray-500 hover:text-gray-900 transition-colors">
+          <button onClick={() => navigate("/")} className="flex items-center gap-1.5 text-[13px] font-semibold text-gray-500 hover:text-gray-900 transition-colors">
             <ArrowLeft size={16} /> Voltar
           </button>
           <img src={logoProUrl} alt="CuraDentes Pro" className="h-6 w-auto opacity-50 hidden sm:block" />
@@ -446,9 +424,7 @@ export default function MeuPerfil() {
             {/* Foto de Perfil */}
             <div className="flex flex-col items-center gap-3">
               <div className="relative w-[120px] h-[120px] rounded-full bg-gray-100 overflow-hidden border-2 border-gray-200 flex items-center justify-center">
-                {isUploadingFoto ? (
-                  <Loader2 className="animate-spin text-[#007AFF]" size={24} />
-                ) : fotoUrl ? (
+                {fotoUrl ? (
                   <img src={fotoUrl || logoProAltUrl} alt="Sua foto" className="w-full h-full object-cover" />
                 ) : (
                   <User size={48} className="text-gray-300" />
@@ -716,12 +692,6 @@ export default function MeuPerfil() {
         </div>
       </main>
 
-      <ImageCropperModal
-        isOpen={isCropperOpen}
-        onClose={() => setIsCropperOpen(false)}
-        imageSrc={cropperSrc}
-        onConfirm={handleConfirmCrop}
-      />
     </div>
   );
 }

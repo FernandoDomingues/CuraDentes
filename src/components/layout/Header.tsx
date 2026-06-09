@@ -13,7 +13,7 @@
 //   - modalDentista: login por email/senha, Google, ou "Criar conta" (redireciona)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Menu, X, Eye, EyeOff, ChevronRight } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 // ============================================================================
@@ -110,6 +110,16 @@ export default function Header() {
 
   // Controla qual modal está aberto: null | "paciente" | "dentista"
   const [modalAberto, setModalAberto] = useState<null | "paciente" | "dentista">(null);
+
+  useEffect(() => {
+    const handleOpenModal = () => {
+      setModalAberto("dentista");
+    };
+    window.addEventListener("open-login-dentista-modal", handleOpenModal);
+    return () => {
+      window.removeEventListener("open-login-dentista-modal", handleOpenModal);
+    };
+  }, []);
 
   // Estado do formulário de login (usado no modal do dentista)
   const [emailLogin, setEmailLogin]   = useState("");

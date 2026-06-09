@@ -403,7 +403,7 @@ export default function Dashboard() {
           return;
         }
 
-        carregarDadosDentista(session.user.id);
+        navigate("/pro/perfil");
       }
     }
     carregarSessao();
@@ -496,7 +496,6 @@ export default function Dashboard() {
         return;
       }
       
-      await carregarDadosDentista(data.user.id);
       toast.success("Bem-vindo ao painel!", { id: toastId });
       navigate("/pro/perfil");
     } catch (error) {

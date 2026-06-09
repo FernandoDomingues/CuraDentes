@@ -41,8 +41,8 @@ import { supabase } from "@/lib/supabase";
 import { CepInputComBusca } from "@/components/ui/CepInputComBusca";
 
 import logoProUrl from "@/assets/logos/logo-pro.png";
-import { uploadFotoDentista } from "@/lib/uploadService";
-import { ImageCropperModal } from "@/components/ImageCropperModal";
+
+
 import {
   validarTelefone,
   validarCpf,
@@ -270,7 +270,7 @@ export default function NovoCadastro() {
           // Determina a primeira etapa incompleta para retomar
           if (pro.lgpd_aceito) {
             // Cadastro completo → redireciona para o painel do dentista
-            navigate('/pro/dashboard');
+            navigate('/pro/perfil');
             return;
           } else {
             setEtapa(2); // Cadastro incompleto → sempre retoma no passo 2
@@ -286,7 +286,7 @@ export default function NovoCadastro() {
         try {
           const dados = JSON.parse(rascunhoSalvo);
           if (dados.lgpdAceito) {
-            navigate('/pro/dashboard');
+            navigate('/pro/perfil');
             return;
           } else if (dados.emailVerificado) {
             setEtapa(2); // Rascunho incompleto e email verificado → sempre retoma no passo 2
@@ -340,9 +340,7 @@ export default function NovoCadastro() {
   const [cro, setCro] = useState("");
   const [anoFormacao, setAnoFormacao] = useState("");
   const [fotoUrl, setFotoUrl] = useState("");
-  const [cropperSrc, setCropperSrc] = useState("");
-  const [isCropperOpen, setIsCropperOpen] = useState(false);
-  const [isUploadingFoto, setIsUploadingFoto] = useState(false);
+  const [isUploadingFoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ─ Etapa 4: Endereços ─────────────────────────────────────────────────────
@@ -663,25 +661,6 @@ export default function NovoCadastro() {
     }
   }
 
-  async function handleConfirmCrop(croppedBlob: Blob) {
-    const toastId = toast.loading("Enviando foto de perfil...");
-    try {
-      setIsUploadingFoto(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error("Sessão expirada. Por favor, volte à Etapa 1 e confirme seu e-mail.");
-      }
-
-      const publicUrl = await uploadFotoDentista(croppedBlob, user.id);
-      setFotoUrl(publicUrl);
-      toast.success("Foto de perfil atualizada com sucesso!", { id: toastId });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Erro ao enviar a foto de perfil.";
-      toast.error(message, { id: toastId });
-    } finally {
-      setIsUploadingFoto(false);
-    }
-  }
 
   // ─────────────────────────────────────────────────────────────────────────
   // (formatarCep e CepInputComBusca movidos para src/components/ui/CepInputComBusca)
@@ -817,7 +796,7 @@ export default function NovoCadastro() {
           // Limpa rascunho
           localStorage.removeItem("curadentes_pro_cadastro_rascunho");
           
-          navigate("/pro/dashboard");
+          navigate("/pro/perfil");
         })()
       ]);
     } catch (error: any) {
@@ -853,7 +832,7 @@ export default function NovoCadastro() {
   // ─────────────────────────────────────────────────────────────────────────
   function continuarIncompleto() {
     setExibirModalIncompleto(false);
-    navigate("/pro/dashboard");
+    navigate("/pro/perfil");
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -1553,10 +1532,8 @@ export default function NovoCadastro() {
           onChange={(e) => {
             const file = e.target.files?.[0];
             if (file) {
-              const localUrl = URL.createObjectURL(file);
-              setCropperSrc(localUrl);
-              setIsCropperOpen(true);
               if (fileInputRef.current) fileInputRef.current.value = "";
+              navigate("/pro/editor-de-fotos", { state: { imageFile: file, from: "/pro/novo-cadastro" } });
             }
           }}
         />
@@ -2322,12 +2299,7 @@ export default function NovoCadastro() {
         </div>
       )}
 
-      <ImageCropperModal
-        isOpen={isCropperOpen}
-        onClose={() => setIsCropperOpen(false)}
-        imageSrc={cropperSrc}
-        onConfirm={handleConfirmCrop}
-      />
+
     </div>
   );
 }

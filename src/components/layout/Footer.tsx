@@ -3,7 +3,7 @@ import logoComNome from "@/assets/logos/logo-com-nome.png";
 
 const LOGO_FULL = logoComNome;
 
-const FOOTER_LINKS: Record<string, { label: string; href: string }[]> = {
+const FOOTER_LINKS: Record<string, { label: string; href: string; onClick?: () => void }[]> = {
   Pacientes: [
     { label: "Buscar dentista", href: "/pesquisa" },
     { label: "Como funciona", href: "#como-funciona" },
@@ -11,7 +11,13 @@ const FOOTER_LINKS: Record<string, { label: string; href: string }[]> = {
   ],
   Dentistas: [
     { label: "Cadastrar dentista", href: "/pro/novo-cadastro" },
-    { label: "Acesso do dentista", href: "#" },
+    { 
+      label: "Acesso do dentista", 
+      href: "#", 
+      onClick: () => {
+        window.dispatchEvent(new CustomEvent("open-login-dentista-modal"));
+      } 
+    },
     { label: "Suporte", href: "mailto:suporte@curadentes.com.br" },
   ],
   Empresa: [
@@ -75,6 +81,12 @@ export default function Footer() {
                   <li key={link.label}>
                     <a
                       href={link.href}
+                      onClick={(e) => {
+                        if (link.onClick) {
+                          e.preventDefault();
+                          link.onClick();
+                        }
+                      }}
                       className="text-[14px] transition-colors duration-200 inline-block min-h-[32px] py-0.5"
                       style={{ color: "rgba(255,255,255,0.72)" }}
                       onMouseEnter={(e) => { e.currentTarget.style.color = "#fff"; }}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getCoordenadas } from "@/lib/geocoding";
@@ -9,6 +9,91 @@ import { Loader2, MapPin, Star, Building2, ChevronRight, Filter, SlidersHorizont
 import logoProAltUrl from "@/assets/logos/logo-pro-alt.png";
 import { useAuth } from "@/hooks/useAuth";
 import { saveToSearchCache, saveQueryCache, loadQueryCache, buildQueryCacheKey } from "@/lib/dentistCache";
+import { useAddressSuggestions } from "@/hooks/useAddressSuggestions";
+import type { AddressSuggestion } from "@/hooks/useAddressSuggestions";
+
+// ─── Subcomponentes para o Autocomplete ──────────────────────────────────────
+function HighlightMatch({ text, query }: { text: string; query: string }) {
+  if (!query.trim()) return <>{text}</>;
+  const idx = text.toLowerCase().indexOf(query.toLowerCase());
+  if (idx === -1) return <>{text}</>;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <strong style={{ color: "#007AFF", fontWeight: 700 }}>{text.slice(idx, idx + query.length)}</strong>
+      {text.slice(idx + query.length)}
+    </>
+  );
+}
+
+const TYPE_LABELS: Record<string, string> = {
+  cidade: "Cidade",
+  bairro: "Bairro",
+  clinica: "Clínica",
+};
+
+function SuggestionItem({
+  suggestion,
+  highlighted,
+  query,
+  onSelect,
+}: {
+  suggestion: AddressSuggestion;
+  highlighted: boolean;
+  query: string;
+  onSelect: (s: AddressSuggestion) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onMouseDown={(e) => { e.preventDefault(); onSelect(suggestion); }}
+      className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors"
+      style={{
+        background: highlighted ? "rgba(0,122,255,0.07)" : "transparent",
+        borderBottom: "0.5px solid rgba(60,60,67,0.06)",
+        cursor: "pointer",
+      }}
+    >
+      <div
+        className="flex-shrink-0 flex items-center justify-center"
+        style={{
+          width: "32px",
+          height: "32px",
+          borderRadius: "10px",
+          background: suggestion.type === "cidade"
+            ? "rgba(0,122,255,0.10)"
+            : suggestion.type === "bairro"
+            ? "rgba(52,199,89,0.10)"
+            : "rgba(255,149,0,0.10)",
+        }}
+      >
+        {suggestion.type === "clinica" ? (
+          <Building2 size={15} style={{ color: "#FF9500" }} />
+        ) : (
+          <MapPin size={15} style={{ color: suggestion.type === "cidade" ? "#007AFF" : "#34C759" }} />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[14px] font-medium truncate" style={{ color: "#1C1C1E" }}>
+          <HighlightMatch text={suggestion.label} query={query} />
+        </p>
+      </div>
+      <span
+        className="flex-shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+        style={{
+          background: suggestion.type === "cidade"
+            ? "rgba(0,122,255,0.08)"
+            : suggestion.type === "bairro"
+            ? "rgba(52,199,89,0.08)"
+            : "rgba(255,149,0,0.08)",
+          color: suggestion.type === "cidade" ? "#007AFF" : suggestion.type === "bairro" ? "#34C759" : "#FF9500",
+        }}
+      >
+        {TYPE_LABELS[suggestion.type]}
+      </span>
+    </button>
+  );
+}
 
 // Função utilitária para cálculo de distância Haversine em JS
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -113,6 +198,52 @@ export default function Pesquisa() {
     return (cached ?? []) as DentistaResultado[];
   });
   const [ordenacao, setOrdenacao] = useState<"distancia" | "avaliacao">("distancia");
+
+  // Autocomplete
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [highlightedIdx, setHighlightedIdx] = useState(-1);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const { suggestions } = useAddressSuggestions(showSuggestions ? searchInput : "");
+
+  // Fecha o dropdown ao clicar fora
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+        setHighlightedIdx(-1);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Reseta o índice destacado quando as sugestões mudam
+  useEffect(() => { setHighlightedIdx(-1); }, [suggestions]);
+
+  const handleSuggestionSelect = useCallback((suggestion: AddressSuggestion) => {
+    setSearchInput(suggestion.value);
+    setShowSuggestions(false);
+    setHighlightedIdx(-1);
+    sessionStorage.setItem("curadentes_search_state", JSON.stringify({ q: suggestion.value }));
+    navigate("/pesquisa", { state: { q: suggestion.value } });
+  }, [navigate]);
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showSuggestions || suggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlightedIdx(i => Math.min(i + 1, suggestions.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlightedIdx(i => Math.max(i - 1, -1));
+    } else if (e.key === "Enter" && highlightedIdx >= 0) {
+      e.preventDefault();
+      handleSuggestionSelect(suggestions[highlightedIdx]);
+    } else if (e.key === "Escape") {
+      setShowSuggestions(false);
+      setHighlightedIdx(-1);
+    }
+  };
 
   // Filtros
   const [showFilters, setShowFilters] = useState(false);
@@ -415,6 +546,11 @@ export default function Pesquisa() {
 
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setShowSuggestions(false);
+    if (highlightedIdx >= 0 && suggestions[highlightedIdx]) {
+      handleSuggestionSelect(suggestions[highlightedIdx]);
+      return;
+    }
     const termo = searchInput.trim();
     if (!termo) return;
     sessionStorage.setItem("curadentes_search_state", JSON.stringify({ q: termo }));
@@ -463,14 +599,21 @@ export default function Pesquisa() {
               </button>
             </div>
 
-            {/* Distância */}
+            {/* Distância (Comentado e invisível na interface)
             <div className="mb-6">
               <label className="block text-[13px] font-bold text-[#1C1C1E] mb-2">Distância Máxima: {raio} km</label>
-              <input 
-                type="range" min="1" max="50" value={raio} 
-                onChange={(e) => setRaio(Number(e.target.value))}
-                className="w-full accent-[#007AFF]"
-              />
+              
+                PENDÊNCIA: Ajustar futuramente a edição do raio de busca na lista de pendências.
+                Desativado temporariamente conforme solicitação do usuário.
+                <input 
+                  type="range" min="1" max="50" value={raio} 
+                  onChange={(e) => setRaio(Number(e.target.value))}
+                  className="w-full accent-[#007AFF]"
+                />
+              
+              <div className="text-[12px] text-gray-500 bg-gray-50 p-2.5 rounded-[12px] border border-gray-100 font-medium">
+                Raio de busca fixado em {raio} km. Edição desativada temporariamente.
+              </div>
               <div className="flex justify-between text-[11px] text-gray-400 mt-1 font-medium">
                 <span>1 km</span>
                 <span>50 km</span>
@@ -494,6 +637,7 @@ export default function Pesquisa() {
             </div>
 
             <hr className="border-gray-100 my-6" />
+            */}
 
             {/* Convênios */}
             <div className="mb-6">
@@ -540,30 +684,73 @@ export default function Pesquisa() {
         <div className="flex-1 flex flex-col gap-6">
           
           {/* Barra de busca */}
-          <form onSubmit={handleSearchSubmit} className="bg-white rounded-[20px] shadow-sm border border-gray-100 p-1 flex items-center gap-2">
-            <div className="flex-1 flex items-center gap-3 px-3">
-              <Search size={18} className="text-gray-400 shrink-0" />
-              <input
-                type="text"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Buscar por cidade, bairro, especialidade..."
-                className="w-full bg-transparent text-[15px] text-[#1C1C1E] outline-none placeholder:text-gray-400 py-2.5"
-              />
-            </div>
-            <button
-              type="submit"
-              className="px-5 py-2.5 rounded-[12px] text-white text-[14px] font-semibold transition-all"
+          <div ref={searchContainerRef} className="relative z-30">
+            <form 
+              onSubmit={handleSearchSubmit} 
+              className="bg-white shadow-sm border border-gray-100 p-1 flex items-center gap-2"
               style={{
-                background: "#007AFF",
-                boxShadow: "0 4px 12px rgba(0,122,255,0.25)",
+                borderRadius: showSuggestions && suggestions.length > 0 ? "20px 20px 0 0" : "20px",
+                transition: "border-radius 0.15s",
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = "#1a8aff" }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = "#007AFF" }}
             >
-              Buscar
-            </button>
-          </form>
+              <div className="flex-1 flex items-center gap-3 px-3">
+                <Search size={18} className="text-gray-400 shrink-0" />
+                <input
+                  type="text"
+                  value={searchInput}
+                  onChange={(e) => { setSearchInput(e.target.value); setShowSuggestions(true); }}
+                  onFocus={() => setShowSuggestions(true)}
+                  onKeyDown={handleSearchKeyDown}
+                  placeholder="Buscar por cidade, bairro, especialidade..."
+                  className="w-full bg-transparent text-[15px] text-[#1C1C1E] outline-none placeholder:text-gray-400 py-2.5"
+                  autoComplete="off"
+                />
+              </div>
+              <button
+                type="submit"
+                className="px-5 py-2.5 rounded-[12px] text-white text-[14px] font-semibold transition-all"
+                style={{
+                  background: "#007AFF",
+                  boxShadow: "0 4px 12px rgba(0,122,255,0.25)",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "#1a8aff" }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "#007AFF" }}
+              >
+                Buscar
+              </button>
+            </form>
+
+            {/* Dropdown de Sugestões */}
+            {showSuggestions && suggestions.length > 0 && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "100%",
+                  left: 0,
+                  right: 0,
+                  background: "rgba(255,255,255,0.98)",
+                  backdropFilter: "blur(20px)",
+                  WebkitBackdropFilter: "blur(20px)",
+                  borderRadius: "0 0 20px 20px",
+                  boxShadow: "0 12px 30px rgba(10,42,102,0.12)",
+                  border: "1px solid rgba(0,0,0,0.05)",
+                  borderTop: "none",
+                  zIndex: 30,
+                  overflow: "hidden",
+                }}
+              >
+                {suggestions.map((s, i) => (
+                  <SuggestionItem
+                    key={`${s.type}-${s.label}`}
+                    suggestion={s}
+                    highlighted={i === highlightedIdx}
+                    query={searchInput}
+                    onSelect={handleSuggestionSelect}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Info bar: termo + contagem + controles */}
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white p-4 rounded-[20px] shadow-sm border border-gray-100">

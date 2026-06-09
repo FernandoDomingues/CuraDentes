@@ -36,6 +36,7 @@ import NovoCadastro from "@/pages/pro/NovoCadastro";
 import Dashboard from "@/pages/pro/Dashboard";
 import MeuPerfil from "@/pages/pro/MeuPerfil";
 import RedefinirSenha from "@/pages/pro/RedefinirSenha";
+import EditorDeFotos from "@/pages/pro/EditorDeFotos";
 import Privacidade from "@/pages/Privacidade";
 import TermosDeUso from "@/pages/TermosDeUso";
 import Sobre from "@/pages/Sobre";
@@ -57,6 +58,7 @@ export default function App() {
         <Route path="/pro/novo-cadastro" element={<NovoCadastro />} />
         <Route path="/pro/dashboard" element={<Dashboard />} />
         <Route path="/pro/perfil" element={<MeuPerfil />} />
+        <Route path="/pro/editor-de-fotos" element={<EditorDeFotos />} />
         <Route path="/pro/redefinir-senha" element={<RedefinirSenha />} />
         <Route path="/privacidade" element={<Privacidade />} />
         <Route path="/termos" element={<TermosDeUso />} />
