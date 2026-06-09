@@ -120,6 +120,7 @@ export default function MeuPerfil() {
   const [cro, setCro] = useState("");
   const [anoFormacao, setAnoFormacao] = useState("");
   const [bio, setBio] = useState("");
+  const [instagram, setInstagram] = useState("");
   const [fotoUrl, setFotoUrl] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -161,6 +162,7 @@ export default function MeuPerfil() {
         setCro(perfil.cro || "");
         setAnoFormacao(perfil.ano_formacao ? perfil.ano_formacao.toString() : "");
         setBio(perfil.bio || "");
+        setInstagram(perfil.instagram || "");
         setFotoUrl(perfil.foto_url || "");
 
         const { data: ends, error: endsError } = await supabase
@@ -226,6 +228,7 @@ export default function MeuPerfil() {
           telefone,
           ano_formacao: anoFormacao ? parseInt(anoFormacao) : null,
           bio,
+          instagram: instagram || null,
         })
         .eq("id", userId);
 
@@ -459,6 +462,10 @@ export default function MeuPerfil() {
               <div className="md:col-span-2">
                 <label style={labelStyle}>Sobre mim (Bio)</label>
                 <textarea value={bio} onChange={(e) => setBio(e.target.value)} style={{ ...inputStyle, minHeight: "80px", resize: "none" }} />
+              </div>
+              <div className="md:col-span-2">
+                <label style={labelStyle}>Instagram (opcional)</label>
+                <input type="url" value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="https://instagram.com/seu-perfil" style={inputStyle} />
               </div>
               <div>
                 <label style={labelStyle}>CPF (Visualização)</label>

@@ -190,6 +190,8 @@ export interface DentistProfile {
   enderecos: EnderecoClinica[];
   /** Avaliação consolidada por atividade (preenchida via query ao banco) */
   avaliacoes?: AvaliacaoGeral;
+  /** Link do perfil do Instagram */
+  instagram?: string;
   /** WhatsApp principal para contato rápido */
   whatsapp_principal?: string;
   /** Telefone principal para ligação */

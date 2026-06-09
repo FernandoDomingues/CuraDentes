@@ -212,6 +212,7 @@ export default function NovoCadastro() {
           if (pro.ano_formacao) setAnoFormacao(String(pro.ano_formacao));
           if (pro.foto_url) setFotoUrl(pro.foto_url);
           if (pro.bio) setBio(pro.bio);
+          if (pro.instagram) setInstagram(pro.instagram);
           if (pro.lgpd_aceito) setLgpdAceito(pro.lgpd_aceito);
           setEmailVerificado(true);
           setSenhaSincronizada(true);
@@ -289,6 +290,7 @@ export default function NovoCadastro() {
           if (dados.fotoUrl) setFotoUrl(dados.fotoUrl);
           if (dados.enderecos) setEnderecos(dados.enderecos);
           if (dados.bio) setBio(dados.bio);
+          if (dados.instagram) setInstagram(dados.instagram);
           if (dados.lgpdAceito) setLgpdAceito(dados.lgpdAceito);
           if (dados.senhaSincronizada) setSenhaSincronizada(dados.senhaSincronizada);
         } catch (e) {
@@ -333,6 +335,7 @@ export default function NovoCadastro() {
 
   // ─ Etapa 5: Bio ───────────────────────────────────────────────────────────
   const [bio, setBio] = useState("");
+  const [instagram, setInstagram] = useState("");
 
   // ─ Etapa 6: LGPD ──────────────────────────────────────────────────────────
   const [lgpdAceito, setLgpdAceito] = useState(false);
@@ -364,6 +367,7 @@ export default function NovoCadastro() {
       fotoUrl,
       enderecos,
       bio,
+      instagram,
       lgpdAceito,
       senhaSincronizada,
     };
@@ -372,7 +376,7 @@ export default function NovoCadastro() {
     etapa, nome, email, emailVerificado,
     telefone, telefoneVerificado,
     cpf, cro, anoFormacao, fotoUrl,
-    enderecos, bio, lgpdAceito,
+    enderecos, bio, instagram, lgpdAceito,
     senhaSincronizada,
   ]);
 
@@ -638,6 +642,7 @@ export default function NovoCadastro() {
       nome,
       email,
       bio: bio || null,
+      instagram: instagram || null,
     }, { onConflict: 'id' });
     if (error) {
       console.error('[pré-cadastro etapa5]', error);
@@ -736,6 +741,7 @@ export default function NovoCadastro() {
             ano_formacao: anoFormacao ? parseInt(anoFormacao) : null,
             foto_url: fotoUrl || null,
             bio: bio,
+            instagram: instagram || null,
             lgpd_aceito: lgpdAceito
           }, { onConflict: 'id' });
 
@@ -2088,6 +2094,19 @@ export default function NovoCadastro() {
         <p className="text-[12px] mt-1 text-right" style={{ color: "#8E8E93" }}>
           {bio.length}/500
         </p>
+      </div>
+
+      <div>
+        <label style={{ ...labelStyle, marginBottom: "8px" }}>
+          Instagram (opcional)
+        </label>
+        <input
+          type="url"
+          value={instagram}
+          onChange={(e) => setInstagram(e.target.value)}
+          placeholder="https://instagram.com/seu-perfil"
+          style={inputStyle}
+        />
       </div>
 
       {renderNavegacao(true, false, false, salvarEtapa5NoBanco)}

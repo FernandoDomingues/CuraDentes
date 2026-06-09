@@ -36,6 +36,8 @@ export interface DentistaPro {
   ano_formacao: number;
   /** Bio do profissional */
   bio: string;
+  /** Link do perfil do Instagram */
+  instagram?: string;
   /** Cadastro completo: true = visível para pacientes */
   cadastro_completo: boolean;
   /** Lista de endereços de atendimento */
@@ -65,6 +67,7 @@ const DEMO_USER_1: DentistaPro = {
   cpf: "123.456.789-00",
   ano_formacao: 2014,
   bio: "Especialista em odontologia estética com mais de 10 anos de experiência. Formada pela USP, com pós-graduação em Harmonização Orofacial pela APCD.",
+  instagram: "https://www.instagram.com/carolinamendesdentista",
   cadastro_completo: true,
   posicao_geral: 1,
   enderecos: [

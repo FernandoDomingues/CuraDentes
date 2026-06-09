@@ -40,6 +40,7 @@ import {
   X,
   ChevronRight,
   Trophy,
+  Instagram,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import type { EnderecoClinica, FormaPagamento, Convenio, ResumoAvaliacaoAtividade, DentistProfile, AvaliacaoIndividual, HorarioAtendimento } from "@/types/dentist";
@@ -835,6 +836,7 @@ export default function DentistProfilePage() {
           email: pro.email,
           especialidade_principal: espec,
           bio: pro.bio,
+          instagram: pro.instagram || undefined,
           rating: mediaGeral,
           total_avaliacoes: totalAvs,
           enderecos: formatarEnderecos,
@@ -999,6 +1001,18 @@ export default function DentistProfilePage() {
                 {/* Badge exibido apenas quando o dentista está no Top 1, 2 ou 3 da cidade */}
                 {perfil.posicao_cidade != null && perfil.posicao_cidade <= 3 && (
                   <BadgePodio posicao={perfil.posicao_cidade} tamanho="md" />
+                )}
+                {perfil.instagram && (
+                  <a
+                    href={perfil.instagram}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center"
+                    style={{ color: "#E4405F" }}
+                    title="Instagram"
+                  >
+                    <Instagram size={22} />
+                  </a>
                 )}
               </div>
 
