@@ -988,27 +988,30 @@ export default function Pesquisa() {
                           </span>
                         </div>
 
-                        {/* Especialidades (Atividades) deste endereço */}
-                        {end.atividades && end.atividades.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {end.atividades.map((at, idx) => (
-                              <span key={idx} className="bg-blue-100/50 text-[#007AFF] text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                                {at}
-                              </span>
-                            ))}
-                          </div>
-                        )}
+                        {/* Atividades e Convênios lado a lado */}
+                        <div className="flex flex-wrap gap-2 items-center mt-1">
+                          {/* Especialidades (Atividades) deste endereço */}
+                          {end.atividades && end.atividades.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {end.atividades.map((at, idx) => (
+                                <span key={idx} className="bg-blue-100/50 text-[#007AFF] text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                                  {at}
+                                </span>
+                              ))}
+                            </div>
+                          )}
 
-                        {/* Convênios deste endereço */}
-                        {end.convenios && end.convenios.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {end.convenios.map((conv, idx) => (
-                              <span key={idx} className="text-[9px] font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded-full border border-green-100/50 uppercase tracking-wider">
-                                {conv}
-                              </span>
-                            ))}
-                          </div>
-                        )}
+                          {/* Convênios deste endereço */}
+                          {end.convenios && end.convenios.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {end.convenios.map((conv, idx) => (
+                                <span key={idx} className="text-[9px] font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded-full border border-green-100/50 uppercase tracking-wider">
+                                  {conv}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
 
                         <div className="flex items-center justify-between mt-2 pt-2 border-t border-blue-100/50">
                           <span className="text-[11px] font-bold text-blue-600 bg-blue-100/80 px-2 py-1 rounded-[8px]">
