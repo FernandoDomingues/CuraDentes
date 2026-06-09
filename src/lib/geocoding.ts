@@ -59,15 +59,71 @@ export async function getCoordenadas(
   }
 }
 
+import { supabase } from "./supabase";
+
 /**
- * Obtém o bairro e cidade aproximados a partir de coordenadas lat/lng
- * usando a API do OpenStreetMap (Nominatim) para reverse geocoding.
+ * Obtém o bairro e cidade aproximados a partir de coordenadas lat/lng.
+ * 
+ * ESTRATÉGIA:
+ * 1. Busca no banco de dados de consultórios cadastrados (`curadentespro_enderecos`) 
+ *    o endereço que tem a menor distância física da localização do usuário.
+ * 2. Se a distância for menor que 50km, assume o bairro/cidade cadastrado no banco.
+ *    Vantagens: latência baixíssima, garante correspondência perfeita com termos do banco, livre de limites de requisição.
+ * 3. Se não houver consultório próximo, usa reverse geocoding via Nominatim como fallback.
  */
 export async function getEnderecoFromCoordenadas(
   lat: number,
   lng: number
 ): Promise<string | null> {
+  // 1. Tenta buscar o bairro mais próximo no banco de dados
   try {
+    const { data, error } = await supabase
+      .from("curadentespro_enderecos")
+      .select("bairro, cidade, latitude, longitude")
+      .not("latitude", "is", null)
+      .not("longitude", "is", null)
+      .not("bairro", "is", null)
+      .not("cidade", "is", null);
+
+    if (!error && data && data.length > 0) {
+      let maisProximo: typeof data[0] | null = null;
+      let menorDistancia = Infinity;
+
+      // Haversine
+      const calcularDistancia = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+        const R = 6371;
+        const dLat = (lat2 - lat1) * (Math.PI / 180);
+        const dLon = (lon2 - lon1) * (Math.PI / 180);
+        const a = 
+          Math.sin(dLat/2) * Math.sin(dLat/2) +
+          Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
+          Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c;
+      };
+
+      for (const item of data) {
+        if (item.latitude === null || item.longitude === null) continue;
+        const dist = calcularDistancia(lat, lng, item.latitude, item.longitude);
+        if (dist < menorDistancia) {
+          menorDistancia = dist;
+          maisProximo = item;
+        }
+      }
+
+      // Se o consultório mais próximo estiver em um raio de 50km, usamos as informações dele
+      if (maisProximo && menorDistancia <= 50) {
+        console.log(`[Geocoding] Bairro mais próximo no banco (${menorDistancia.toFixed(2)}km): ${maisProximo.bairro}, ${maisProximo.cidade}`);
+        return `${maisProximo.bairro}, ${maisProximo.cidade}`;
+      }
+    }
+  } catch (err) {
+    console.error("[Geocoding] Erro ao buscar bairro mais próximo no banco:", err);
+  }
+
+  // 2. Fallback Nominatim (OpenStreetMap)
+  try {
+    console.log("[Geocoding] Sem consultório próximo no banco. Usando fallback Nominatim...");
     const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
     const controller = new AbortController();
     const fetchTimeoutId = setTimeout(() => controller.abort(), 5000);
