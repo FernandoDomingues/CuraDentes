@@ -40,7 +40,7 @@ BEGIN
     p.nome::TEXT AS dentista_nome,
     p.foto_url::TEXT AS dentista_foto,
     p.bio::TEXT AS dentista_bio,
-    5.0::NUMERIC AS dentista_avaliacao,
+    COALESCE((SELECT AVG(nota)::NUMERIC(3,1) FROM public.avaliacoes WHERE dentista_id = p.id), 0) AS dentista_avaliacao,
     e.id AS endereco_id,
     e.nome_clinica::TEXT,
     e.logradouro::TEXT,

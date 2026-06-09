@@ -3,7 +3,7 @@ import type { Session, Subscription, User as SupabaseUser } from "@supabase/supa
 import { supabase } from "@/lib/supabase";
 
 // ============================================================================
-// DEFINIÇÃO DO TIPO DE USUÁRIO (CLIENTE) NO FRONTEND
+// DEFINIÇÃO DO TIPO DE USUÁRIO NO FRONTEND
 // ============================================================================
 export interface User {
   id: string;
@@ -11,6 +11,7 @@ export interface User {
   email: string;
   picture: string;
   createdAt: string;
+  role: 'paciente' | 'dentista';
   latitude?: number | null;
   longitude?: number | null;
 }
@@ -22,6 +23,7 @@ interface AuthState {
   signInWithGoogle: (latitude?: number | null, longitude?: number | null) => Promise<void>;
   logout: () => Promise<void>;
   initialize: () => void;
+  setUser: (user: User | null) => void;
 }
 
 // ============================================================================
@@ -98,6 +100,15 @@ export const useAuth = create<AuthState>((set, get) => ({
     }
   },
 
+  setUser: (user: User | null) => {
+    if (user) {
+      saveUserCache(user);
+    } else {
+      clearUserCache();
+    }
+    set({ user });
+  },
+
   initialize: () => {
     if (get().initialized) return;
     set({ initialized: true });
@@ -112,21 +123,50 @@ export const useAuth = create<AuthState>((set, get) => ({
       set({ user: userObj, isInitializing: false });
     };
 
+    // Verifica se o usuário autenticado é um dentista (tabela curadentespro)
+    const checkIfDentista = async (authUser: SupabaseUser) => {
+      try {
+        const { data: dentista } = await supabase
+          .from('curadentespro')
+          .select('id, nome, email, foto_url')
+          .eq('id', authUser.id)
+          .maybeSingle();
+        return dentista;
+      } catch {
+        return null;
+      }
+    };
+
     // Restaura do banco (somente quando o cache não existe)
     const restoreFromDB = async (authUser: SupabaseUser) => {
       if (!authUser) { set({ isInitializing: false }); return; }
       
-      // 1. Ação Agressiva: Mostra o usuário como logado imediatamente com dados básicos
+      // 1. Verifica se é dentista
+      const dentista = await checkIfDentista(authUser);
+      if (dentista) {
+        setAndCache({
+          id: dentista.id,
+          name: dentista.nome,
+          email: dentista.email || authUser.email,
+          picture: dentista.foto_url || "",
+          createdAt: new Date().toISOString(),
+          role: 'dentista',
+        });
+        return;
+      }
+
+      // 2. Ação Agressiva: Mostra o usuário como logado imediatamente com dados básicos
       const basicUser: User = {
         id: authUser.id,
         name: authUser.user_metadata?.full_name || authUser.email,
         email: authUser.email,
         picture: authUser.user_metadata?.avatar_url || "",
-        createdAt: new Date().toISOString(), // Fallback
+        createdAt: new Date().toISOString(),
+        role: 'paciente',
       };
       setAndCache(basicUser);
 
-      // 2. Busca dados complementares no banco em background
+      // 3. Busca dados complementares no banco em background
       try {
         const { data: cliente } = await supabase
           .from("clientes").select("*").eq("id", authUser.id).single();
@@ -135,6 +175,7 @@ export const useAuth = create<AuthState>((set, get) => ({
             id: cliente.id, name: cliente.nome, email: cliente.email,
             picture: cliente.foto, createdAt: cliente.criado_em,
             latitude: cliente.latitude, longitude: cliente.longitude,
+            role: 'paciente',
           });
         }
       } catch (err) {
@@ -142,10 +183,24 @@ export const useAuth = create<AuthState>((set, get) => ({
       }
     };
 
-    // Login real: cria/atualiza o registro do cliente no banco
+    // Login real: detecta dentista ou cria/atualiza o registro do cliente no banco
     const signInAndSync = async (session: Session) => {
       const authUser = session.user;
       if (!authUser) return;
+
+      // 1. Verifica se é dentista
+      const dentista = await checkIfDentista(authUser);
+      if (dentista) {
+        setAndCache({
+          id: dentista.id,
+          name: dentista.nome,
+          email: dentista.email || authUser.email,
+          picture: dentista.foto_url || "",
+          createdAt: new Date().toISOString(),
+          role: 'dentista',
+        });
+        return;
+      }
 
       const pendingLocStr = localStorage.getItem("curadentes_pending_loc");
       let lat: number | null = null, lng: number | null = null;
@@ -159,7 +214,7 @@ export const useAuth = create<AuthState>((set, get) => ({
         }
       }
 
-      // 1. Ação Agressiva: O frontend precisa mostrar o usuário logado AGORA, não importa o banco
+      // 2. Ação Agressiva: O frontend precisa mostrar o usuário logado AGORA, não importa o banco
       const basicUser: User = {
         id: authUser.id,
         name: authUser.user_metadata?.full_name || authUser.email,
@@ -167,11 +222,12 @@ export const useAuth = create<AuthState>((set, get) => ({
         picture: authUser.user_metadata?.avatar_url || "",
         createdAt: new Date().toISOString(),
         latitude: lat,
-        longitude: lng
+        longitude: lng,
+        role: 'paciente',
       };
       setAndCache(basicUser);
 
-      // 2. Tenta sincronizar em background com a tabela 'clientes'
+      // 3. Tenta sincronizar em background com a tabela 'clientes'
       try {
         const { data: cliente } = await supabase
           .from("clientes")
@@ -190,6 +246,7 @@ export const useAuth = create<AuthState>((set, get) => ({
             id: cliente.id, name: cliente.nome, email: cliente.email,
             picture: cliente.foto, createdAt: cliente.criado_em,
             latitude: cliente.latitude, longitude: cliente.longitude,
+            role: 'paciente',
           });
         }
       } catch (err) { console.error("Erro background upsert:", err); }

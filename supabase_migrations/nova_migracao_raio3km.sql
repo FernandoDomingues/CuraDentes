@@ -43,7 +43,7 @@ BEGIN
     p.foto_url AS dentista_foto,
     p.bio AS dentista_bio,
     -- Simulando uma nota 5.0 caso você não tenha sistema de avaliação no banco ainda
-    5.0::NUMERIC AS dentista_avaliacao, 
+    COALESCE((SELECT AVG(nota)::NUMERIC(3,1) FROM public.avaliacoes WHERE dentista_id = p.id), 0) AS dentista_avaliacao, 
     e.id AS endereco_id,
     e.nome_clinica,
     e.logradouro,

@@ -1,15 +1,10 @@
 -- ==============================================================================
--- MIGRATION: Tornar CRO nullable para permitir pré-cadastro + Filtro de Privacidade
--- Data: 2026-06-08
--- Motivo: Permitir que o dentista salve seu cadastro progressivamente a partir
---         do Passo 1 (antes de preencher o CRO). O perfil só é exposto publicamente
---         quando o cadastro estiver completo (lgpd_aceito = true).
+-- MIGRATION: Corrigir avaliação dos dentistas nos resultados de busca
+-- Data: 2026-06-09
+-- Motivo: A função get_dentistas_proximos estava hardcoded com 5.0.
+--         Agora calcula a média real das notas da tabela avaliacoes.
 -- ==============================================================================
 
--- 1. Alterar a coluna cro da tabela curadentespro para aceitar NULL
-ALTER TABLE public.curadentespro ALTER COLUMN cro DROP NOT NULL;
-
--- 2. Atualizar a função get_dentistas_proximos para exibir APENAS perfis com cadastro completo (lgpd_aceito = true)
 CREATE OR REPLACE FUNCTION public.get_dentistas_proximos(
   lat DOUBLE PRECISION, 
   lng DOUBLE PRECISION, 
@@ -34,7 +29,7 @@ RETURNS TABLE (
   distancia_km DOUBLE PRECISION
 )
 LANGUAGE plpgsql
-SECURITY DEFINER -- Garante execução segura pelo cliente anônimo
+SECURITY DEFINER
 AS $$
 BEGIN
   RETURN QUERY
@@ -64,7 +59,7 @@ BEGIN
   FROM public.curadentespro_enderecos e
   JOIN public.curadentespro p ON e.curadentespro_id = p.id
   WHERE 
-    p.lgpd_aceito = true -- APENAS DENTISTAS QUE CONCLUÍRAM O CADASTRO
+    p.lgpd_aceito = true
     AND e.latitude IS NOT NULL 
     AND e.longitude IS NOT NULL
     AND (

@@ -687,7 +687,7 @@ export default function DentistProfilePage() {
                   cro: doCache.dentista_cro || "",
                   especialidade_principal: espec,
                   bio: doCache.dentista_bio || "",
-                  rating: doCache.dentista_avaliacao || 5.0,
+                  rating: doCache.dentista_avaliacao || 0,
                   total_avaliacoes: 0,
                   enderecos: [{
                     id: doCache.endereco_id,

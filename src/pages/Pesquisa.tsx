@@ -425,7 +425,7 @@ export default function Pesquisa() {
                   dentista_nome: pro.nome || "Dentista Parceiro",
                   dentista_foto: pro.foto_url || "",
                   dentista_bio: pro.bio || "",
-                  dentista_avaliacao: 5.0,
+                  dentista_avaliacao: 0,
                   endereco_id: d.id,
                   nome_clinica: d.nome_clinica || "",
                   logradouro: d.logradouro || "",
@@ -466,6 +466,36 @@ export default function Pesquisa() {
         });
 
         const finalResults = Array.from(mergedMap.values());
+
+        // ─── Busca avaliações reais da tabela avaliacoes ─────────────────────
+        const dentistaIds = [...new Set(finalResults.map(r => r.dentista_id))].filter(Boolean);
+        if (dentistaIds.length > 0) {
+          try {
+            const { data: ratings } = await supabase
+              .from('avaliacoes')
+              .select('dentista_id, nota')
+              .in('dentista_id', dentistaIds);
+
+            if (ratings && ratings.length > 0) {
+              const sums: Record<string, { sum: number; count: number }> = {};
+              ratings.forEach((r: { dentista_id: string; nota: number }) => {
+                if (!sums[r.dentista_id]) sums[r.dentista_id] = { sum: 0, count: 0 };
+                sums[r.dentista_id].sum += r.nota;
+                sums[r.dentista_id].count++;
+              });
+              const ratingMap: Record<string, number> = {};
+              Object.entries(sums).forEach(([id, { sum, count }]) => {
+                ratingMap[id] = parseFloat((sum / count).toFixed(1));
+              });
+              finalResults.forEach(r => {
+                r.dentista_avaliacao = ratingMap[r.dentista_id] ?? 0;
+              });
+            }
+          } catch (err) {
+            console.error("[Pesquisa] Erro ao buscar avaliações:", err);
+          }
+        }
+
         console.log("[Pesquisa] 🏁 Busca finalizada com sucesso! Total de resultados combinados:", finalResults.length);
         if (!cancelled) setResultadosBrutos(finalResults);
 

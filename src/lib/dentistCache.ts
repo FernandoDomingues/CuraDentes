@@ -66,7 +66,7 @@ export function saveToSearchCache(dentists: CacheableDentist[]) {
         dentista_nome: newD.dentista_nome,
         dentista_foto: newD.dentista_foto || "",
         dentista_bio: newD.dentista_bio || "",
-        dentista_avaliacao: newD.dentista_avaliacao ?? 5.0,
+        dentista_avaliacao: newD.dentista_avaliacao ?? 0,
         endereco_id: newD.endereco_id || newD.dentista_id,
         nome_clinica: newD.nome_clinica || "",
         logradouro: newD.logradouro || "",
