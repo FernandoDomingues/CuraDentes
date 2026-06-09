@@ -68,6 +68,7 @@ import {
   Sparkles,
   Star,
   Baby,
+  Stethoscope,
 } from "lucide-react";
 
 type IconComponent = ({ size, color }: { size?: number; color?: string }) => JSX.Element;
@@ -81,6 +82,7 @@ interface SpecialtyItem {
 }
 
 const SPECIALTIES: SpecialtyItem[] = [
+  { id: "clinico",     label: "Clínico Geral", Icon: Stethoscope as unknown as IconComponent, count: 450, color: "#007AFF" },
   { id: "urgencia",     label: "Urgência",     Icon: Siren as unknown as IconComponent,       count: 76,  color: "#E6004C" },
   { id: "dor",         label: "Dor de Dente", Icon: Zap as unknown as IconComponent,         count: 134, color: "#FF9500" },
   { id: "aparelho",    label: "Aparelho",     Icon: BracesIcon,     count: 142, color: "#007AFF" },

@@ -56,6 +56,7 @@ const LOGO_PRO = logoProUrl;
 
 // ─── Especialidades disponíveis para seleção nos endereços ───────────────────
 const ESPECIALIDADES = [
+  "Clínico Geral",
   "Clareamento dental",
   "Lentes de contato dental",
   "Facetas de porcelana",

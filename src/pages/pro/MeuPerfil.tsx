@@ -34,7 +34,7 @@ import logoProAltUrl from "@/assets/logos/logo-pro-alt.png";
 
 // --- Constantes ---
 const ESPECIALIDADES = [
-  "Clareamento dental", "Lentes de contato dental", "Facetas de porcelana",
+  "Clínico Geral", "Clareamento dental", "Lentes de contato dental", "Facetas de porcelana",
   "Limpeza e profilaxia", "Ortodontia (aparelho)", "Implante dentário",
   "Tratamento de canal", "Prótese dentária", "Cirurgia oral",
   "Periodontia", "Odontopediatria", "Botox odontológico",

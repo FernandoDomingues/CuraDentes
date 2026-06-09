@@ -11,13 +11,7 @@ interface DentistaRecente {
   foto_url: string;
   bio: string;
   cro: string;
-  endereco: {
-    nome_clinica: string;
-    logradouro: string;
-    numero: string;
-    bairro: string;
-    cidade: string;
-  } | null;
+  especialidades: string[];
   criado_em: string;
 }
 
@@ -30,7 +24,7 @@ export default function LatestDentists() {
   useEffect(() => {
     async function fetchLatest() {
       const CACHE_KEY = "curadentes_latest_dentists_cache";
-      const CACHE_VERSION = "v2";
+      const CACHE_VERSION = "v3";
       const EXPIRATION_TIME = 24 * 60 * 60 * 1000; // 24 horas
 
       try {
@@ -67,18 +61,35 @@ export default function LatestDentists() {
         if (pros && pros.length > 0) {
           const comEnderecos = await Promise.all(
             pros.map(async (p) => {
-              const { data: end } = await supabase
+              const { data: ends } = await supabase
                 .from("curadentespro_enderecos")
-                .select("nome_clinica, logradouro, numero, bairro, cidade")
-                .eq("curadentespro_id", p.id)
-                .limit(1)
-                .maybeSingle();
+                .select("nome_clinica, logradouro, numero, bairro, cidade, atividades")
+                .eq("curadentespro_id", p.id);
 
-              return { ...p, endereco: end };
+              // Coleta todas as atividades de todos os endereços e remove duplicatas
+              const todasAtividadesSet = new Set<string>();
+              ends?.forEach((e) => {
+                if (Array.isArray(e.atividades)) {
+                  e.atividades.forEach((at: string) => {
+                    if (at) todasAtividadesSet.add(at.trim());
+                  });
+                }
+              });
+              const especialidades = Array.from(todasAtividadesSet);
+
+              return { 
+                id: p.id,
+                nome: p.nome,
+                foto_url: p.foto_url,
+                bio: p.bio,
+                cro: p.cro,
+                especialidades,
+                criado_em: p.criado_em
+              };
             })
           );
           
-          setDentistas(comEnderecos);
+          setDentistas(comEnderecos as unknown as DentistaRecente[]);
           
           // Salva os dentistas novos no cache de busca para carregamento instantâneo dos perfis
           saveToSearchCache(comEnderecos.map(d => ({
@@ -87,11 +98,12 @@ export default function LatestDentists() {
             dentista_nome: d.nome,
             dentista_foto: d.foto_url || "",
             dentista_bio: d.bio || "",
-            nome_clinica: d.endereco?.nome_clinica || "",
-            logradouro: d.endereco?.logradouro || "",
-            numero: d.endereco?.numero || "",
-            bairro: d.endereco?.bairro || "",
-            cidade: d.endereco?.cidade || "",
+            // Para retrocompatibilidade de cache de perfil simples, enviamos strings vazias para campos de endereço
+            nome_clinica: "",
+            logradouro: "",
+            numero: "",
+            bairro: "",
+            cidade: "",
           })));
 
           // 3. Salva no cache com versão
@@ -200,15 +212,16 @@ export default function LatestDentists() {
                 {dentista.bio || "Dentista clínico geral focado em oferecer o melhor atendimento para o seu sorriso."}
               </p>
 
-              {dentista.endereco && (
-                <div className="mt-auto bg-blue-50/50 rounded-[12px] p-3 flex flex-col gap-2">
-                  <div className="flex items-start gap-2 text-[12px] text-[#0A2A66]">
-                    <Building2 size={14} className="mt-0.5 shrink-0 text-blue-400" />
-                    <span className="font-medium line-clamp-2 leading-snug">
-                      {dentista.endereco.nome_clinica ? `${dentista.endereco.nome_clinica} - ` : ""}
-                      {dentista.endereco.bairro}, {dentista.endereco.cidade}
+              {dentista.especialidades && dentista.especialidades.length > 0 && (
+                <div className="mt-auto pt-3 border-t border-gray-100 flex flex-wrap gap-1.5">
+                  {dentista.especialidades.map((esp, index) => (
+                    <span
+                      key={index}
+                      className="bg-blue-50 text-[#007AFF] text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                    >
+                      {esp}
                     </span>
-                  </div>
+                  ))}
                 </div>
               )}
             </div>

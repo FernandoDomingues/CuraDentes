@@ -184,6 +184,7 @@ export const DENTISTS: Dentist[] = [
 ];
 
 export const SPECIALTIES: Specialty[] = [
+  { id: "clinico", label: "Clínico Geral", icon: "Stethoscope", count: 450 },
   { id: "urgencia", label: "Urgência", icon: "Siren", count: 76 },
   { id: "dor", label: "Dor de Dente", icon: "Zap", count: 134 },
   { id: "aparelho", label: "Aparelho", icon: "AlignCenter", count: 142 },
@@ -198,6 +199,7 @@ export const SPECIALTIES: Specialty[] = [
 ];
 
 export const FILTER_CHIPS = [
+  { id: "clinico", label: "Clínico Geral", icon: "Stethoscope" },
   { id: "urgencia", label: "Urgência", icon: "Siren" },
   { id: "dor", label: "Dor de Dente", icon: "Zap" },
   { id: "aparelho", label: "Aparelho", icon: "AlignCenter" },

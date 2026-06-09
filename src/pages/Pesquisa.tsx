@@ -9,6 +9,7 @@ import { Loader2, MapPin, Star, Building2, ChevronRight, Filter, SlidersHorizont
 import logoProAltUrl from "@/assets/logos/logo-pro-alt.png";
 import { useAuth } from "@/hooks/useAuth";
 import { saveToSearchCache, saveQueryCache, loadQueryCache, buildQueryCacheKey } from "@/lib/dentistCache";
+import { FILTER_CHIPS } from "@/constants/data";
 import { useAddressSuggestions } from "@/hooks/useAddressSuggestions";
 import type { AddressSuggestion } from "@/hooks/useAddressSuggestions";
 
@@ -247,6 +248,7 @@ export default function Pesquisa() {
 
   // Filtros
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedAtividades, setSelectedAtividades] = useState<string[]>([]);
   const [selectedConvenios, setSelectedConvenios] = useState<string[]>([]);
   const [selectedPagamentos, setSelectedPagamentos] = useState<string[]>([]);
 
@@ -521,6 +523,14 @@ export default function Pesquisa() {
 
   // Aplicação dos filtros locais
   const resultadosFiltrados = resultadosBrutos.filter((dentista) => {
+    // Verifica Especialidades/Atividades
+    if (selectedAtividades.length > 0) {
+      const temAtividade = selectedAtividades.some(at =>
+        dentista.atividades?.some(a => a.toLowerCase().includes(at.toLowerCase()))
+      );
+      if (!temAtividade) return false;
+    }
+
     // Verifica Convênios (se selecionou algum, o dentista precisa ter PELO MENOS UM dos selecionados)
     if (selectedConvenios.length > 0) {
       const temConvenio = selectedConvenios.some(c => dentista.convenios?.includes(c));
@@ -547,6 +557,63 @@ export default function Pesquisa() {
     }
     return a.distancia_km - b.distancia_km; // Por distância
   });
+
+  // Agrupa resultados por dentista mantendo a ordenação original do primeiro endereço correspondente
+  interface DentistaAgrupado {
+    dentista_id: string;
+    dentista_cro: string;
+    dentista_nome: string;
+    dentista_foto: string;
+    dentista_bio: string;
+    dentista_avaliacao: number;
+    enderecos: {
+      endereco_id: string;
+      nome_clinica: string;
+      logradouro: string;
+      numero: string;
+      bairro: string;
+      cidade: string;
+      estado: string;
+      atividades: string[];
+      convenios: string[];
+      formas_pagamento: string[];
+      distancia_km: number;
+    }[];
+  }
+
+  const dentistasAgrupados: DentistaAgrupado[] = [];
+  resultadosOrdenados.forEach((item) => {
+    let grupo = dentistasAgrupados.find(g => g.dentista_id === item.dentista_id);
+    if (!grupo) {
+      grupo = {
+        dentista_id: item.dentista_id,
+        dentista_cro: item.dentista_cro,
+        dentista_nome: item.dentista_nome,
+        dentista_foto: item.dentista_foto,
+        dentista_bio: item.dentista_bio,
+        dentista_avaliacao: item.dentista_avaliacao,
+        enderecos: []
+      };
+      dentistasAgrupados.push(grupo);
+    }
+    grupo.enderecos.push({
+      endereco_id: item.endereco_id,
+      nome_clinica: item.nome_clinica,
+      logradouro: item.logradouro,
+      numero: item.numero,
+      bairro: item.bairro,
+      cidade: item.cidade,
+      estado: item.estado,
+      atividades: item.atividades,
+      convenios: item.convenios,
+      formas_pagamento: item.formas_pagamento,
+      distancia_km: item.distancia_km
+    });
+  });
+
+  const toggleAtividade = (a: string) => {
+    setSelectedAtividades(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a]);
+  };
 
   const toggleConvenio = (c: string) => {
     setSelectedConvenios(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]);
@@ -673,6 +740,28 @@ export default function Pesquisa() {
 
             <hr className="border-gray-100 my-6" />
             */}
+
+            {/* Especialidades */}
+            <div className="mb-6">
+              <label className="block text-[13px] font-bold text-[#1C1C1E] mb-3">Especialidade</label>
+              <div className="flex flex-col gap-2">
+                {FILTER_CHIPS.map(chip => (
+                  <label key={chip.id} className="flex items-center gap-2 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={selectedAtividades.includes(chip.label)}
+                      onChange={() => toggleAtividade(chip.label)}
+                      className="w-4 h-4 accent-[#007AFF] rounded"
+                    />
+                    <span className="text-[13px] text-gray-600 group-hover:text-gray-900 transition-colors">
+                      {chip.label}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <hr className="border-gray-100 my-6" />
 
             {/* Convênios */}
             <div className="mb-6">
@@ -859,9 +948,9 @@ export default function Pesquisa() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-4">
-              {resultadosOrdenados.map((dentista) => (
+              {dentistasAgrupados.map((dentista) => (
                 <div 
-                  key={dentista.endereco_id} 
+                  key={dentista.dentista_id} 
                   onClick={() => navigate(`/dentista/${dentista.dentista_cro || dentista.dentista_id}`)}
                   className="bg-white rounded-[24px] p-5 border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer flex flex-col gap-4 group"
                 >
@@ -887,38 +976,52 @@ export default function Pesquisa() {
                     </div>
                   </div>
 
-                  {dentista.convenios && dentista.convenios.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {dentista.convenios.slice(0, 3).map(conv => (
-                        <span key={conv} className="text-[10px] font-bold text-green-700 bg-green-50 px-2 py-1 rounded-full border border-green-100 uppercase tracking-wider">
-                          {conv}
-                        </span>
-                      ))}
-                      {dentista.convenios.length > 3 && (
-                        <span className="text-[10px] font-bold text-gray-500 bg-gray-50 px-2 py-1 rounded-full border border-gray-100">
-                          +{dentista.convenios.length - 3}
-                        </span>
-                      )}
-                    </div>
-                  )}
+                  {/* Endereços que batem com a busca, junto com atividades e convênios daquele endereço */}
+                  <div className="mt-auto flex flex-col gap-3">
+                    {dentista.enderecos.map((end) => (
+                      <div key={end.endereco_id} className="bg-blue-50/50 rounded-[16px] p-3.5 flex flex-col gap-2">
+                        <div className="flex items-start gap-2 text-[12px] text-[#0A2A66]">
+                          <Building2 size={14} className="mt-0.5 shrink-0 text-blue-400" />
+                          <span className="font-semibold leading-snug">
+                            {end.nome_clinica ? `${end.nome_clinica} - ` : ""}
+                            {end.logradouro}, {end.numero} - {end.bairro}, {end.cidade}
+                          </span>
+                        </div>
 
-                  <div className="mt-auto bg-blue-50/50 rounded-[16px] p-3.5 flex flex-col gap-2">
-                    <div className="flex items-start gap-2 text-[12px] text-[#0A2A66]">
-                      <Building2 size={14} className="mt-0.5 shrink-0 text-blue-400" />
-                      <span className="font-medium leading-snug">
-                        {dentista.nome_clinica ? `${dentista.nome_clinica} - ` : ""}
-                        {dentista.logradouro}, {dentista.numero} - {dentista.bairro}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-blue-100/50">
-                      <span className="text-[11px] font-bold text-blue-600 bg-blue-100/80 px-2 py-1 rounded-[8px]">
-                        {dentista.distancia_km.toFixed(1)} km daqui
-                      </span>
-                      <div className="flex items-center gap-1 text-[12px] font-bold text-[#007AFF] group-hover:translate-x-1 transition-transform">
-                        Agendar <ChevronRight size={14} />
+                        {/* Especialidades (Atividades) deste endereço */}
+                        {end.atividades && end.atividades.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {end.atividades.map((at, idx) => (
+                              <span key={idx} className="bg-blue-100/50 text-[#007AFF] text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                                {at}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Convênios deste endereço */}
+                        {end.convenios && end.convenios.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {end.convenios.map((conv, idx) => (
+                              <span key={idx} className="text-[9px] font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded-full border border-green-100/50 uppercase tracking-wider">
+                                {conv}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-blue-100/50">
+                          <span className="text-[11px] font-bold text-blue-600 bg-blue-100/80 px-2 py-1 rounded-[8px]">
+                            {end.distancia_km.toFixed(1)} km daqui
+                          </span>
+                          <div className="flex items-center gap-1 text-[12px] font-bold text-[#007AFF] group-hover:translate-x-1 transition-transform">
+                            Agendar <ChevronRight size={14} />
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    ))}
                   </div>
+
                 </div>
               ))}
             </div>
