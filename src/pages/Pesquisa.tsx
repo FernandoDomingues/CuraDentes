@@ -167,7 +167,7 @@ export default function Pesquisa() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Lê o estado da navegação (vindo da Hero) com fallback para sessionStorage (F5)
+  // Lê o estado da navegação com fallback para sessionStorage (F5)
   const estadoNavegacao = (location.state as { q?: string; lat?: string; lng?: string; atividade?: string }) || {};
   const estadoSalvo = (() => {
     try {
@@ -176,26 +176,47 @@ export default function Pesquisa() {
     } catch { return {}; }
   })();
 
-  const query = estadoNavegacao.q || estadoSalvo.q || null;
-  const latPesquisa = estadoNavegacao.lat || estadoSalvo.lat || null;
-  const lngPesquisa = estadoNavegacao.lng || estadoSalvo.lng || null;
+  const [query, setQuery] = useState<string | null>(estadoNavegacao.q || estadoSalvo.q || null);
+  const [latPesquisa, setLatPesquisa] = useState<string | null>(estadoNavegacao.lat || estadoSalvo.lat || null);
+  const [lngPesquisa, setLngPesquisa] = useState<string | null>(estadoNavegacao.lng || estadoSalvo.lng || null);
   const atividadeInicial = estadoNavegacao.atividade || null;
 
-  const [searchInput, setSearchInput] = useState(query || "");
+  const [searchInput, setSearchInput] = useState(estadoNavegacao.q || estadoSalvo.q || "");
   const [usandoLocalizacao, setUsandoLocalizacao] = useState(false);
 
-  const [raio, setRaio] = useState(5); // 5km por padrão
+  const [raio, setRaio] = useState(5);
 
-  // Lazy initializers: só leem localStorage 1× na montagem do componente
+  // Sincroniza estado da navegação sempre que location.state mudar
+  useEffect(() => {
+    const nav = (location.state as { q?: string; lat?: string; lng?: string; atividade?: string }) || {};
+    const saved = (() => {
+      try {
+        const raw = sessionStorage.getItem("curadentes_search_state");
+        return raw ? JSON.parse(raw) as { q?: string; lat?: string; lng?: string } : {};
+      } catch { return {}; }
+    })();
+    const newQ = nav.q || saved.q || null;
+    const newLat = nav.lat || saved.lat || null;
+    const newLng = nav.lng || saved.lng || null;
+    setQuery(newQ);
+    setLatPesquisa(newLat);
+    setLngPesquisa(newLng);
+    if (newQ) {
+      setSearchInput(newQ);
+      sessionStorage.setItem("curadentes_search_state", JSON.stringify({ q: newQ, lat: newLat ?? undefined, lng: newLng ?? undefined }));
+    }
+  }, [location.state]);
+
+  // Lazy initializers
   const [loading, setLoading] = useState(() => {
     const cached = loadQueryCache(
-      buildQueryCacheKey(query, latPesquisa, lngPesquisa, 5)
+      buildQueryCacheKey(estadoNavegacao.q || estadoSalvo.q || null, estadoNavegacao.lat || estadoSalvo.lat || null, estadoNavegacao.lng || estadoSalvo.lng || null, 5)
     );
     return !cached || cached.length === 0;
   });
   const [resultadosBrutos, setResultadosBrutos] = useState<DentistaResultado[]>(() => {
     const cached = loadQueryCache(
-      buildQueryCacheKey(query, latPesquisa, lngPesquisa, 5)
+      buildQueryCacheKey(estadoNavegacao.q || estadoSalvo.q || null, estadoNavegacao.lat || estadoSalvo.lat || null, estadoNavegacao.lng || estadoSalvo.lng || null, 5)
     );
     return (cached ?? []) as DentistaResultado[];
   });

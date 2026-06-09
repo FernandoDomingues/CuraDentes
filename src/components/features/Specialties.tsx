@@ -1,4 +1,6 @@
+import { useNavigate } from "react-router-dom";
 import { ESPECIALIDADES } from "@/constants/data";
+import { ESPECIALIDADES_SEO } from "@/constants/especialidadesSEO";
 import {
   Stethoscope,
   Sparkles,
@@ -119,6 +121,7 @@ const COLOR_MAP: Record<string, string> = {
 };
 
 export default function Specialties() {
+  const navigate = useNavigate();
   return (
     <section id="especialidades" style={{ padding: "80px 0" }}>
       <div className="container mx-auto px-5 md:px-8 lg:px-16">
@@ -148,6 +151,8 @@ export default function Specialties() {
           {ESPECIALIDADES.map((label) => {
             const Icon = (ICON_MAP[label] || Star) as IconComponent;
             const color = COLOR_MAP[label] || "#007AFF";
+            const seo = ESPECIALIDADES_SEO[label];
+            const slug = seo?.slug || label.toLowerCase().replace(/\s+/g, "-");
             return (
               <button
                 key={label}
@@ -164,6 +169,7 @@ export default function Specialties() {
                   transition: "transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease",
                   cursor: "pointer",
                 }}
+                onClick={() => navigate(`/especialidade/${slug}`)}
                 onMouseEnter={(e) => {
                   const el = e.currentTarget;
                   el.style.transform = "translateY(-3px)";

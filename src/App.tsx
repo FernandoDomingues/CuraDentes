@@ -24,7 +24,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import { useEffect } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -40,6 +40,15 @@ import EditorDeFotos from "@/pages/pro/EditorDeFotos";
 import Privacidade from "@/pages/Privacidade";
 import TermosDeUso from "@/pages/TermosDeUso";
 import Sobre from "@/pages/Sobre";
+import Especialidade from "@/pages/Especialidade";
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+}
 
 export default function App() {
   const { initialize } = useAuth();
@@ -50,6 +59,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <Toaster position="top-right" richColors />
       <Routes>
         <Route path="/" element={<Index />} />
@@ -63,6 +73,7 @@ export default function App() {
         <Route path="/privacidade" element={<Privacidade />} />
         <Route path="/termos" element={<TermosDeUso />} />
         <Route path="/sobre" element={<Sobre />} />
+        <Route path="/especialidade/:slug" element={<Especialidade />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

@@ -21,17 +21,26 @@ import AboutSection from "@/components/features/AboutSection";
 import AppSection from "@/components/features/AppSection";
 import Footer from "@/components/layout/Footer";
 
+const scrollToSection = (id: string) => {
+  setTimeout(() => {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+  }, 300);
+};
+
 const Index = () => {
   const location = useLocation();
 
   useEffect(() => {
-    const scrollTo = (location.state as { scrollTo?: string })?.scrollTo;
-    if (scrollTo) {
-      setTimeout(() => {
-        document.getElementById(scrollTo)?.scrollIntoView({ behavior: "smooth" });
-      }, 300);
+    const stateScrollTo = (location.state as { scrollTo?: string })?.scrollTo;
+    if (stateScrollTo) {
+      scrollToSection(stateScrollTo);
+      return;
     }
-  }, [location.state]);
+    const hash = location.hash.replace("#", "");
+    if (hash) {
+      scrollToSection(hash);
+    }
+  }, [location.state, location.hash]);
 
   return (
     <div className="min-h-screen" style={{ background: "#F2F2F7" }}>
