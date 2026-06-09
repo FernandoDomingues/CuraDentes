@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import { useNavigate, useLocation } from "react-router-dom";
-import { getCoordenadas } from "@/lib/geocoding";
+import { getCoordenadas, getEnderecoFromCoordenadas } from "@/lib/geocoding";
 import { supabase } from "@/lib/supabase";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -563,15 +563,38 @@ export default function Pesquisa() {
       return;
     }
     setUsandoLocalizacao(true);
+    const toastId = toast.loading("Buscando sua localização...");
+    
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const lat = pos.coords.latitude.toFixed(4);
-        const lng = pos.coords.longitude.toFixed(4);
-        const payload = query ? { q: query, lat, lng } : { lat, lng };
-        sessionStorage.setItem("curadentes_search_state", JSON.stringify(payload));
-        navigate("/pesquisa", { state: payload });
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        toast.message("Identificando seu bairro...");
+        
+        try {
+          const enderecoTexto = await getEnderecoFromCoordenadas(lat, lng);
+          toast.dismiss(toastId);
+          
+          const latStr = lat.toFixed(4);
+          const lngStr = lng.toFixed(4);
+          const payload = enderecoTexto
+            ? { q: enderecoTexto, lat: latStr, lng: lngStr }
+            : { lat: latStr, lng: lngStr };
+            
+          sessionStorage.setItem("curadentes_search_state", JSON.stringify(payload));
+          navigate("/pesquisa", { state: payload });
+        } catch (err) {
+          toast.dismiss(toastId);
+          console.error(err);
+          const payload = { lat: lat.toFixed(4), lng: lng.toFixed(4) };
+          sessionStorage.setItem("curadentes_search_state", JSON.stringify(payload));
+          navigate("/pesquisa", { state: payload });
+        } finally {
+          setUsandoLocalizacao(false);
+        }
       },
       () => {
+        toast.dismiss(toastId);
         toast.error("Não foi possível obter sua localização. Verifique as permissões do navegador.");
         setUsandoLocalizacao(false);
       },

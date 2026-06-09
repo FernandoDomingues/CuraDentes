@@ -58,3 +58,53 @@ export async function getCoordenadas(
     return null;
   }
 }
+
+/**
+ * Obtém o bairro e cidade aproximados a partir de coordenadas lat/lng
+ * usando a API do OpenStreetMap (Nominatim) para reverse geocoding.
+ */
+export async function getEnderecoFromCoordenadas(
+  lat: number,
+  lng: number
+): Promise<string | null> {
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
+    const controller = new AbortController();
+    const fetchTimeoutId = setTimeout(() => controller.abort(), 5000);
+
+    const resposta = await fetch(url, {
+      signal: controller.signal,
+      headers: { 
+        'Accept-Language': 'pt-BR,pt;q=0.9',
+        'User-Agent': 'CuraDentes-App/1.0'
+      }
+    });
+
+    clearTimeout(fetchTimeoutId);
+
+    if (!resposta.ok) {
+      console.error("Erro no reverse geocoding:", resposta.statusText);
+      return null;
+    }
+
+    const dados = await resposta.json();
+    if (dados && dados.address) {
+      const addr = dados.address;
+      const bairro = addr.suburb || addr.neighbourhood || addr.quarter || addr.hamlet;
+      const cidade = addr.city || addr.town || addr.municipality || addr.village;
+
+      if (bairro && cidade) {
+        return `${bairro}, ${cidade}`;
+      } else if (cidade) {
+        return cidade;
+      } else if (bairro) {
+        return bairro;
+      }
+    }
+    return null;
+  } catch (erro) {
+    console.error("Falha no reverse geocoding:", erro);
+    return null;
+  }
+}
+

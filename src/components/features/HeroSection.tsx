@@ -21,6 +21,7 @@ import { supabase } from "@/lib/supabase";
 import { useUserLocation } from "@/hooks/useUserLocation";
 import { useAddressSuggestions } from "@/hooks/useAddressSuggestions";
 import type { AddressSuggestion } from "@/hooks/useAddressSuggestions";
+import { getEnderecoFromCoordenadas } from "@/lib/geocoding";
 
 // ── Custom SVG icons ────────────────────────────────────────────────────────
 const BracesIcon = ({ size = 14, color = "currentColor" }: { size?: number; color?: string }) => (
@@ -385,11 +386,33 @@ export default function HeroSection() {
     }
   };
 
+  const processarBuscaPorCoordenadas = async (lat: number, lng: number, toastIdToDismiss?: string) => {
+    let loaderToastId = toastIdToDismiss || toast.loading("Identificando seu bairro...");
+    try {
+      const enderecoTexto = await getEnderecoFromCoordenadas(lat, lng);
+      toast.dismiss(loaderToastId);
+      
+      const latStr = lat.toFixed(4);
+      const lngStr = lng.toFixed(4);
+      
+      const payload = enderecoTexto
+        ? { q: enderecoTexto, lat: latStr, lng: lngStr }
+        : { lat: latStr, lng: lngStr };
+        
+      sessionStorage.setItem("curadentes_search_state", JSON.stringify(payload));
+      navigate("/pesquisa", { state: payload });
+    } catch (err) {
+      toast.dismiss(loaderToastId);
+      console.error(err);
+      const payload = { lat: lat.toFixed(4), lng: lng.toFixed(4) };
+      sessionStorage.setItem("curadentes_search_state", JSON.stringify(payload));
+      navigate("/pesquisa", { state: payload });
+    }
+  };
+
   const handleUseMyLocation = () => {
     if (locationStatus === "autorizado" && userLat !== null && userLng !== null) {
-      // Já temos coordenadas (cache ou captura anterior): navega direto
-      sessionStorage.setItem("curadentes_search_state", JSON.stringify({ lat: userLat, lng: userLng }));
-      navigate("/pesquisa", { state: { lat: userLat, lng: userLng } });
+      processarBuscaPorCoordenadas(userLat, userLng);
       return;
     }
 
@@ -400,7 +423,6 @@ export default function HeroSection() {
 
     const toastId = toast.loading("Buscando sua localização...");
     requestLocation();
-    // A navegação acontece via useEffect abaixo quando o hook resolver
     sessionStorage.setItem("curadentes_location_toast_id", String(toastId));
   };
 
@@ -409,10 +431,8 @@ export default function HeroSection() {
     if (locationStatus === "autorizado" && userLat !== null && userLng !== null) {
       const toastId = sessionStorage.getItem("curadentes_location_toast_id");
       if (toastId) {
-        toast.dismiss(toastId);
         sessionStorage.removeItem("curadentes_location_toast_id");
-        sessionStorage.setItem("curadentes_search_state", JSON.stringify({ lat: userLat, lng: userLng }));
-        navigate("/pesquisa", { state: { lat: userLat, lng: userLng } });
+        processarBuscaPorCoordenadas(userLat, userLng, toastId);
       }
     } else if (locationError) {
       const toastId = sessionStorage.getItem("curadentes_location_toast_id");
