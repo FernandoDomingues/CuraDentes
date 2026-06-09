@@ -301,20 +301,32 @@ export default function Pesquisa() {
         if (query) {
           const q = query.trim();
           console.log("[Pesquisa] [Passo 1] Disparando busca textual por:", q);
-          const queryBuilder = supabase
+          
+          let queryBuilder = supabase
             .from("curadentespro_enderecos")
             .select(`
               id, nome_clinica, logradouro, numero, bairro, cidade, estado, atividades, convenios, formas_pagamento, latitude, longitude,
               curadentespro!inner ( id, nome, foto_url, bio, cro, lgpd_aceito )
-            `)
-            .or([
+            `);
+
+          const partes = q.split(",").map(p => p.trim()).filter(Boolean);
+          if (partes.length > 1) {
+            const p1 = partes[0];
+            const p2 = partes[1];
+            queryBuilder = queryBuilder
+              .or(`bairro.ilike.%${p1}%,cidade.ilike.%${p1}%,nome_clinica.ilike.%${p1}%,logradouro.ilike.%${p1}%`)
+              .or(`cidade.ilike.%${p2}%,estado.ilike.%${p2}%`);
+          } else {
+            queryBuilder = queryBuilder.or([
               `bairro.ilike.%${q}%`,
               `cidade.ilike.%${q}%`,
               `estado.ilike.%${q}%`,
               `logradouro.ilike.%${q}%`,
               `nome_clinica.ilike.%${q}%`
-            ].join(','))
-            .eq('curadentespro.lgpd_aceito', true); // Apenas dentistas com cadastro completo
+            ].join(','));
+          }
+
+          queryBuilder = queryBuilder.eq('curadentespro.lgpd_aceito', true); // Apenas dentistas com cadastro completo
           textSearchPromise = queryBuilder as unknown as Promise<{ data: EnderecoRow[] | null; error: SupabaseError | null }>;
         }
 
