@@ -172,7 +172,9 @@ export default function Pesquisa() {
   const estadoSalvo = (() => {
     try {
       const raw = sessionStorage.getItem("curadentes_search_state");
-      return raw ? JSON.parse(raw) as { q?: string; lat?: string; lng?: string; atividades?: string[] } : {};
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      return (parsed && typeof parsed === "object") ? parsed as { q?: string; lat?: string; lng?: string; atividades?: string[] } : {};
     } catch { return {}; }
   })();
 
@@ -250,7 +252,11 @@ export default function Pesquisa() {
   // Filtros
   const [showFilters, setShowFilters] = useState(false);
   const [selectedAtividades, setSelectedAtividades] = useState<string[]>(() => {
-    return estadoNavegacao.atividades || estadoSalvo.atividades || [];
+    const fromNav = estadoNavegacao.atividades;
+    if (Array.isArray(fromNav)) return fromNav;
+    const fromSaved = estadoSalvo.atividades;
+    if (Array.isArray(fromSaved)) return fromSaved;
+    return [];
   });
   const [selectedConvenios, setSelectedConvenios] = useState<string[]>([]);
   const [selectedPagamentos, setSelectedPagamentos] = useState<string[]>([]);
@@ -259,7 +265,17 @@ export default function Pesquisa() {
   useEffect(() => {
     try {
       const raw = sessionStorage.getItem("curadentes_search_state");
-      const current = raw ? JSON.parse(raw) : {};
+      let current: Record<string, any> = {};
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === "object") {
+            current = parsed;
+          }
+        } catch {
+          // Se não for JSON válido, mantém objeto vazio
+        }
+      }
       current.atividades = selectedAtividades;
       sessionStorage.setItem("curadentes_search_state", JSON.stringify(current));
     } catch (e) {
