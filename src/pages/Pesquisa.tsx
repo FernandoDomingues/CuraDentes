@@ -691,7 +691,7 @@ export default function Pesquisa() {
         
         {/* BARRA LATERAL DE FILTROS (Desktop) / MODAL (Mobile) */}
         <aside className={`lg:w-[280px] flex-shrink-0 ${showFilters ? 'block' : 'hidden lg:block'}`}>
-          <div className="bg-white rounded-[24px] p-6 border border-gray-100 shadow-sm sticky top-[100px]">
+          <div className="bg-white rounded-[24px] p-6 border border-gray-100 shadow-sm sticky top-[100px] overflow-y-auto" style={{ maxHeight: 'calc(100vh - 120px)' }}>
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-bold text-[18px] text-[#0A2A66] flex items-center gap-2">
                 <SlidersHorizontal size={18} /> Filtros
@@ -876,9 +876,27 @@ export default function Pesquisa() {
             )}
           </div>
 
+          {/* Botão de localização — apenas Mobile, abaixo da barra de busca */}
+          {!temCoordenadas && (
+            <button
+              type="button"
+              onClick={usarLocalizacao}
+              disabled={usandoLocalizacao}
+              className="lg:hidden w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[16px] text-[13px] font-semibold border transition-all"
+              style={{
+                background: usandoLocalizacao ? "rgba(0,122,255,0.08)" : "rgba(0,122,255,0.06)",
+                borderColor: "rgba(0,122,255,0.20)",
+                color: "#007AFF",
+              }}
+            >
+              <MapPin size={14} />
+              {usandoLocalizacao ? "Obtendo localização..." : "Usar minha localização"}
+            </button>
+          )}
+
           {/* Info bar: termo + contagem + controles */}
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white p-4 rounded-[20px] shadow-sm border border-gray-100">
-            <div className="flex-1">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 bg-white p-4 rounded-[20px] shadow-sm border border-gray-100">
+            <div className="flex-1 min-w-0">
               <h1 className="text-[20px] font-bold text-[#0A2A66] flex items-center gap-2 flex-wrap">
                 {query && (
                   <span>
@@ -894,13 +912,14 @@ export default function Pesquisa() {
               </p>
             </div>
 
-            <div className="flex items-center gap-3 shrink-0">
+            <div className="flex items-center gap-2 shrink-0 w-full md:w-auto">
+              {/* Botão localização — apenas Desktop */}
               {!temCoordenadas && (
                 <button
                   type="button"
                   onClick={usarLocalizacao}
                   disabled={usandoLocalizacao}
-                  className="flex items-center gap-2 px-4 py-2 rounded-[12px] text-[13px] font-semibold border transition-all"
+                  className="hidden lg:flex items-center gap-2 px-4 py-2 rounded-[12px] text-[13px] font-semibold border transition-all"
                   style={{
                     background: usandoLocalizacao ? "rgba(0,122,255,0.08)" : "rgba(0,122,255,0.06)",
                     borderColor: "rgba(0,122,255,0.20)",
@@ -914,17 +933,17 @@ export default function Pesquisa() {
 
               <button 
                 onClick={() => setShowFilters(true)}
-                className="lg:hidden flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-xl text-[13px] font-semibold text-gray-700 border border-gray-200"
+                className="lg:hidden flex items-center justify-center gap-2 flex-1 bg-gray-50 px-3 py-2 rounded-xl text-[13px] font-semibold text-gray-700 border border-gray-200"
               >
                 <SlidersHorizontal size={14} /> Filtros
               </button>
 
-              <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-xl border border-gray-200">
+              <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-xl border border-gray-200 flex-1 md:flex-none">
                 <Filter size={14} className="text-gray-400" />
                 <select 
                   value={ordenacao} 
                   onChange={(e) => setOrdenacao(e.target.value as "distancia" | "avaliacao")}
-                  className="bg-transparent text-[13px] font-semibold text-[#1C1C1E] outline-none cursor-pointer"
+                  className="bg-transparent text-[13px] font-semibold text-[#1C1C1E] outline-none cursor-pointer w-full"
                 >
                   <option value="distancia">Mais próximos</option>
                   <option value="avaliacao">Melhor avaliados</option>
