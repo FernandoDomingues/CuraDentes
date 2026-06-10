@@ -352,7 +352,7 @@ export default function Pesquisa() {
             const p1 = partes[0];
             const p2 = partes[1];
             queryBuilder = queryBuilder
-              .or(`bairro.ilike.%${p1}%,cidade.ilike.%${p1}%,curadentespro.nome.ilike.%${p1}%,nome_clinica.ilike.%${p1}%,logradouro.ilike.%${p1}%`)
+              .or(`bairro.ilike.%${p1}%,cidade.ilike.%${p1}%,nome_clinica.ilike.%${p1}%,logradouro.ilike.%${p1}%`)
               .or(`cidade.ilike.%${p2}%,estado.ilike.%${p2}%`);
           } else {
             queryBuilder = queryBuilder.or([
@@ -360,8 +360,7 @@ export default function Pesquisa() {
               `cidade.ilike.%${q}%`,
               `estado.ilike.%${q}%`,
               `logradouro.ilike.%${q}%`,
-              `nome_clinica.ilike.%${q}%`,
-              `curadentespro.nome.ilike.%${q}%`
+              `nome_clinica.ilike.%${q}%`
             ].join(','));
           }
 
@@ -491,6 +490,68 @@ export default function Pesquisa() {
         }
 
         if (cancelled) return;
+
+        // ─── Busca por nome do dentista (query separada: or() não suporta coluna embedded) ────
+        if (query) {
+          try {
+            const q = query.trim();
+            const { data: dentistasPorNome } = await supabase
+              .from("curadentespro")
+              .select("id")
+              .ilike("nome", `%${q}%`)
+              .eq("lgpd_aceito", true)
+              .is("deleted_at", null);
+
+            if (dentistasPorNome && dentistasPorNome.length > 0) {
+              const ids = dentistasPorNome.map(d => d.id);
+              const { data: enderecosPorNome } = await supabase
+                .from("curadentespro_enderecos")
+                .select(`
+                  id, nome_clinica, logradouro, numero, bairro, cidade, estado, atividades, convenios, formas_pagamento, latitude, longitude,
+                  curadentespro!inner ( id, nome, foto_url, bio, cro, lgpd_aceito )
+                `)
+                .in("curadentespro.id", ids);
+
+              if (enderecosPorNome && enderecosPorNome.length > 0) {
+                const nomeResults = enderecosPorNome
+                  .filter((d) => {
+                    const pro = Array.isArray(d.curadentespro) ? d.curadentespro[0] : d.curadentespro;
+                    return !!(pro && pro.id);
+                  })
+                  .map((d) => {
+                    const pro = Array.isArray(d.curadentespro) ? d.curadentespro[0] : (d.curadentespro || { id: "", nome: "", foto_url: null, bio: null, cro: "" });
+                    let dist = 0;
+                    if (finalLat !== null && finalLng !== null && d.latitude && d.longitude) {
+                      dist = calculateDistance(finalLat, finalLng, d.latitude, d.longitude);
+                    }
+                    return {
+                      dentista_id: pro.id,
+                      dentista_cro: (pro.cro || "").replace(/\s/g, ""),
+                      dentista_nome: pro.nome || "Dentista Parceiro",
+                      dentista_foto: pro.foto_url || "",
+                      dentista_bio: pro.bio || "",
+                      dentista_avaliacao: 0,
+                      endereco_id: d.id,
+                      nome_clinica: d.nome_clinica || "",
+                      logradouro: d.logradouro || "",
+                      numero: d.numero || "",
+                      bairro: d.bairro || "",
+                      cidade: d.cidade || "",
+                      estado: d.estado || "",
+                      atividades: d.atividades || [],
+                      convenios: d.convenios || [],
+                      formas_pagamento: d.formas_pagamento || [],
+                      distancia_km: dist,
+                    };
+                  });
+                textResults.push(...nomeResults);
+                console.log("[Pesquisa] Adicionados", nomeResults.length, "resultado(s) da busca por nome.");
+              }
+            }
+          } catch (err) {
+            console.error("[Pesquisa] Erro na busca por nome do dentista:", err);
+          }
+        }
 
         // 5. Combinação de Resultados sem duplicação
         const mergedMap = new Map<string, DentistaResultado>();
