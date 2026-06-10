@@ -17,6 +17,7 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Loader2, MapPin, Star, Building2, ChevronRight, Filter, SlidersHorizontal, X, Search } from "lucide-react";
 import logoProAltUrl from "@/assets/logos/logo-pro-alt.png";
+import CroVerificationBadge from "@/components/analytics/CroVerificationBadge";
 import { useAuth } from "@/hooks/useAuth";
 import { saveToSearchCache, saveQueryCache, loadQueryCache, buildQueryCacheKey } from "@/lib/dentistCache";
 import { ESPECIALIDADES } from "@/constants/data";
@@ -123,6 +124,7 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
 interface DentistaResultado {
   dentista_id: string;
   dentista_cro: string;
+  dentista_cro_verificado: boolean;
   dentista_nome: string;
   dentista_foto: string;
   dentista_bio: string;
@@ -344,7 +346,7 @@ export default function Pesquisa() {
             .from("curadentespro_enderecos")
             .select(`
               id, nome_clinica, logradouro, numero, bairro, cidade, estado, atividades, convenios, formas_pagamento, latitude, longitude,
-              curadentespro!inner ( id, nome, foto_url, bio, cro, lgpd_aceito )
+              curadentespro!inner ( id, nome, foto_url, bio, cro, cro_verificado, lgpd_aceito )
             `);
 
           const partes = q.split(",").map(p => p.trim()).filter(Boolean);
@@ -447,7 +449,7 @@ export default function Pesquisa() {
                 return temPro;
               })
               .map((d) => {
-                const pro = Array.isArray(d.curadentespro) ? d.curadentespro[0] : (d.curadentespro || { id: "", nome: "", foto_url: null, bio: null, cro: "" });
+                const pro = Array.isArray(d.curadentespro) ? d.curadentespro[0] : (d.curadentespro || { id: "", nome: "", foto_url: null, bio: null, cro: "", cro_verificado: false }) as { id: string; nome: string; foto_url: string | null; bio: string | null; cro: string; cro_verificado: boolean; };
 
                 let dist = 0;
                 if (finalLat !== null && finalLng !== null && d.latitude && d.longitude) {
@@ -457,6 +459,7 @@ export default function Pesquisa() {
                 return {
                   dentista_id: pro.id,
                   dentista_cro: (pro.cro || "").replace(/\s/g, ""),
+                  dentista_cro_verificado: !!(pro as any).cro_verificado,
                   dentista_nome: pro.nome || "Dentista Parceiro",
                   dentista_foto: pro.foto_url || "",
                   dentista_bio: pro.bio || "",
@@ -508,7 +511,7 @@ export default function Pesquisa() {
                 .from("curadentespro_enderecos")
                 .select(`
                   id, nome_clinica, logradouro, numero, bairro, cidade, estado, atividades, convenios, formas_pagamento, latitude, longitude,
-                  curadentespro!inner ( id, nome, foto_url, bio, cro, lgpd_aceito )
+                  curadentespro!inner ( id, nome, foto_url, bio, cro, cro_verificado, lgpd_aceito )
                 `)
                 .in("curadentespro.id", ids);
 
@@ -519,7 +522,7 @@ export default function Pesquisa() {
                     return !!(pro && pro.id);
                   })
                   .map((d) => {
-                    const pro = Array.isArray(d.curadentespro) ? d.curadentespro[0] : (d.curadentespro || { id: "", nome: "", foto_url: null, bio: null, cro: "" });
+                const pro = Array.isArray(d.curadentespro) ? d.curadentespro[0] : (d.curadentespro || { id: "", nome: "", foto_url: null, bio: null, cro: "", cro_verificado: false }) as { id: string; nome: string; foto_url: string | null; bio: string | null; cro: string; cro_verificado: boolean; };
                     let dist = 0;
                     if (finalLat !== null && finalLng !== null && d.latitude && d.longitude) {
                       dist = calculateDistance(finalLat, finalLng, d.latitude, d.longitude);
@@ -527,6 +530,7 @@ export default function Pesquisa() {
                     return {
                       dentista_id: pro.id,
                       dentista_cro: (pro.cro || "").replace(/\s/g, ""),
+                  dentista_cro_verificado: !!(pro as any).cro_verificado,
                       dentista_nome: pro.nome || "Dentista Parceiro",
                       dentista_foto: pro.foto_url || "",
                       dentista_bio: pro.bio || "",
@@ -706,6 +710,7 @@ export default function Pesquisa() {
   interface DentistaAgrupado {
     dentista_id: string;
     dentista_cro: string;
+    dentista_cro_verificado: boolean;
     dentista_nome: string;
     dentista_foto: string;
     dentista_bio: string;
@@ -732,6 +737,7 @@ export default function Pesquisa() {
       grupo = {
         dentista_id: item.dentista_id,
         dentista_cro: item.dentista_cro,
+        dentista_cro_verificado: item.dentista_cro_verificado,
         dentista_nome: item.dentista_nome,
         dentista_foto: item.dentista_foto,
         dentista_bio: item.dentista_bio,
@@ -1125,9 +1131,15 @@ export default function Pesquisa() {
                     />
                     <div className="flex-1">
                       <div className="flex justify-between items-start">
-                        <h3 className="font-bold text-[16px] text-[#1C1C1E] leading-tight group-hover:text-[#007AFF] transition-colors">
-                          {dentista.dentista_nome}
-                        </h3>
+                        <div>
+                          <h3 className="font-bold text-[16px] text-[#1C1C1E] leading-tight group-hover:text-[#007AFF] transition-colors">
+                            {dentista.dentista_nome}
+                          </h3>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[11px] font-mono text-gray-400">{dentista.dentista_cro}</span>
+                            <CroVerificationBadge verificado={dentista.dentista_cro_verificado} size="sm" />
+                          </div>
+                        </div>
                         <div className="flex items-center gap-1 bg-yellow-50 px-2 py-0.5 rounded-full shrink-0">
                           <Star size={12} className="text-yellow-500 fill-yellow-500" />
                           <span className="text-[12px] font-bold text-yellow-700">{dentista.dentista_avaliacao}</span>

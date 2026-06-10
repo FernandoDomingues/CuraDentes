@@ -11,6 +11,7 @@ export interface Dentist {
   id: string | number;
   name: string;
   cro: string;
+  cro_verificado?: boolean;
   specialty: string;
   rating: number;
   reviews: number;
@@ -172,8 +173,10 @@ export interface DentistProfile {
   /** FK para Dentist.id / tabela: dentistas */
   dentista_id: string | number;
   nome_completo: string;
+  nome_legal?: string;
   foto_url: string;
   cro: string;
+  cro_verificado?: boolean;
   /** Email do dentista (para notificações) */
   email?: string;
   /** Especialidade principal autodeclarada */

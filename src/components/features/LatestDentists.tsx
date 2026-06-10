@@ -11,6 +11,7 @@ import { supabase } from "@/lib/supabase";
 import { Sparkles, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import logoProAltUrl from "@/assets/logos/logo-pro-alt.png";
 import { saveToSearchCache } from "@/lib/dentistCache";
+import CroVerificationBadge from "@/components/analytics/CroVerificationBadge";
 
 interface DentistaRecente {
   id: string;
@@ -18,6 +19,7 @@ interface DentistaRecente {
   foto_url: string;
   bio: string;
   cro: string;
+  cro_verificado?: boolean;
   especialidades: string[];
   criado_em: string;
 }
@@ -58,7 +60,7 @@ export default function LatestDentists() {
         // 2. Busca do Supabase se não houver cache válido
         const { data: pros, error } = await supabase
           .from("curadentespro")
-          .select("id, nome, foto_url, bio, cro, criado_em")
+          .select("id, nome, foto_url, bio, cro, cro_verificado, criado_em")
           .eq("lgpd_aceito", true)
           .is("deleted_at", null)
           .order("criado_em", { ascending: false })
@@ -210,9 +212,14 @@ export default function LatestDentists() {
                   <h3 className="font-bold text-[16px] text-[#1C1C1E] leading-tight line-clamp-1 group-hover:text-[#007AFF] transition-colors">
                     {dentista.nome}
                   </h3>
-                  <p className="text-[12px] text-gray-400 mt-0.5 font-medium">
-                    {dentista.cro}
-                  </p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <p className="text-[12px] text-gray-400 font-medium">
+                      {dentista.cro}
+                    </p>
+                    {dentista.cro_verificado !== undefined && (
+                      <CroVerificationBadge verificado={dentista.cro_verificado} size="sm" />
+                    )}
+                  </div>
                 </div>
               </div>
 

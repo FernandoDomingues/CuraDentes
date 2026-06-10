@@ -51,6 +51,7 @@ import { Loader2 } from "lucide-react";
 import { CachedDentistResult, loadProfileCache, saveProfileCache } from "@/lib/dentistCache";
 import Header from "@/components/layout/Header";
 import logoProAltUrl from "@/assets/logos/logo-pro-alt.png";
+import CroVerificationBadge from "@/components/analytics/CroVerificationBadge";
 import { ESPECIALIDADES_SEO } from "@/constants/especialidadesSEO";
 
 /** Retorna o slug da especialidade a partir do nome */
@@ -846,6 +847,7 @@ export default function DentistProfilePage() {
           nome_completo: pro.nome,
           foto_url: (pro.foto_url && !pro.foto_url.startsWith("blob:")) ? pro.foto_url : "",
           cro: (pro.cro || "").replace(/\s/g, ""),
+          cro_verificado: !!pro.cro_verificado,
           email: pro.email,
           especialidade_principal: espec,
           bio: pro.bio,
@@ -1037,12 +1039,20 @@ export default function DentistProfilePage() {
                 {perfil.especialidade_principal}
               </Link>
 
-              {/* CRO com ícone de verificação */}
+              {/* CRO com medalha de verificação */}
               <div className="flex items-center gap-2 justify-center sm:justify-start mb-2">
-                <Shield size={13} style={{ color: "#8E8E93" }} />
-                <span className="text-[13px]" style={{ color: "#8E8E93" }}>
-                  {perfil.cro}
-                </span>
+                <div className="relative inline-flex items-center gap-2">
+                  <Shield size={13} style={{ color: "#8E8E93" }} />
+                  <span className="text-[13px]" style={{ color: "#8E8E93" }}>
+                    {perfil.cro}
+                  </span>
+                  {perfil.cro_verificado === true && (
+                    <CroVerificationBadge verificado medal size="sm" />
+                  )}
+                </div>
+                {perfil.cro_verificado !== undefined && (
+                  <CroVerificationBadge verificado={!!perfil.cro_verificado} size="sm" />
+                )}
               </div>
 
               {/* Rating geral em estrelas */}

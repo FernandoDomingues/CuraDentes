@@ -284,6 +284,7 @@ export default function NovoCadastro() {
             setEtapa(1);
           }
           if (dados.nome) setNome(dados.nome);
+          if (dados.nomeCompleto) setNomeCompleto(dados.nomeCompleto);
           if (dados.email) setEmail(dados.email);
           if (dados.emailVerificado) setEmailVerificado(dados.emailVerificado);
           if (dados.telefone) setTelefone(dados.telefone);
@@ -308,6 +309,7 @@ export default function NovoCadastro() {
 
   // ─ Etapa 1: Conta ─────────────────────────────────────────────────────────
   const [nome, setNome] = useState("");
+  const [nomeCompleto, setNomeCompleto] = useState("");
   const [email, setEmail] = useState("");
   const [emailVerificado, setEmailVerificado] = useState(false);
   const [tokenEmailInput, setTokenEmailInput] = useState("");
@@ -362,6 +364,7 @@ export default function NovoCadastro() {
     const rascunho = {
       etapa,
       nome,
+      nomeCompleto,
       email,
       emailVerificado,
       telefone,
@@ -378,7 +381,7 @@ export default function NovoCadastro() {
     };
     localStorage.setItem("curadentes_pro_cadastro_rascunho", JSON.stringify(rascunho));
   }, [
-    etapa, nome, email, emailVerificado,
+    etapa, nome, nomeCompleto, email, emailVerificado,
     telefone, telefoneVerificado,
     cpf, cro, anoFormacao, fotoUrl,
     enderecos, bio, instagram, lgpdAceito,
@@ -388,7 +391,8 @@ export default function NovoCadastro() {
   // ─ Verifica se o cadastro está completo ───────────────────────────────────
   function camposFaltantes(): string[] {
     const faltando: string[] = [];
-    if (!nome.trim()) faltando.push("Nome completo");
+    if (!nome.trim()) faltando.push("Nome para exibição");
+    if (!nomeCompleto.trim()) faltando.push("Nome completo (para verificação do CRO)");
     if (!emailVerificado) faltando.push("Verificação de e-mail");
     
     // Se a senha já estiver sincronizada e o usuário não digitou nada para alterar, não é obrigatório preencher
@@ -535,6 +539,7 @@ export default function NovoCadastro() {
       id: userId,
       user_id: userId,
       nome,
+      nome_completo: nomeCompleto,
       email,
     }, { onConflict: 'id' });
     if (error) {
@@ -552,6 +557,7 @@ export default function NovoCadastro() {
       id: user.id,
       user_id: user.id,
       nome,
+      nome_completo: nomeCompleto,
       email,
       telefone,
       telefone_verificado: validarTelefone(telefone),
@@ -571,6 +577,7 @@ export default function NovoCadastro() {
       id: user.id,
       user_id: user.id,
       nome,
+      nome_completo: nomeCompleto,
       email,
       cpf: cpf || null,
       cro: cro || null,
@@ -644,6 +651,7 @@ export default function NovoCadastro() {
       id: user.id,
       user_id: user.id,
       nome,
+      nome_completo: nomeCompleto,
       email,
       bio: bio || null,
       instagram: instagramUrl,
@@ -748,6 +756,7 @@ export default function NovoCadastro() {
             id: user.id,
             user_id: user.id,
             nome: nome,
+            nome_completo: nomeCompleto,
             email: email,
             telefone: telefone,
             telefone_verificado: validarTelefone(telefone),
@@ -859,6 +868,7 @@ export default function NovoCadastro() {
     const rascunho = {
       etapa,
       nome,
+      nomeCompleto,
       email,
       emailVerificado,
       telefone,
@@ -1164,9 +1174,9 @@ export default function NovoCadastro() {
         <p className="text-[14px]" style={{ color: "#8E8E93" }}>Informações básicas de acesso à plataforma</p>
       </div>
 
-      {/* Nome completo */}
+      {/* Nome para exibição */}
       <div>
-        <label style={labelStyle}>Nome completo *</label>
+        <label style={labelStyle}>Nome para exibição *</label>
         <input
           type="text"
           value={nome}
@@ -1174,6 +1184,26 @@ export default function NovoCadastro() {
           placeholder="Dr. João Silva"
           style={inputStyle}
         />
+      </div>
+
+      {/* Nome completo (para verificação do CRO) */}
+      <div>
+        <label style={labelStyle}>
+          <span className="flex items-center gap-1.5">
+            <Shield size={13} />
+            Nome completo (para verificação do CRO) *
+          </span>
+        </label>
+        <input
+          type="text"
+          value={nomeCompleto}
+          onChange={(e) => setNomeCompleto(e.target.value)}
+          placeholder="João Silva Santos (igual ao documento)"
+          style={inputStyle}
+        />
+        <p className="text-[11px] mt-1" style={{ color: "#8E8E93" }}>
+          Este nome será usado para conferência com o CRO no sistema CFO e não poderá ser alterado depois.
+        </p>
       </div>
 
       {/* Email + verificação por token */}
@@ -2164,7 +2194,8 @@ export default function NovoCadastro() {
         <p className="text-[13px] font-semibold" style={{ color: "#34C759" }}>Resumo do cadastro</p>
         <div className="flex flex-col gap-1.5">
           {[
-            { label: "Nome", valor: nome || "—", ok: !!nome },
+            { label: "Nome para exibição", valor: nome || "—", ok: !!nome },
+            { label: "Nome completo (CRO)", valor: nomeCompleto || "—", ok: !!nomeCompleto },
             { label: "E-mail", valor: email, ok: emailVerificado },
             { label: "Telefone", valor: telefone || "Não informado", ok: !telefone || validarTelefone(telefone) },
             { label: "CRO", valor: cro || "—", ok: !!cro },

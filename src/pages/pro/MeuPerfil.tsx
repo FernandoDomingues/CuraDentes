@@ -116,6 +116,7 @@ export default function MeuPerfil() {
 
   // Dados Pessoais
   const [nome, setNome] = useState("");
+  const [nomeCompleto, setNomeCompleto] = useState("");
   const [telefone, setTelefone] = useState("");
   const [cpf, setCpf] = useState("");
   const [cro, setCro] = useState("");
@@ -159,6 +160,7 @@ export default function MeuPerfil() {
         }
 
         setNome(perfil.nome || "");
+        setNomeCompleto(perfil.nome_completo || "");
         setTelefone(perfil.telefone || "");
         setCpf(perfil.cpf || "");
         setCro(perfil.cro || "");
@@ -458,8 +460,20 @@ export default function MeuPerfil() {
             {/* Formulário */}
             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
               <div className="md:col-span-2">
-                <label style={labelStyle}>Nome Completo</label>
+                <label style={labelStyle}>Nome de Exibição</label>
                 <input type="text" value={nome} onChange={(e) => setNome(e.target.value)} style={inputStyle} />
+              </div>
+              <div className="md:col-span-2">
+                <label style={{ ...labelStyle, color: "#8E8E93" }}>Nome Completo (para verificação do CRO)</label>
+                <input
+                  type="text"
+                  value={nomeCompleto}
+                  disabled
+                  style={{ ...inputStyle, background: "#F2F2F7", color: "#8E8E93" }}
+                />
+                <p className="text-[11px] mt-1" style={{ color: "#8E8E93" }}>
+                  Para alterar, envie email para <strong>suporte@curadentes.com.br</strong>
+                </p>
               </div>
               <div>
                 <label style={labelStyle}>Telefone / Celular</label>
@@ -499,8 +513,11 @@ export default function MeuPerfil() {
                 <input type="text" value={cpf} disabled style={{ ...inputStyle, background: "#F2F2F7", color: "#8E8E93" }} />
               </div>
               <div>
-                <label style={labelStyle}>CRO (Visualização)</label>
+                <label style={{ ...labelStyle, color: "#8E8E93" }}>CRO (Visualização)</label>
                 <input type="text" value={cro} disabled style={{ ...inputStyle, background: "#F2F2F7", color: "#8E8E93" }} />
+                <p className="text-[11px] mt-1" style={{ color: "#8E8E93" }}>
+                  Para alterar, envie email para <strong>suporte@curadentes.com.br</strong>
+                </p>
               </div>
             </div>
           </div>
