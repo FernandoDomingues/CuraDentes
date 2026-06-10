@@ -39,7 +39,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { CepInputComBusca } from "@/components/ui/CepInputComBusca";
-import { formatarInstagram } from "@/utils/instagram";
+import { formatarInstagram, extrairUserInstagram, INSTAGRAM_BASE } from "@/utils/instagram";
 
 import logoProUrl from "@/assets/logos/logo-pro.png";
 import { ESPECIALIDADES } from "@/constants/data";
@@ -214,7 +214,7 @@ export default function NovoCadastro() {
           if (pro.ano_formacao) setAnoFormacao(String(pro.ano_formacao));
           if (pro.foto_url) setFotoUrl(pro.foto_url);
           if (pro.bio) setBio(pro.bio);
-          if (pro.instagram) setInstagram(pro.instagram);
+          if (pro.instagram) setInstagram(extrairUserInstagram(pro.instagram));
           if (pro.lgpd_aceito) setLgpdAceito(pro.lgpd_aceito);
           setEmailVerificado(true);
           setSenhaSincronizada(true);
@@ -292,7 +292,7 @@ export default function NovoCadastro() {
           if (dados.fotoUrl) setFotoUrl(dados.fotoUrl);
           if (dados.enderecos) setEnderecos(dados.enderecos);
           if (dados.bio) setBio(dados.bio);
-          if (dados.instagram) setInstagram(dados.instagram);
+          if (dados.instagram) setInstagram(extrairUserInstagram(dados.instagram));
           if (dados.lgpdAceito) setLgpdAceito(dados.lgpdAceito);
           if (dados.senhaSincronizada) setSenhaSincronizada(dados.senhaSincronizada);
         } catch (e) {
@@ -641,10 +641,10 @@ export default function NovoCadastro() {
 
     const instagramUrl = formatarInstagram(instagram);
     if (instagram && !instagramUrl) {
-      toast.error('Link do Instagram inválido. Use apenas o nome de usuário ou o link completo (ex: @seuperfil).');
+      toast.error('Nome de usuário do Instagram inválido. Use apenas letras, números, ponto, traço e underscore (ex: @seuperfil).');
       throw new Error('Instagram inválido');
     }
-    setInstagram(instagramUrl || "");
+    setInstagram(extrairUserInstagram(instagramUrl || ""));
 
     const { error } = await supabase.from('curadentespro').upsert({
       id: user.id,
@@ -2110,13 +2110,24 @@ export default function NovoCadastro() {
         <label style={{ ...labelStyle, marginBottom: "8px" }}>
           Instagram (opcional)
         </label>
-        <input
-          type="url"
-          value={instagram}
-          onChange={(e) => setInstagram(e.target.value)}
-          placeholder="https://instagram.com/seu-perfil"
-          style={inputStyle}
-        />
+        <div
+          className="flex items-center gap-0 rounded-[12px] overflow-hidden"
+          style={{ border: "1px solid rgba(60,60,67,0.18)", background: "#fff" }}
+        >
+          <span
+            className="flex-shrink-0 text-[13px] px-3 py-3"
+            style={{ color: "#8E8E93", background: "#F2F2F7", borderRight: "1px solid rgba(60,60,67,0.12)", fontFamily: "monospace" }}
+          >
+            {INSTAGRAM_BASE}
+          </span>
+          <input
+            type="text"
+            value={instagram}
+            onChange={(e) => setInstagram(e.target.value.replace(/[^a-zA-Z0-9_.@-]/g, ""))}
+            placeholder="@seu-perfil"
+            style={{ ...inputStyle, border: "none", borderRadius: 0, padding: "12px 12px" }}
+          />
+        </div>
       </div>
 
       {renderNavegacao(true, false, false, salvarEtapa5NoBanco)}

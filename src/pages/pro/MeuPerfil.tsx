@@ -23,7 +23,7 @@ import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
 import { getCoordenadas } from "@/lib/geocoding";
-import { formatarInstagram } from "@/utils/instagram";
+import { formatarInstagram, extrairUserInstagram, INSTAGRAM_BASE } from "@/utils/instagram";
 import {
   User, Building2, Save, ArrowLeft, Loader2,
   Camera, Plus, Trash2, ShieldCheck, Mail, KeyRound
@@ -163,7 +163,7 @@ export default function MeuPerfil() {
         setCro(perfil.cro || "");
         setAnoFormacao(perfil.ano_formacao ? perfil.ano_formacao.toString() : "");
         setBio(perfil.bio || "");
-        setInstagram(perfil.instagram || "");
+        setInstagram(extrairUserInstagram(perfil.instagram || ""));
         setFotoUrl(perfil.foto_url || "");
 
         const { data: ends, error: endsError } = await supabase
@@ -224,11 +224,11 @@ export default function MeuPerfil() {
     try {
       const instagramUrl = formatarInstagram(instagram);
       if (instagram && !instagramUrl) {
-        toast.error('Link do Instagram inválido. Use apenas o nome de usuário ou o link completo (ex: @seuperfil).');
+        toast.error('Nome de usuário do Instagram inválido. Use apenas letras, números, ponto, traço e underscore (ex: @seuperfil).');
         setSaving(false);
         return;
       }
-      setInstagram(instagramUrl || "");
+      setInstagram(extrairUserInstagram(instagramUrl || ""));
 
       const { error: perfilError } = await supabase
         .from("curadentespro")
@@ -474,7 +474,24 @@ export default function MeuPerfil() {
               </div>
               <div className="md:col-span-2">
                 <label style={labelStyle}>Instagram (opcional)</label>
-                <input type="url" value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="https://instagram.com/seu-perfil" style={inputStyle} />
+                <div
+                  className="flex items-center gap-0 rounded-[12px] overflow-hidden"
+                  style={{ border: "1px solid rgba(60,60,67,0.18)", background: "#fff" }}
+                >
+                  <span
+                    className="flex-shrink-0 text-[13px] px-3 py-3"
+                    style={{ color: "#8E8E93", background: "#F2F2F7", borderRight: "1px solid rgba(60,60,67,0.12)", fontFamily: "monospace" }}
+                  >
+                    {INSTAGRAM_BASE}
+                  </span>
+                  <input
+                    type="text"
+                    value={instagram}
+                    onChange={(e) => setInstagram(e.target.value.replace(/[^a-zA-Z0-9_.@-]/g, ""))}
+                    placeholder="@seu-perfil"
+                    style={{ ...inputStyle, border: "none", borderRadius: 0, padding: "12px 12px" }}
+                  />
+                </div>
               </div>
               <div>
                 <label style={labelStyle}>CPF (Visualização)</label>
