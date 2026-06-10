@@ -23,6 +23,7 @@ import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
 import { getCoordenadas } from "@/lib/geocoding";
+import { formatarInstagram } from "@/utils/instagram";
 import {
   User, Building2, Save, ArrowLeft, Loader2,
   Camera, Plus, Trash2, ShieldCheck, Mail, KeyRound
@@ -221,6 +222,14 @@ export default function MeuPerfil() {
     const toastId = toast.loading("Salvando alterações...");
 
     try {
+      const instagramUrl = formatarInstagram(instagram);
+      if (instagram && !instagramUrl) {
+        toast.error('Link do Instagram inválido. Use apenas o nome de usuário ou o link completo (ex: @seuperfil).');
+        setSaving(false);
+        return;
+      }
+      setInstagram(instagramUrl || "");
+
       const { error: perfilError } = await supabase
         .from("curadentespro")
         .update({
@@ -228,7 +237,7 @@ export default function MeuPerfil() {
           telefone,
           ano_formacao: anoFormacao ? parseInt(anoFormacao) : null,
           bio,
-          instagram: instagram || null,
+          instagram: instagramUrl,
         })
         .eq("id", userId);
 

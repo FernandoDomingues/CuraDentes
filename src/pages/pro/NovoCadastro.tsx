@@ -39,6 +39,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { CepInputComBusca } from "@/components/ui/CepInputComBusca";
+import { formatarInstagram } from "@/utils/instagram";
 
 import logoProUrl from "@/assets/logos/logo-pro.png";
 import { ESPECIALIDADES } from "@/constants/data";
@@ -633,17 +634,25 @@ export default function NovoCadastro() {
     }
   }
 
-  /** Etapa 5 → banco: bio */
+  /** Etapa 5 → banco: bio + instagram */
   async function salvarEtapa5NoBanco() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+
+    const instagramUrl = formatarInstagram(instagram);
+    if (instagram && !instagramUrl) {
+      toast.error('Link do Instagram inválido. Use apenas o nome de usuário ou o link completo (ex: @seuperfil).');
+      throw new Error('Instagram inválido');
+    }
+    setInstagram(instagramUrl || "");
+
     const { error } = await supabase.from('curadentespro').upsert({
       id: user.id,
       user_id: user.id,
       nome,
       email,
       bio: bio || null,
-      instagram: instagram || null,
+      instagram: instagramUrl,
     }, { onConflict: 'id' });
     if (error) {
       console.error('[pré-cadastro etapa5]', error);
@@ -742,7 +751,7 @@ export default function NovoCadastro() {
             ano_formacao: anoFormacao ? parseInt(anoFormacao) : null,
             foto_url: fotoUrl || null,
             bio: bio,
-            instagram: instagram || null,
+            instagram: formatarInstagram(instagram),
             lgpd_aceito: lgpdAceito
           }, { onConflict: 'id' });
 
