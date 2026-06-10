@@ -73,10 +73,10 @@ export default function CroVerificationBadge({
           fontSize: size === "sm" ? 11 : 13,
           color: "#34C759",
         }}
-        title="CRO verificado no sistema CFO"
+        title="CRO verificada pelo time CURADENTES"
       >
         <ShieldCheck size={size === "sm" ? 12 : 16} />
-        Verificado
+        Verificado*
       </span>
     );
   }
@@ -88,10 +88,10 @@ export default function CroVerificationBadge({
         fontSize: size === "sm" ? 11 : 13,
         color: "#FF9500",
       }}
-      title="CRO aguardando verificação no CFO"
+      title="Esta CRO está em processo de verificação do time CURADENTES"
     >
       <ShieldAlert size={size === "sm" ? 12 : 16} />
-      Não verificado
+      Não verificado*
     </span>
   );
 }

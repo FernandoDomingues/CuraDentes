@@ -9,8 +9,9 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import Header from "@/components/layout/Header";
 import CroVerificationBadge from "@/components/analytics/CroVerificationBadge";
+import VerificarCroModal from "@/components/analytics/VerificarCroModal";
 import { useNavigate } from "react-router-dom";
-import { Loader2, ExternalLink, Search, ShieldCheck, ShieldAlert, Clock, CheckCircle, XCircle } from "lucide-react";
+import { Loader2, ExternalLink, Search, ShieldCheck, ShieldAlert, Clock, CheckCircle, XCircle, Eye } from "lucide-react";
 
 type VerificacaoRow = {
   id: string | null;
@@ -33,6 +34,8 @@ export default function VerificarCro() {
   const [verificacoes, setVerificacoes] = useState<VerificacaoRow[]>([]);
   const [filtro, setFiltro] = useState<string>("todas");
   const [busca, setBusca] = useState("");
+  const [modalAberta, setModalAberta] = useState(false);
+  const [modalDados, setModalDados] = useState<{ dentista_id: string; nome: string; cro: string; verificacao_id: string | null } | null>(null);
 
   useEffect(() => {
     async function carregar() {
@@ -228,26 +231,27 @@ export default function VerificarCro() {
               return (
                 <div
                   key={v.dentista_id}
-                  onClick={async () => {
-                    if (v.id) {
-                      navigate(`/pro/verificar-cro/${v.id}`);
-                    } else {
-                      // Cria registro de verificação e navega
-                      const uf = v.cro.includes("-")
-                        ? v.cro.split("-")[1]?.trim()?.replace(/\d/g, "")?.trim() || ""
-                        : "";
-                      const { data: novo } = await supabase
-                        .from("cro_verificacoes")
-                        .insert({ dentista_id: v.dentista_id, cro: v.cro, uf, status: "pendente" })
-                        .select("id")
-                        .single();
-                      if (novo) navigate(`/pro/verificar-cro/${novo.id}`);
-                    }
-                  }}
-                  className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                  className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow"
                 >
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
+                    <div
+                      className="flex items-center gap-4 flex-1 min-w-0 cursor-pointer"
+                      onClick={async () => {
+                        if (v.id) {
+                          navigate(`/pro/verificar-cro/${v.id}`);
+                        } else {
+                          const { data } = await supabase.rpc("marcar_verificacao_cro", {
+                            p_dentista_id: v.dentista_id,
+                            p_verificado: false,
+                            p_observacao: null,
+                          });
+                          if (data?.success) {
+                            // Recarrega para obter o ID da verificação
+                            window.location.reload();
+                          }
+                        }
+                      }}
+                    >
                       {statusIcon(v.status)}
                       <div>
                         <p className="font-semibold text-[#0A2A66]">
@@ -260,13 +264,31 @@ export default function VerificarCro() {
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-xs text-[#6B7280]">
-                        {new Date(v.criado_em).toLocaleDateString("pt-BR")}
-                      </p>
-                      <p className="text-xs text-[#6B7280] mt-0.5">
-                        {statusLabel(v.status)}
-                      </p>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="text-right">
+                        <p className="text-xs text-[#6B7280]">
+                          {new Date(v.criado_em).toLocaleDateString("pt-BR")}
+                        </p>
+                        <p className="text-xs text-[#6B7280] mt-0.5">
+                          {statusLabel(v.status)}
+                        </p>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setModalDados({
+                            dentista_id: v.dentista_id,
+                            nome: v.nome || "Sem nome",
+                            cro: v.cro,
+                            verificacao_id: v.id,
+                          });
+                          setModalAberta(true);
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-[#007AFF] text-white hover:bg-[#0056CC] transition-colors"
+                      >
+                        <Eye size={13} />
+                        Verificar
+                      </button>
                     </div>
                   </div>
                   {v.erro && v.status === "falhou" && (
@@ -277,6 +299,25 @@ export default function VerificarCro() {
             })
           )}
         </div>
+
+        {/* Modal de verificação */}
+        {modalDados && (
+          <VerificarCroModal
+            isOpen={modalAberta}
+            onClose={() => {
+              setModalAberta(false);
+              setModalDados(null);
+            }}
+            dentistaId={modalDados.dentista_id}
+            nome={modalDados.nome}
+            cro={modalDados.cro}
+            verificacaoId={modalDados.verificacao_id}
+            onSaved={() => {
+              // Recarrega a lista
+              window.location.reload();
+            }}
+          />
+        )}
       </main>
     </div>
   );

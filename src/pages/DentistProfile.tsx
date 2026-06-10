@@ -1039,20 +1039,19 @@ export default function DentistProfilePage() {
                 {perfil.especialidade_principal}
               </Link>
 
-              {/* CRO com medalha de verificação */}
+              {/* CRO com badge de verificação à direita */}
               <div className="flex items-center gap-2 justify-center sm:justify-start mb-2">
                 <div className="relative inline-flex items-center gap-2">
                   <Shield size={13} style={{ color: "#8E8E93" }} />
                   <span className="text-[13px]" style={{ color: "#8E8E93" }}>
                     {perfil.cro}
                   </span>
-                  {perfil.cro_verificado === true && (
-                    <CroVerificationBadge verificado medal size="sm" />
-                  )}
                 </div>
-                {perfil.cro_verificado !== undefined && (
-                  <CroVerificationBadge verificado={!!perfil.cro_verificado} size="sm" />
-                )}
+                {perfil.cro_verificado === true ? (
+                  <CroVerificationBadge verificado size="sm" />
+                ) : perfil.cro_verificado !== undefined ? (
+                  <CroVerificationBadge verificado={false} size="sm" />
+                ) : null}
               </div>
 
               {/* Rating geral em estrelas */}

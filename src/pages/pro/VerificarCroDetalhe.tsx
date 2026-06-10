@@ -11,6 +11,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 import Header from "@/components/layout/Header";
 import CroVerificationBadge from "@/components/analytics/CroVerificationBadge";
 import { Loader2, ArrowLeft, ExternalLink, RefreshCw, ShieldAlert, CheckCircle } from "lucide-react";
@@ -102,19 +103,19 @@ export default function VerificarCroDetalhe() {
     if (!verificacao) return;
     setSalvando(true);
     try {
-      await supabase.from("cro_verificacoes").update({
-        status: "verificado",
-        dados_consultados: dadosExtraidos,
-        observacao,
-      }).eq("id", verificacao.id);
-
-      await supabase.from("curadentespro").update({
-        cro_verificado: true,
-      }).eq("id", verificacao.dentista_id);
+      const { data, error } = await supabase.rpc("marcar_verificacao_cro", {
+        p_dentista_id: verificacao.dentista_id,
+        p_verificado: true,
+        p_observacao: observacao || null,
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || "Erro desconhecido");
 
       setVerificacao({ ...verificacao, status: "verificado" } as VerificacaoDetalhe);
+      toast.success("CRO verificado com sucesso!");
     } catch (err) {
       console.error("[VerificarCroDetalhe] Erro ao salvar:", err);
+      toast.error("Erro ao verificar CRO: " + (err instanceof Error ? err.message : "Erro desconhecido"));
     } finally {
       setSalvando(false);
     }
@@ -124,15 +125,19 @@ export default function VerificarCroDetalhe() {
     if (!verificacao) return;
     setSalvando(true);
     try {
-      await supabase.from("cro_verificacoes").update({
-        status: "falhou",
-        erro: "Dados não conferem ou CRO não localizado.",
-        observacao,
-      }).eq("id", verificacao.id);
+      const { data, error } = await supabase.rpc("marcar_verificacao_cro", {
+        p_dentista_id: verificacao.dentista_id,
+        p_verificado: false,
+        p_observacao: observacao || null,
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || "Erro desconhecido");
 
       setVerificacao({ ...verificacao, status: "falhou" } as VerificacaoDetalhe);
+      toast.success("Verificação marcada como falha.");
     } catch (err) {
       console.error("[VerificarCroDetalhe] Erro ao salvar:", err);
+      toast.error("Erro ao salvar: " + (err instanceof Error ? err.message : "Erro desconhecido"));
     } finally {
       setSalvando(false);
     }
