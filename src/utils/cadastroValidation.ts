@@ -69,6 +69,14 @@ export function validarEnderecos(enderecos: any[]): { valido: boolean; erros: st
   return { valido: erros.length === 0, erros };
 }
 
+export function validarAnoFormacao(valor: string): boolean {
+  if (!valor) return true; // opcional
+  const ano = parseInt(valor, 10);
+  if (isNaN(ano)) return false;
+  const atual = new Date().getFullYear();
+  return ano >= 1950 && ano <= atual;
+}
+
 export interface EtapaValidationParams {
   nome: string;
   emailVerificado: boolean;
@@ -80,6 +88,7 @@ export interface EtapaValidationParams {
   cro: string;
   enderecos: any[];
   lgpdAceito: boolean;
+  anoFormacao?: string;
 }
 
 export function isEtapaConcluida(etapaId: number, params: EtapaValidationParams): boolean {

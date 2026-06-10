@@ -346,6 +346,7 @@ export default function NovoCadastro() {
 
   // ─ Modal de cadastro incompleto ───────────────────────────────────────────
   const [exibirModalIncompleto, setExibirModalIncompleto] = useState(false);
+  const [salvando, setSalvando] = useState(false);
 
   // Se o usuario editar a senha depois de ja sincronizada, re-sincroniza no proximo avanco
   useEffect(() => {
@@ -468,7 +469,10 @@ export default function NovoCadastro() {
   // resend({type:"email"}). (Era "signup" no fluxo antigo, vindo de signUp.)
   // ─────────────────────────────────────────────────────────────────────────
   async function validarTokenEmail() {
-    if (tokenEmailInput.length !== 8) return;
+    if (tokenEmailInput.length !== 8) {
+      toast.error('Digite o código de 8 dígitos recebido por e-mail.');
+      return;
+    }
 
     const toastId = toast.loading("Validando código...");
     const { error } = await supabase.auth.verifyOtp({
@@ -498,35 +502,23 @@ export default function NovoCadastro() {
   async function avancarEtapa1() {
     if (!emailVerificado) return;
     
-    // Se a senha já estiver sincronizada e o campo estiver vazio, apenas avança
-    if (senhaSincronizada && senha.length === 0) {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await salvarEtapa1NoBanco(user.id);
-      }
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    
+    if (senhaSincronizada) {
+      await salvarEtapa1NoBanco(user.id);
       return;
     }
     
     if (senha.length < 8) return;
-    // Ja foi sincronizada numa passagem anterior pela etapa 1 e não mudou
-    if (senhaSincronizada) {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await salvarEtapa1NoBanco(user.id);
-      }
-      return;
-    }
+    
     const { error } = await supabase.auth.updateUser({ password: senha });
     if (error) {
       toast.error("Erro ao salvar a senha: " + error.message);
       throw error;
     }
     setSenhaSincronizada(true);
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await salvarEtapa1NoBanco(user.id);
-    }
+    await salvarEtapa1NoBanco(user.id);
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -722,6 +714,9 @@ export default function NovoCadastro() {
       return;
     }
 
+    if (salvando) return;
+    setSalvando(true);
+
     const toastId = toast.loading("Salvando seus dados...");
 
     // Timeout de segurança: impede que a tela trave para sempre
@@ -730,6 +725,14 @@ export default function NovoCadastro() {
     );
 
     try {
+      // ─── Valida Instagram antes de prosseguir ──────────────────────────────
+      const instagramUrl = formatarInstagram(instagram);
+      if (instagram && !instagramUrl) {
+        toast.error('Nome de usuário do Instagram inválido. Use apenas letras, números, ponto, traço e underscore (ex: @seuperfil).', { id: toastId });
+        return;
+      }
+      if (instagramUrl) setInstagram(extrairUserInstagram(instagramUrl));
+
       await Promise.race([
         timeoutPromise,
         (async () => {
@@ -753,7 +756,7 @@ export default function NovoCadastro() {
             ano_formacao: anoFormacao ? parseInt(anoFormacao) : null,
             foto_url: fotoUrl || null,
             bio: bio,
-            instagram: formatarInstagram(instagram),
+            instagram: instagramUrl,
             lgpd_aceito: lgpdAceito
           }, { onConflict: 'id' });
 
@@ -827,6 +830,8 @@ export default function NovoCadastro() {
       }
       
       toast.error(message, { id: toastId });
+    } finally {
+      setSalvando(false);
     }
   }
 
@@ -1107,37 +1112,42 @@ export default function NovoCadastro() {
         {ultimaEtapa ? (
           <button
             onClick={finalizarCadastro}
-            disabled={!lgpdAceito}
+            disabled={!lgpdAceito || salvando}
             className="flex items-center gap-2 px-6 py-3 rounded-[14px] font-semibold text-[15px] min-h-[44px] transition-all duration-200 text-white"
             style={{
-              background: lgpdAceito ? "#34C759" : "rgba(52,199,89,0.35)",
-              boxShadow: lgpdAceito ? "0 4px 16px rgba(52,199,89,0.30)" : "none",
-              cursor: lgpdAceito ? "pointer" : "not-allowed",
+              background: lgpdAceito && !salvando ? "#34C759" : "rgba(52,199,89,0.35)",
+              boxShadow: lgpdAceito && !salvando ? "0 4px 16px rgba(52,199,89,0.30)" : "none",
+              cursor: lgpdAceito && !salvando ? "pointer" : "not-allowed",
             }}
           >
-            <Check size={16} />
-            Concluir cadastro
+            {salvando ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+            {salvando ? "Salvando..." : "Concluir cadastro"}
           </button>
         ) : (
           <button
             onClick={async () => {
+              if (salvando) return;
+              setSalvando(true);
               try {
                 if (onAvancar) await onAvancar();
+                setEtapa(etapa + 1);
               } catch {
                 return;
+              } finally {
+                setSalvando(false);
               }
-              setEtapa(etapa + 1);
             }}
-            disabled={!podeProsseguir}
+            disabled={!podeProsseguir || salvando}
             className="flex items-center gap-2 px-6 py-3 rounded-[14px] font-semibold text-[15px] min-h-[44px] transition-all duration-200 text-white"
             style={{
-              background: podeProsseguir ? "#007AFF" : "rgba(0,122,255,0.30)",
-              boxShadow: podeProsseguir ? "0 4px 16px rgba(0,122,255,0.28)" : "none",
-              cursor: podeProsseguir ? "pointer" : "not-allowed",
+              background: podeProsseguir && !salvando ? "#007AFF" : "rgba(0,122,255,0.30)",
+              boxShadow: podeProsseguir && !salvando ? "0 4px 16px rgba(0,122,255,0.28)" : "none",
+              cursor: podeProsseguir && !salvando ? "pointer" : "not-allowed",
             }}
           >
-            Continuar
-            <ChevronRight size={16} />
+            {salvando ? <Loader2 size={16} className="animate-spin" /> : null}
+            {salvando ? "Salvando..." : "Continuar"}
+            {!salvando && <ChevronRight size={16} />}
           </button>
         )}
       </div>
@@ -2062,7 +2072,7 @@ export default function NovoCadastro() {
         </button>
       )}
 
-      {renderNavegacao(enderecos.length > 0, false, false, salvarEtapa4NoBanco)}
+      {renderNavegacao(enderecos.length > 0 && validarEnderecos(enderecos).valido, false, false, salvarEtapa4NoBanco)}
     </div>
   );
 

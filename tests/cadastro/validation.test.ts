@@ -18,9 +18,11 @@ import {
   validarCpf,
   validarCro,
   validarEnderecos,
+  validarAnoFormacao,
   isEtapaConcluida,
   EtapaValidationParams,
 } from "../../src/utils/cadastroValidation";
+import { extrairUserInstagram, formatarInstagram } from "../../src/utils/instagram";
 
 let passed = 0;
 let failed = 0;
@@ -112,9 +114,47 @@ function testEnderecos() {
   }
 }
 
-// 5. Testar Validação de Conclusão de Etapas
+// 5. Testar Validação de Ano de Formação
+function testAnoFormacao() {
+  console.log("\n[5/7] Validação de Ano de Formação");
+  try {
+    assert.strictEqual(validarAnoFormacao(""), true, "Ano vazio é opcional e válido");
+    assert.strictEqual(validarAnoFormacao("2010"), true, "Ano válido no passado");
+    assert.strictEqual(validarAnoFormacao("2026"), true, "Ano atual é válido");
+    assert.strictEqual(validarAnoFormacao("1949"), false, "Ano anterior a 1950 é inválido");
+    assert.strictEqual(validarAnoFormacao("2027"), false, "Ano futuro é inválido");
+    assert.strictEqual(validarAnoFormacao("abc"), false, "Texto não numérico é inválido");
+    assert.strictEqual(validarAnoFormacao("0"), false, "Ano zero é inválido");
+    ok("Regras de ano de formação corretas");
+  } catch (err: any) {
+    fail("Erro em validarAnoFormacao", err.message);
+  }
+}
+
+// 6. Testar Instagram Utils
+function testInstagram() {
+  console.log("\n[6/7] Utilitários Instagram");
+  try {
+    assert.strictEqual(extrairUserInstagram(""), "", "Vazio retorna vazio");
+    assert.strictEqual(extrairUserInstagram("@meuperfil"), "meuperfil", "Handle com @");
+    assert.strictEqual(extrairUserInstagram("https://instagram.com/user"), "user", "URL completa");
+    assert.strictEqual(extrairUserInstagram("https://www.instagram.com/user/"), "user", "URL com www e barra");
+    assert.strictEqual(extrairUserInstagram("user"), "user", "Apenas username");
+    assert.strictEqual(extrairUserInstagram("@USER"), "USER", "Username maiúsculo preservado");
+
+    assert.strictEqual(formatarInstagram(""), null, "Vazio retorna null");
+    assert.strictEqual(formatarInstagram("@user"), "https://www.instagram.com/user", "Handle com @ formatado");
+    assert.strictEqual(formatarInstagram("user"), "https://www.instagram.com/user", "Username puro formatado");
+    assert.strictEqual(formatarInstagram("invalido espaço"), null, "Username inválido retorna null");
+    ok("Utilitários Instagram corretos");
+  } catch (err: any) {
+    fail("Erro em Instagram", err.message);
+  }
+}
+
+// 7. Testar Validação de Conclusão de Etapas
 function testEtapasCompleteness() {
-  console.log("\n[5/5] Validação de Etapas");
+  console.log("\n[7/7] Validação de Etapas");
   try {
     const baseParams: EtapaValidationParams = {
       nome: "Dr. Fernando Domingues",
@@ -154,6 +194,9 @@ function testEtapasCompleteness() {
     assert.strictEqual(isEtapaConcluida(4, baseParams), true, "Etapa 4 concluída");
     assert.strictEqual(isEtapaConcluida(4, { ...baseParams, enderecos: [] }), false, "Etapa 4 pendente: sem endereços");
 
+    // Etapa 3 com anoFormacao
+    assert.strictEqual(isEtapaConcluida(3, { ...baseParams, anoFormacao: "2010" }), true, "Etapa 3 concluída com ano válido");
+    
     // Etapa 5
     assert.strictEqual(isEtapaConcluida(5, baseParams), true, "Etapa 5 sempre concluída (Bio opcional)");
 
@@ -173,6 +216,8 @@ async function main() {
   testCpf();
   testCro();
   testEnderecos();
+  testAnoFormacao();
+  testInstagram();
   testEtapasCompleteness();
 
   console.log(`\n=== Resultado: ${passed} passou, ${failed} falhou ===\n`);
