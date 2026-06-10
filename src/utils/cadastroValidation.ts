@@ -1,7 +1,18 @@
-/**
- * Funções de validação para o fluxo de cadastro do CuraDentes Pro.
- * Centralizado para permitir testes de unidade via Node/TSX (TDD).
- */
+// ═══════════════════════════════════════════════════════════════════════════════
+// CADASTRO VALIDATION — Regras de validação do cadastro Pro
+//
+// Fonte da verdade para validação de todas as etapas do cadastro do dentista.
+// Centralizado aqui para ser reutilizado tanto pelo frontend (NovoCadastro.tsx)
+// quanto pelos testes de unidade (tests/cadastro/validation.test.ts) — TDD.
+//
+// Etapas:
+//   1. Conta (nome, email, senha)
+//   2. Telefone (DDD + 9 dígitos)
+//   3. Identidade (CPF módulo 11 + CRO por UF)
+//   4. Endereços (logradouro, bairro, cidade, estado, CEP)
+//   5. Bio (opcional — sempre concluída)
+//   6. LGPD (consentimento obrigatório)
+// ═══════════════════════════════════════════════════════════════════════════════
 
 export function validarTelefone(valor: string): boolean {
   const numeros = valor.replace(/\D/g, "");

@@ -1,3 +1,13 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// PÁGINA: Pesquisa (/pesquisa)
+//
+// Página de resultados de busca de dentistas com:
+//   - Filtros por localização, raio, convênios e formas de pagamento
+//   - Busca textual por bairro, cidade, estado, clínica e logradouro
+//   - RPC de proximidade Haversine (get_dentistas_proximos)
+//   - Cache de resultados no localStorage e sessionStorage
+// ═══════════════════════════════════════════════════════════════════════════════
+
 import { useEffect, useState, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -184,7 +194,7 @@ export default function Pesquisa() {
   const [searchInput, setSearchInput] = useState(estadoNavegacao.q || estadoSalvo.q || "");
   const [usandoLocalizacao, setUsandoLocalizacao] = useState(false);
 
-  const [raio, setRaio] = useState(5);
+  const [raio] = useState(5);
 
   // Sincroniza estado da navegação sempre que location.state mudar
   useEffect(() => {
@@ -340,19 +350,22 @@ export default function Pesquisa() {
             const p1 = partes[0];
             const p2 = partes[1];
             queryBuilder = queryBuilder
-              .or(`bairro.ilike.%${p1}%,cidade.ilike.%${p1}%,nome_clinica.ilike.%${p1}%,logradouro.ilike.%${p1}%`)
+              .or(`bairro.ilike.%${p1}%,cidade.ilike.%${p1}%,nome.ilike.%${p1}%,nome_clinica.ilike.%${p1}%,logradouro.ilike.%${p1}%`)
               .or(`cidade.ilike.%${p2}%,estado.ilike.%${p2}%`);
           } else {
             queryBuilder = queryBuilder.or([
               `bairro.ilike.%${q}%`,
               `cidade.ilike.%${q}%`,
               `estado.ilike.%${q}%`,
+              `nome.ilike.%${q}%`,
               `logradouro.ilike.%${q}%`,
               `nome_clinica.ilike.%${q}%`
             ].join(','));
           }
 
-          queryBuilder = queryBuilder.eq('curadentespro.lgpd_aceito', true); // Apenas dentistas com cadastro completo
+          queryBuilder = queryBuilder
+            .eq('curadentespro.lgpd_aceito', true)
+            .is('curadentespro.deleted_at', null);
           textSearchPromise = queryBuilder as unknown as Promise<{ data: EnderecoRow[] | null; error: SupabaseError | null }>;
         }
 

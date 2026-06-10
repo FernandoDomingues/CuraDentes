@@ -101,18 +101,6 @@ function BarraAvaliacao({
   );
 }
 
-function normalizarAgenda(agendaRaw: any): any[] {
-  if (!Array.isArray(agendaRaw)) return [];
-  return agendaRaw
-    .filter((item: any) => item && item.ativo !== false)
-    .map((item: any) => ({
-      dia_semana: item.dia || item.dia_semana || "",
-      horario_inicio: item.inicio || item.horario_inicio || "",
-      horario_fim: item.fim || item.horario_fim || "",
-    }))
-    .filter((item: any) => item.dia_semana && item.horario_inicio && item.horario_fim);
-}
-
 // ─── Componente: Card de endereço no dashboard ────────────────────────────────
 
 /** Exibe um endereço com todas as informações e opção de editar */
@@ -395,6 +383,7 @@ export default function Dashboard() {
           .from('curadentespro')
           .select('lgpd_aceito')
           .eq('id', session.user.id)
+          .is('deleted_at', null)
           .maybeSingle();
 
         if (!perfil || !perfil.lgpd_aceito) {
@@ -408,63 +397,6 @@ export default function Dashboard() {
     }
     carregarSessao();
   }, [navigate]);
-
-  async function carregarDadosDentista(userId: string) {
-    try {
-      const { data: perfil, error: perfilError } = await supabase
-        .from('curadentespro')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (perfilError) throw perfilError;
-
-      const { data: enderecosData } = await supabase
-        .from('curadentespro_enderecos')
-        .select('*')
-        .eq('curadentespro_id', userId);
-
-      const dentistaLogado: DentistaPro = {
-        id: perfil.id,
-        usuario: perfil.email || "",
-        senha: "",
-        nome_completo: perfil.nome,
-        email: perfil.email || "",
-        telefone: perfil.telefone || "",
-        foto_url: (perfil.foto_url && !perfil.foto_url.startsWith("blob:")) ? perfil.foto_url : logoProAltUrl,
-        cro: perfil.cro,
-        cpf: perfil.cpf || "",
-        ano_formacao: perfil.ano_formacao || 0,
-        bio: perfil.bio || "",
-        cadastro_completo: true,
-        posicao_geral: 1,
-        avaliacoes: { media_geral: 0, total_avaliacoes: 0, por_atividade: [] },
-        enderecos: (enderecosData || []).map((e) => ({
-          id: e.id,
-          nome_clinica: e.nome_clinica,
-          logradouro: e.logradouro,
-          numero: e.numero || "",
-          complemento: e.complemento || "",
-          bairro: e.bairro,
-          cidade: e.cidade,
-          estado: e.estado,
-          cep: e.cep || "",
-          telefone: e.telefone || "",
-          whatsapp: e.whatsapp || "",
-          maps_url: "",
-          atividades: e.atividades || [],
-          agenda: normalizarAgenda(e.agenda),
-          formas_pagamento: e.formas_pagamento || [],
-          convenios: e.convenios ? e.convenios.map((c: string) => ({ id: c, nome: c })) : []
-        }))
-      };
-
-      setDentista(dentistaLogado);
-      setBioEditada(dentistaLogado.bio);
-    } catch (error) {
-      console.error("Erro ao carregar perfil:", error);
-    }
-  }
 
   // ─────────────────────────────────────────────────────────────────────────
   // Função: Autentica o dentista com usuário e senha
@@ -486,6 +418,7 @@ export default function Dashboard() {
         .from('curadentespro')
         .select('lgpd_aceito')
         .eq('id', data.user.id)
+        .is('deleted_at', null)
         .maybeSingle();
 
       if (!perfil || !perfil.lgpd_aceito) {

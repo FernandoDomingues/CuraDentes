@@ -1,8 +1,12 @@
-// ============================================================================
-// HOOK: useCepLookup
+// ═══════════════════════════════════════════════════════════════════════════════
+// HOOK: useCepLookup — Auto-fill de CEP via ViaCEP
 //
-// Auto-completa logradouro/bairro/cidade/estado a partir de um CEP,
-// consultando a API publica ViaCEP (https://viacep.com.br).
+// Dispara consulta à API do ViaCEP quando o usuário digita 8 dígitos (CEP completo).
+// Com debounce de 500ms, cache em localStorage (TTL 7 dias) e AbortController
+// para evitar race conditions.
+//
+// Estados: loading | notFound | error | success
+// ═══════════════════════════════════════════════════════════════════════════════
 //
 // Estrategia:
 //   1. So dispara quando o CEP (so digitos) tem 8 caracteres.

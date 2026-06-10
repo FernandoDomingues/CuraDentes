@@ -1,3 +1,11 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// CLIENTE SUPABASE — Singleton
+//
+// Cria e exporta uma única instância do cliente Supabase JS.
+// As variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY vêm do .env
+// (ou das variáveis de ambiente configuradas na Vercel).
+// ═══════════════════════════════════════════════════════════════════════════════
+
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;

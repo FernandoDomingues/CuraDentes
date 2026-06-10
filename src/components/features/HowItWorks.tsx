@@ -1,3 +1,12 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// COMPONENTE: HowItWorks — Seção "Como funciona"
+//
+// Exibe na landing page os passos de como o paciente encontra um dentista:
+//   1. Busca por localização
+//   2. Filtra por necessidades
+//   3. Agende a consulta
+// ═══════════════════════════════════════════════════════════════════════════════
+
 import { MapPin, SlidersHorizontal, CalendarCheck } from "lucide-react";
 
 const STEPS = [

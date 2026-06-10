@@ -1,3 +1,11 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// COMPONENTE: CepInputComBusca — Input de CEP com auto-fill
+//
+// Componente de input de CEP que dispara a busca ViaCEP ao completar 8 dígitos.
+// Auto-preenche logradouro, bairro, cidade e estado automaticamente.
+// Usa o hook useCepLookup internamente.
+// ═══════════════════════════════════════════════════════════════════════════════
+
 import { useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";

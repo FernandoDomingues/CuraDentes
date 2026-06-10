@@ -1,3 +1,12 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// PÁGINA: Especialidade (/especialidade/:slug)
+//
+// Página de detalhes de uma especialidade odontológica com:
+//   - Descrição SEO da especialidade
+//   - Lista de dentistas que oferecem aquela especialidade
+//   - Perguntas frequentes (FAQ)
+// ═══════════════════════════════════════════════════════════════════════════════
+
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";

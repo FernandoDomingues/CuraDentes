@@ -1,7 +1,16 @@
-/**
- * Função para buscar as coordenadas geográficas (latitude, longitude)
- * a partir de um endereço em texto usando a API gratuita do OpenStreetMap (Nominatim).
- */
+// ═══════════════════════════════════════════════════════════════════════════════
+// GEOCODING — Nominatim (OpenStreetMap)
+//
+// Responsabilidades:
+//   1. Buscar coordenadas (lat/lng) a partir de endereço textual via Nominatim
+//   2. Buscar endereço a partir de coordenadas (reverse geocoding)
+//   3. Servir como fallback quando não há consultórios próximos no banco
+//
+// API pública gratuita do OpenStreetMap (Nominatim):
+//   https://nominatim.openstreetmap.org/
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** Busca coordenadas (latitude, longitude) a partir de um endereço */
 export async function getCoordenadas(
   enderecoTexto: string,
   userLat?: number | null,

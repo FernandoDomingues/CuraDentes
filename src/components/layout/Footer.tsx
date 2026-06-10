@@ -1,3 +1,10 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// COMPONENTE: Footer — Rodapé da aplicação
+//
+// Exibe links institucionais (Sobre, Termos de Uso, Privacidade),
+// redes sociais e informações de copyright no rodapé de todas as páginas.
+// ═══════════════════════════════════════════════════════════════════════════════
+
 import { Instagram } from "lucide-react";
 import logoComNome from "@/assets/logos/logo-com-nome.png";
 

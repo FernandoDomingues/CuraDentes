@@ -23,24 +23,25 @@
 // Ver src/hooks/useAuth.ts para detalhes do cleanup de subscription.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { Loader2 } from "lucide-react";
 
-import Index from "@/pages/Index";
-import Pesquisa from "@/pages/Pesquisa";
-import NotFound from "@/pages/NotFound";
-import DentistProfile from "@/pages/DentistProfile";
-import NovoCadastro from "@/pages/pro/NovoCadastro";
-import Dashboard from "@/pages/pro/Dashboard";
-import MeuPerfil from "@/pages/pro/MeuPerfil";
-import RedefinirSenha from "@/pages/pro/RedefinirSenha";
-import EditorDeFotos from "@/pages/pro/EditorDeFotos";
-import Privacidade from "@/pages/Privacidade";
-import TermosDeUso from "@/pages/TermosDeUso";
-import Sobre from "@/pages/Sobre";
-import Especialidade from "@/pages/Especialidade";
+const Index = lazy(() => import("@/pages/Index"));
+const Pesquisa = lazy(() => import("@/pages/Pesquisa"));
+const NotFound = lazy(() => import("@/pages/NotFound"));
+const DentistProfile = lazy(() => import("@/pages/DentistProfile"));
+const NovoCadastro = lazy(() => import("@/pages/pro/NovoCadastro"));
+const Dashboard = lazy(() => import("@/pages/pro/Dashboard"));
+const MeuPerfil = lazy(() => import("@/pages/pro/MeuPerfil"));
+const RedefinirSenha = lazy(() => import("@/pages/pro/RedefinirSenha"));
+const EditorDeFotos = lazy(() => import("@/pages/pro/EditorDeFotos"));
+const Privacidade = lazy(() => import("@/pages/Privacidade"));
+const TermosDeUso = lazy(() => import("@/pages/TermosDeUso"));
+const Sobre = lazy(() => import("@/pages/Sobre"));
+const Especialidade = lazy(() => import("@/pages/Especialidade"));
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -61,21 +62,29 @@ export default function App() {
     <BrowserRouter>
       <ScrollToTop />
       <Toaster position="top-right" richColors />
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/pesquisa" element={<Pesquisa />} />
-        <Route path="/dentista/:id" element={<DentistProfile />} />
-        <Route path="/pro/novo-cadastro" element={<NovoCadastro />} />
-        <Route path="/pro/dashboard" element={<Dashboard />} />
-        <Route path="/pro/perfil" element={<MeuPerfil />} />
-        <Route path="/pro/editor-de-fotos" element={<EditorDeFotos />} />
-        <Route path="/pro/redefinir-senha" element={<RedefinirSenha />} />
-        <Route path="/privacidade" element={<Privacidade />} />
-        <Route path="/termos" element={<TermosDeUso />} />
-        <Route path="/sobre" element={<Sobre />} />
-        <Route path="/especialidade/:slug" element={<Especialidade />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <Suspense
+        fallback={
+          <div className="flex items-center justify-center min-h-screen">
+            <Loader2 className="h-8 w-8 animate-spin text-[#007AFF]" />
+          </div>
+        }
+      >
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/pesquisa" element={<Pesquisa />} />
+          <Route path="/dentista/:id" element={<DentistProfile />} />
+          <Route path="/pro/novo-cadastro" element={<NovoCadastro />} />
+          <Route path="/pro/dashboard" element={<Dashboard />} />
+          <Route path="/pro/perfil" element={<MeuPerfil />} />
+          <Route path="/pro/editor-de-fotos" element={<EditorDeFotos />} />
+          <Route path="/pro/redefinir-senha" element={<RedefinirSenha />} />
+          <Route path="/privacidade" element={<Privacidade />} />
+          <Route path="/termos" element={<TermosDeUso />} />
+          <Route path="/sobre" element={<Sobre />} />
+          <Route path="/especialidade/:slug" element={<Especialidade />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

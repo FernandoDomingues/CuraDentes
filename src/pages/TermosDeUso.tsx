@@ -1,3 +1,10 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// PÁGINA: TermosDeUso (/termos)
+//
+// Página de Termos de Uso da plataforma CuraDentes.
+// Exibe os termos e condições de uso do serviço em formato de accordion.
+// ═══════════════════════════════════════════════════════════════════════════════
+
 import { useState } from "react";
 import { ChevronDown, FileText } from "lucide-react";
 import Header from "@/components/layout/Header";

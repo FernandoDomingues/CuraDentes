@@ -51,6 +51,7 @@ import {
   validarCro,
   validarEnderecos,
   isEtapaConcluida,
+  type EtapaValidationParams,
 } from "@/utils/cadastroValidation";
 
 // ─── URL do logo CuraDentes Pro ───────────────────────────────────────────────
@@ -202,6 +203,7 @@ export default function NovoCadastro() {
           .from('curadentespro')
           .select('*')
           .eq('id', user.id)
+          .is('deleted_at', null)
           .maybeSingle();
 
         if (pro) {

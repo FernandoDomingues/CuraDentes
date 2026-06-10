@@ -37,3 +37,7 @@ convert_sql.cjs
 
 # Local Netlify folder
 .netlify
+
+# Playwright test artifacts
+playwright-report/
+test-results/

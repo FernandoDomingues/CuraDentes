@@ -1,26 +1,20 @@
-/**
- * Teste E2E: RLS + Storage (Item 8)
- *
- * Verifica que, apos rodar a migration
- * supabase_migrations/2026-06-02_seguranca_rls_storage.sql:
- *   1. Anon PODE ler curadentespro (busca segue funcionando)
- *   2. Anon NAO PODE deletar curadentespro (RLS bloqueia)
- *   3. Anon NAO PODE inserir em avaliacoes (policy autenticada)
- *   4. RPC get_dentistas_proximos funciona para anon (Haversine)
- *   5. Anon NAO PODE fazer upload no bucket fotos-dentistas
- *   6. Anon PODE listar arquivos publicos do bucket
- *
- * Como rodar:
- *   npm run test:security
- *
- * Exit code:
- *   0 = todos os testes passaram
- *   1 = pelo menos um teste falhou
- *
- * NOTA: neste teste, "falhou" geralmente = BOM, significa que RLS bloqueou.
- * O numero problematico seria passed=0 (RLS nao bloqueou nada) ou falha em
- * testes de LEITURA publica (ex.: teste 1 falhando).
- */
+// ═══════════════════════════════════════════════════════════════════════════════
+// TESTE E2E: RLS + Storage (Item 8)
+//
+// Verifica que as policies de segurança estão ativas no Supabase:
+//   1. Anon PODE ler curadentespro (SELECT público)
+//   2. Anon NÃO PODE deletar (RLS bloqueia)
+//   3. Anon NÃO PODE inserir em avaliacoes (policy autenticada)
+//   4. RPC get_dentistas_proximos funciona para anon
+//   5. Anon NÃO PODE fazer upload no bucket fotos-dentistas
+//   6. Anon PODE listar arquivos públicos do bucket
+//
+// NOTA: "falhou" geralmente = BOM (RLS bloqueou corretamente).
+// Problemático seria passed=0 (RLS não bloqueou nada).
+//
+// Como rodar:
+//   npm run test:security
+// ═══════════════════════════════════════════════════════════════════════════════
 
 import { createClient } from '@supabase/supabase-js';
 

@@ -1,3 +1,10 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// CONSTANTS: ESPECIALIDADES SEO — Dados de SEO para páginas de especialidades
+//
+// Contém metadados, FAQs e descrições para cada especialidade odontológica,
+// usados para gerar páginas otimizadas para mecanismos de busca.
+// ═══════════════════════════════════════════════════════════════════════════════
+
 export interface FAQ {
   pergunta: string;
   resposta: string;

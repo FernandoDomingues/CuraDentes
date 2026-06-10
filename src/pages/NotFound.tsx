@@ -1,3 +1,10 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// PÁGINA: NotFound (404)
+//
+// Página exibida para rotas inexistentes. Mostra mensagem amigável
+// com links para voltar à home ou ir para a página de busca.
+// ═══════════════════════════════════════════════════════════════════════════════
+
 import { useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { Home, Search } from "lucide-react";
@@ -10,7 +17,7 @@ const NotFound = () => {
   const location = useLocation();
 
   useEffect(() => {
-    console.error("404 Error: User attempted to access non-existent route:", location.pathname);
+    console.warn("404 Error: User attempted to access non-existent route:", location.pathname);
   }, [location.pathname]);
 
   return (

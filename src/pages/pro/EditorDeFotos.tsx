@@ -1,3 +1,12 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// PÁGINA: EditorDeFotos (/pro/editor-de-fotos)
+//
+// Editor de foto de perfil do dentista com:
+//   - Upload de nova foto (validação de tamanho/tipo via uploadService)
+//   - Recorte e redimensionamento via react-avatar-editor
+//   - Salvamento no Storage Supabase
+// ═══════════════════════════════════════════════════════════════════════════════
+
 import React, { useState, useRef, useEffect } from "react";
 import AvatarEditor, { AvatarEditorRef } from "react-avatar-editor";
 import { useLocation, useNavigate } from "react-router-dom";

@@ -1,3 +1,10 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// PÁGINA: Privacidade (/privacidade)
+//
+// Página de Política de Privacidade da plataforma CuraDentes.
+// Explica como os dados dos usuários são coletados, armazenados e tratados (LGPD).
+// ═══════════════════════════════════════════════════════════════════════════════
+
 import { useState } from "react";
 import { Check, ChevronDown, Shield } from "lucide-react";
 import Header from "@/components/layout/Header";

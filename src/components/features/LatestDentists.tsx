@@ -1,7 +1,14 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// COMPONENTE: LatestDentists — Últimos dentistas cadastrados
+//
+// Exibe na landing page os dentistas mais recentes cadastrados na plataforma,
+// com foto, nome e CRO. Cada card leva ao perfil público do dentista.
+// ═══════════════════════════════════════════════════════════════════════════════
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
-import { Building2, Sparkles, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { Sparkles, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import logoProAltUrl from "@/assets/logos/logo-pro-alt.png";
 import { saveToSearchCache } from "@/lib/dentistCache";
 
@@ -53,6 +60,7 @@ export default function LatestDentists() {
           .from("curadentespro")
           .select("id, nome, foto_url, bio, cro, criado_em")
           .eq("lgpd_aceito", true)
+          .is("deleted_at", null)
           .order("criado_em", { ascending: false })
           .limit(15);
 

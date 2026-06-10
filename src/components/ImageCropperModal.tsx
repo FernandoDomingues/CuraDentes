@@ -1,3 +1,10 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// COMPONENTE: ImageCropperModal — Modal de recorte de imagem
+//
+// Modal para recorte de imagem de perfil com aspect ratio configurável.
+// Usa react-image-crop para seleção da área e preview em tempo real.
+// ═══════════════════════════════════════════════════════════════════════════════
+
 import React, { useState, useRef, useEffect } from "react";
 import ReactCrop, { Crop, PixelCrop, centerCrop, makeAspectCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";

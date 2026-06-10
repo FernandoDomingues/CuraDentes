@@ -1,5 +1,5 @@
-// ============================================================================
-// HOOK: useAddressSuggestions
+// ═══════════════════════════════════════════════════════════════════════════════
+// HOOK: useAddressSuggestions — Autocomplete fuzzy de endereços
 //
 // Fornece sugestões de endereço com correção fuzzy enquanto o usuário digita.
 //

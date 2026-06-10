@@ -616,10 +616,11 @@ export default function DentistProfilePage() {
 
       const ids = [...new Set(avaliacoes.map((a: any) => a.paciente_id))];
       console.log("[fetchAvaliacoesIndividuais] Querying clients for patient_ids:", ids);
-      const { data: pacientes, error: pacError } = await supabase
-        .from("clientes")
-        .select("id, nome, foto")
-        .in("id", ids);
+        const { data: pacientes, error: pacError } = await supabase
+          .from("clientes")
+          .select("id, nome, foto")
+          .in("id", ids)
+          .is("deleted_at", null);
 
       if (pacError) {
         console.error("[fetchAvaliacoesIndividuais] Error fetching clients:", pacError);
@@ -740,6 +741,7 @@ export default function DentistProfilePage() {
             .from("curadentespro")
             .select("*")
             .eq(queryField, queryValue)
+            .is("deleted_at", null)
             .maybeSingle(),
           15000
         );

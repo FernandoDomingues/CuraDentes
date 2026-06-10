@@ -1,3 +1,12 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// PÁGINA: Sobre (/sobre)
+//
+// Página institucional com informações sobre o CuraDentes:
+//   - Missão, visão e valores
+//   - Como funciona a plataforma
+//   - Informações da equipe
+// ═══════════════════════════════════════════════════════════════════════════════
+
 import { Search, Shield, Sparkles, MapPin, Star, HeartHandshake, Target, Lightbulb } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";

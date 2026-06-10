@@ -147,6 +147,7 @@ export default function MeuPerfil() {
           .from("curadentespro")
           .select("*")
           .eq("id", uid)
+          .is("deleted_at", null)
           .single();
 
         if (perfilError) throw perfilError;

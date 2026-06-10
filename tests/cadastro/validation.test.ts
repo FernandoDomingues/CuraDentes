@@ -1,11 +1,16 @@
-/**
- * Testes de Unidade: Validação de Etapas e Regras do Cadastro Pro (TDD)
- *
- * Roda validações de telefone, CPF, CRO, endereços e integridade das etapas.
- *
- * Como rodar:
- *   npm run test:cadastro
- */
+// ═══════════════════════════════════════════════════════════════════════════════
+// TESTE: Validação do Cadastro Pro (TDD)
+//
+// Testes unitários que validam as regras de negócio do cadastro do dentista:
+//   - Telefone (DDD + 9 dígitos)
+//   - CPF (Módulo 11)
+//   - CRO (UF + número)
+//   - Endereços (campos obrigatórios)
+//   - Conclusão de etapas (1 a 6)
+//
+// Como rodar:
+//   npm run test:cadastro
+// ═══════════════════════════════════════════════════════════════════════════════
 
 import assert from "assert";
 import {

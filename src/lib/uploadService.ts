@@ -1,3 +1,12 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// UPLOAD SERVICE — Upload de fotos para o Storage Supabase
+//
+// Responsabilidades:
+//   1. Validar tamanho (max 2MB) e tipo (JPEG, PNG, WebP) antes do upload
+//   2. Fazer upload para o bucket "fotos-dentistas" no path {user_id}/{timestamp}_foto.{ext}
+//   3. Retornar a URL pública da foto após o upload
+// ═══════════════════════════════════════════════════════════════════════════════
+
 import { supabase } from "./supabase";
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB em bytes

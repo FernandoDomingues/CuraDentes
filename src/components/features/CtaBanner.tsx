@@ -1,3 +1,9 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// COMPONENTE: CtaBanner — Banner de call-to-action para dentistas
+//
+// Exibe na landing page um banner convidando dentistas a se cadastrarem
+// no CuraDentes Pro. Mostra benefícios como número de pacientes, alcance, etc.
+// ═══════════════════════════════════════════════════════════════════════════════
 
 import { TrendingUp, Users, Clock, CheckCircle } from "lucide-react";
 import { useState } from "react";

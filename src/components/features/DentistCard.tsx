@@ -1,3 +1,13 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// COMPONENTE: DentistCard — Card de dentista para listagens
+//
+// Card reutilizável que exibe informações resumidas do dentista:
+//   - Foto, nome, CRO, especialidades
+//   - Endereço, avaliação por estrelas
+//   - Convênios aceitos e formas de pagamento
+// Usado na página de resultados de busca e perfis relacionados.
+// ═══════════════════════════════════════════════════════════════════════════════
+
 import type { Dentist } from "@/types/dentist";
 import { MapPin, Star, DollarSign, Heart, Clock, CheckCircle } from "lucide-react";
 

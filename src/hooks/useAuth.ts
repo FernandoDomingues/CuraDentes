@@ -1,3 +1,14 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// HOOK: useAuth — Estado global de autenticação (Zustand)
+//
+// Responsabilidades:
+//   1. Gerenciar sessão do Supabase Auth (login, logout, refresh)
+//   2. Cachear sessão no localStorage para login instantâneo
+//   3. Escutar eventos onAuthStateChange (login, logout, token refresh)
+//   4. Gerenciar login com email/senha e Google OAuth
+//   5. Cleanup explícito da subscription no onUnmount (necessário pelo StrictMode)
+// ═══════════════════════════════════════════════════════════════════════════════
+
 import { create } from "zustand";
 import type { Session, Subscription, User as SupabaseUser } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
@@ -130,6 +141,7 @@ export const useAuth = create<AuthState>((set, get) => ({
           .from('curadentespro')
           .select('id, nome, email, foto_url')
           .eq('id', authUser.id)
+          .is('deleted_at', null)
           .maybeSingle();
         return dentista;
       } catch {
@@ -169,7 +181,7 @@ export const useAuth = create<AuthState>((set, get) => ({
       // 3. Busca dados complementares no banco em background
       try {
         const { data: cliente } = await supabase
-          .from("clientes").select("*").eq("id", authUser.id).single();
+          .from("clientes").select("*").eq("id", authUser.id).is("deleted_at", null).single();
         if (cliente) {
           setAndCache({
             id: cliente.id, name: cliente.nome, email: cliente.email,

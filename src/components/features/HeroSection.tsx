@@ -1,15 +1,19 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// COMPONENTE: HeroSection — Seção principal da landing page
+//
+// Responsabilidades:
+//   1. Barra de busca com autocomplete de endereço (cidade, bairro, clínica)
+//   2. Botão de geolocalização opt-in (LGPD)
+//   3. Exibição de especialidades em grid
+//   4. Login com Google (pacientes)
+// ═══════════════════════════════════════════════════════════════════════════════
+
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search,
   MapPin,
-  Siren,
-  Zap,
-  Sparkles,
-  Star,
-  Baby,
   Building2,
-  type LucideIcon,
 } from "lucide-react";
 import { ESPECIALIDADES } from "@/constants/data";
 // ============================================================================
@@ -22,86 +26,6 @@ import { useUserLocation } from "@/hooks/useUserLocation";
 import { useAddressSuggestions } from "@/hooks/useAddressSuggestions";
 import type { AddressSuggestion } from "@/hooks/useAddressSuggestions";
 import { getEnderecoFromCoordenadas } from "@/lib/geocoding";
-
-// ── Custom SVG icons ────────────────────────────────────────────────────────
-const BracesIcon = ({ size = 14, color = "currentColor" }: { size?: number; color?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 6 C4 4 6 3 8 3 C10 3 11 4 12 5 C13 4 14 3 16 3 C18 3 20 4 20 6 L20 18 C20 20 18 21 16 21 C14 21 13 20 12 19 C11 20 10 21 8 21 C6 21 4 20 4 18 Z" />
-    <line x1="7" y1="12" x2="17" y2="12" />
-    <circle cx="8" cy="12" r="1.5" fill={color} stroke="none" />
-    <circle cx="12" cy="12" r="1.5" fill={color} stroke="none" />
-    <circle cx="16" cy="12" r="1.5" fill={color} stroke="none" />
-  </svg>
-);
-
-const ToothbrushIcon = ({ size = 14, color = "currentColor" }: { size?: number; color?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="12" y1="21" x2="12" y2="10" />
-    <path d="M12 10 L12 7 C12 5.3 13.3 4 15 4 L19 4 C19.6 4 20 4.4 20 5 L20 7 C20 7.6 19.6 8 19 8 L12 8" />
-    <line x1="15" y1="6" x2="15" y2="8" />
-    <line x1="17" y1="6" x2="17" y2="8" />
-    <path d="M10 13 C10 13 8 14 8 16 C8 18 10 19 12 21 C14 19 16 18 16 16 C16 14 14 13 14 13" />
-  </svg>
-);
-
-const SmileIcon = ({ size = 14, color = "currentColor" }: { size?: number; color?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="9" />
-    <path d="M8 13 C8 13 9.5 16 12 16 C14.5 16 16 13 16 13" />
-    <rect x="8" y="9.5" width="2" height="2.5" rx="0.5" fill={color} stroke="none" />
-    <rect x="11" y="9.5" width="2" height="2.5" rx="0.5" fill={color} stroke="none" />
-    <rect x="14" y="9.5" width="2" height="2.5" rx="0.5" fill={color} stroke="none" />
-  </svg>
-);
-
-const DrillToothIcon = ({ size = 14, color = "currentColor" }: { size?: number; color?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M6 3 C6 3 8 4 10 5 C10 5 10 8 9 11 C8 14 8 17 10 19 C12 21 14 21 14 21 C14 21 14 17 13 14 C12 11 12 8 14 5 C16 4 18 3 18 3" />
-    <line x1="6" y1="3" x2="18" y2="3" />
-    <line x1="19" y1="6" x2="22" y2="3" />
-    <line x1="20" y1="8" x2="23" y2="6" />
-    <line x1="19" y1="10" x2="22" y2="9" />
-  </svg>
-);
-
-const ImplantToothIcon = ({ size = 14, color = "currentColor" }: { size?: number; color?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M8 3 C8 3 9.5 4.5 12 4.5 C14.5 4.5 16 3 16 3 C16 3 17 5 17 7.5 C17 10 15.5 12 12 12 C8.5 12 7 10 7 7.5 C7 5 8 3 8 3Z" />
-    <line x1="12" y1="12" x2="12" y2="14" />
-    <rect x="10.5" y="14" width="3" height="1.5" rx="0.3" />
-    <line x1="10.5" y1="16.5" x2="13.5" y2="16.5" />
-    <line x1="10" y1="18" x2="14" y2="18" />
-    <line x1="10.5" y1="19.5" x2="13.5" y2="19.5" />
-    <line x1="11" y1="21" x2="13" y2="21" />
-  </svg>
-);
-
-const DoctorMaskIcon = ({ size = 14, color = "currentColor" }: { size?: number; color?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="6" r="3" />
-    <path d="M7 10 C7 10 5 11 5 14 L5 21 L19 21 L19 14 C19 11 17 10 17 10" />
-    <path d="M9 13 L15 13 C15 13 16 14 16 15.5 C16 17 15 18 12 18 C9 18 8 17 8 15.5 C8 14 9 13 9 13Z" />
-    <line x1="9" y1="13" x2="7.5" y2="11.5" />
-    <line x1="15" y1="13" x2="16.5" y2="11.5" />
-  </svg>
-);
-
-type CustomIconComponent = ({ size, color }: { size?: number; color?: string }) => JSX.Element;
-type AnyIcon = LucideIcon | CustomIconComponent;
-
-const ICON_MAP: Record<string, AnyIcon> = {
-  Siren,
-  Zap,
-  AlignCenter: BracesIcon,
-  Sparkles,
-  Droplets: ToothbrushIcon,
-  Wrench: SmileIcon,
-  Activity: DrillToothIcon,
-  Layers: ImplantToothIcon,
-  Star,
-  Baby,
-  Scissors: DoctorMaskIcon,
-};
 
 // ─── Subcomponente: Item de Sugestão do Autocomplete ──────────────────────────
 
@@ -284,7 +208,8 @@ export default function HeroSection() {
         const { count, error } = await supabase
           .from("curadentespro")
           .select("*", { count: "exact", head: true })
-          .eq("lgpd_aceito", true);
+          .eq("lgpd_aceito", true)
+          .is("deleted_at", null);
           
         if (!error && count !== null && count > 0) {
           setTotalDentists(count);

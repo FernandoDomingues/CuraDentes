@@ -1,3 +1,10 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// COMPONENTE: Specialties — Grid de especialidades odontológicas
+//
+// Exibe na landing page um grid com todas as especialidades disponíveis.
+// Cada card leva para a página de detalhes da especialidade (/especialidade/:slug).
+// ═══════════════════════════════════════════════════════════════════════════════
+
 import { useNavigate } from "react-router-dom";
 import { ESPECIALIDADES } from "@/constants/data";
 import { ESPECIALIDADES_SEO } from "@/constants/especialidadesSEO";

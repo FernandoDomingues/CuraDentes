@@ -13,7 +13,10 @@
     "test:smoke": "npx --yes tsx --env-file=.env tests/smoke/supabase.test.ts",
     "test:security": "npx --yes tsx --env-file=.env tests/security/rls.test.ts",
     "test:cadastro": "npx --yes tsx tests/cadastro/validation.test.ts",
-    "test:all": "npm run test:cadastro && npm run test:smoke && npm run test:security"
+    "test:all": "npm run test:cadastro && npm run test:smoke && npm run test:security",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:chromium": "playwright test --project=chromium"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -93,14 +96,28 @@
     "zod": "^3.23.8",
     "zustand": "^5.0.8"
   },
+  "browserslist": {
+    "production": [
+      "> 0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
   "devDependencies": {
     "@eslint/js": "^9.9.0",
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/typography": "^0.5.15",
     "@types/node": "^22.5.5",
     "@types/react": "^18.3.3",
     "@types/react-avatar-editor": "^13.0.4",
     "@types/react-dom": "^18.3.0",
-    "@vitejs/plugin-react-swc": "^3.5.0",
+    "@vitejs/plugin-legacy": "^8.0.2",
+    "@vitejs/plugin-react": "^6.0.2",
     "autoprefixer": "^10.4.20",
     "eslint": "^9.9.0",
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",
@@ -109,6 +126,7 @@
     "postcss": "^8.4.47",
     "sharp": "^0.34.5",
     "tailwindcss": "^3.4.11",
+    "terser": "^5.48.0",
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.0.1",
     "vite": "^8.0.13"

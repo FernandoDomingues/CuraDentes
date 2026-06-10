@@ -1,3 +1,12 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// INSTAGRAM UTILS — Manipulação de URLs/perfis do Instagram
+//
+// Responsabilidades:
+//   1. Extrair nome de usuário de URL ou handle do Instagram
+//   2. Montar URL de perfil a partir do nome de usuário
+//   3. Validar formato de URL do Instagram
+// ═══════════════════════════════════════════════════════════════════════════════
+
 const INSTAGRAM_BASE = "https://www.instagram.com/";
 
 /** Extrai apenas o nome de usuário de uma URL ou handle do Instagram.

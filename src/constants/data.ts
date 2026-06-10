@@ -1,3 +1,10 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// CONSTANTS: DATA — Dados estáticos da aplicação
+//
+// Contém listas de dentistas (fallback estático), especialidades e demais
+// dados constantes usados em toda a aplicação.
+// ═══════════════════════════════════════════════════════════════════════════════
+
 import type { Dentist, Specialty } from "@/types/dentist";
 
 export const DENTISTS: Dentist[] = [

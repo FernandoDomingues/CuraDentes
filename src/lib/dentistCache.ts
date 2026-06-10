@@ -1,3 +1,12 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// DENTIST CACHE — Cache local de busca de dentistas (localStorage)
+//
+// Responsabilidades:
+//   1. Cachear resultados de busca de dentistas no localStorage
+//   2. Limitar a 50 entradas para não estourar a quota do localStorage
+//   3. Fornecer funções de busca, salvamento e limpeza do cache
+// ═══════════════════════════════════════════════════════════════════════════════
+
 export interface CacheableDentist {
   dentista_id: string;
   dentista_cro?: string;

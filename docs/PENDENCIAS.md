@@ -6,68 +6,17 @@ Lista de itens do checklist de QA que ainda não foram concluídos, com contexto
 
 ## Como o checklist foi construído
 
-Em uma sessão de QA, mapeamos 10 itens de melhoria no projeto. Itens 1, 2, 3 foram resolvidos antes do checklist formal (observação inicial, mocks substituídos por Supabase real, e `.env` migrado para Vercel). Itens 5, 6, 7, 8, 9 estão **concluídos**. Em sessões seguintes (itens 11-14) foram feitas mais melhorias de UX/auth. Restam:
-
-| # | Item | Status | Por que adiado |
-|---|---|---|---|
-| 4 | Code-split do bundle | ⏳ adiado | Conjunto de rotas ainda instável (serão adicionadas mais páginas) |
-| 10 | Playwright smoke E2E | ⏳ adiado | Páginas ainda em iteração; testes exigiriam refatoração constante |
+Em uma sessão de QA, mapeamos 10 itens de melhoria no projeto. Itens 1, 2, 3 foram resolvidos antes do checklist formal (observação inicial, mocks substituídos por Supabase real, e `.env` migrado para Vercel). Itens 5, 6, 7, 8, 9 estão **concluídos**. Em sessões seguintes (itens 11-14) foram feitas mais melhorias de UX/auth. **Todos os 10 itens originais estão concluídos.**
 
 ---
 
-## Item 4 — Code-split do bundle
+## Itens concluídos nas sessões de 2026-06-10
 
-**O que é:** Quebrar o bundle único de ~595 kB em chunks por rota usando `React.lazy` + `Suspense` no `App.tsx`. Cada página (`Pesquisa`, `DentistProfile`, `Dashboard`, `MeuPerfil`, `NovoCadastro`) viraria um chunk baixado só quando o usuário acessa a rota.
-
-**Esforço estimado:** ~30-45 min
-- Trocar imports diretos em `App.tsx` por `lazy(() => import("@/pages/..."))`
-- Envolver `<Routes>` em `<Suspense fallback={<Loader />}>`
-- Decidir fallback (spinner? skeleton?)
-- Testar build e medir chunks gerados
-
-**Por que adiar:**
-- O conjunto de rotas está instável (próximas features vão adicionar mais páginas)
-- Cada nova rota exige realocar os limites do `lazy()`
-- Suspense fallbacks precisam ser pensados quando o design amadurece
-- Code-split feito cedo geralmente é refeito em 1-2 meses
-
-**Quando retomar:** Quando o conjunto de rotas estiver estável (provavelmente quando o MVP estiver "finalizado" do ponto de vista de feature) E quando o item 10 (Playwright) estiver em vigor para validar que nada quebrou.
-
-**Métricas atuais do bundle:**
-- `dist/index-*.js`: ~597 kB / gzip 161 kB
-- 1641 módulos no build
-- Tempo de build: ~1.5s
-
----
-
-## Item 10 — Playwright smoke E2E
-
-**O que é:** Testes end-to-end que abrem um browser real e validam o fluxo principal do usuário:
-1. Home carrega sem erros no console
-2. Home → clica "Buscar" → vai pra `/pesquisa`
-3. Pesquisa lista dentistas (≥ 1 card visível)
-4. Pesquisa → clica num dentista → vai pra `/dentista/:id`
-5. Perfil do dentista mostra nome, CRO, endereço
-6. URL inexistente → mostra 404
-
-**Esforço estimado:** ~45 min
-- `npm install -D @playwright/test --legacy-peer-deps` (conflito pré-existente com Vite 8)
-- `npx playwright install chromium` (download ~150 MB)
-- Criar `playwright.config.ts`
-- Criar 4-6 arquivos `.spec.ts` em `tests/e2e/`
-- Adicionar scripts `test:e2e`, `test:e2e:ui` no `package.json`
-
-**Por que adiar:**
-- A página está em iteração ativa (mudanças quebrariam testes constantemente)
-- Cada refatoração visual / copy / estrutural exigiria atualizar os testes
-- Custo/benefício só compensa quando o front estiver "parado" ou em CI
-
-**Quando retomar:**
-- Quando a UI estiver estável por 1-2 semanas
-- OU quando entrar em CI (aí vira guarda de PR)
-- OU quando algum bug em produção pegar o time de surpresa e a busca manual virar problema
-
-**Alternativa mais leve:** teste manual com checklist em [`docs/`](./) ou ferramenta de smoke (k6, Artillery) antes de E2E completo.
+- **Item 4 — Code-split:** 13 rotas convertidas para `React.lazy()` + `<Suspense>` com fallback `<Loader2>`. Bundle index reduzido de 742 kB → 405 kB; chunks por rota de 2–51 kB.
+- **Item 10 — Playwright E2E:** 33 testes (11 por engine: Chromium + Firefox + WebKit) em `tests/e2e/`. Cobrem home, busca, perfil de dentista e 404. Helper `collectErrors` filtra falsos positivos (erros de API Supabase, migrations pendentes).
+- **Peer-dep warning eliminado:** `@vitejs/plugin-react-swc` → `@vitejs/plugin-react` (Babel). `npm install` agora funciona sem `--legacy-peer-deps`.
+- **Busca por nome do dentista:** adicionado `nome.ilike.%${q}%` nas queries textuais do `Pesquisa.tsx`.
+- **Soft delete (LGPD):** migration `20260610120000_soft_delete.sql` com colunas `deleted_at`/`deleted_by` em `curadentespro` e `clientes`, RLS policies atualizadas, função `apagar_dados_cliente()`.
 
 ---
 
@@ -121,24 +70,18 @@ ALTER TABLE public.avaliacoes
 
 **Atenção:** pode falhar se houver `paciente_id` órfão. Rodar `SELECT DISTINCT paciente_id FROM avaliacoes WHERE paciente_id NOT IN (SELECT id FROM auth.users);` antes.
 
-### C. LGPD completo (diferido)
+### C. LGPD — Política de Privacidade e Termos de Uso (pendente)
 
-Não há ainda:
-- `deleted_at` para soft delete
-- Política de retenção/expurgo de `clientes.latitude`/`longitude`
-- Função `apagar_dados_cliente(cliente_id uuid)` que faz `DELETE FROM auth.users` (cascade apaga tudo)
-- Texto de Política de Privacidade + Termos de Uso (hoje são âncoras vazias no Header)
+- ✅ Soft delete (`deleted_at`/`deleted_by`) implementado em `curadentespro` e `clientes`
+- ✅ Função `apagar_dados_cliente()` criada (right to be forgotten)
+- ❌ Política de retenção/expurgo de `clientes.latitude`/`longitude` — depende de decisão jurídica
+- ❌ Texto de Política de Privacidade + Termos de Uso (hoje são âncoras vazias no Header)
 
 **Decisão jurídica necessária:** prazo de retenção dos dados após "esquecimento".
 
-### D. Conflito de peer dependencies (Vite 8)
+### D. ~~Conflito de peer dependencies (Vite 8)~~ ✅ Resolvido
 
-`@vitejs/plugin-react-swc@3.x` pede Vite 4-7, mas o projeto tem Vite 8. `npm install` falha sem `--legacy-peer-deps`. **Não bloqueia nada** (build e dev funcionam), mas é warning em todo install novo.
-
-**Possíveis soluções (em ordem de complexidade):**
-1. Downgrade Vite para 7.x
-2. Trocar `@vitejs/plugin-react-swc` por `@vitejs/plugin-react` (Babel)
-3. Usar `--legacy-peer-deps` no CI
+`@vitejs/plugin-react-swc` substituído por `@vitejs/plugin-react` (Babel). `npm install` funciona sem `--legacy-peer-deps`.
 
 ---
 
@@ -156,3 +99,4 @@ Não há ainda:
 - **Agendamento real** — tabela `agendamentos` + fluxo de escolha de horário
 - **Chat paciente-dentista** — Realtime do Supabase
 - **PWA** — service worker para instalar como app (já tem `AppSection` de marketing)
+

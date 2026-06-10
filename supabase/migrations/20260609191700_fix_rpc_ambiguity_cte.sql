@@ -27,6 +27,7 @@ BEGIN
     JOIN public.curadentespro p ON e.curadentespro_id = p.id
     WHERE 
       p.lgpd_aceito = true
+      AND p.deleted_at IS NULL
       AND EXISTS (
         SELECT 1 FROM unnest(e.atividades) AS atv
         WHERE LOWER(atv) = LOWER(especialidade_nome)
