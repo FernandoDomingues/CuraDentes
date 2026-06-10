@@ -534,9 +534,15 @@ export default function Header() {
                 </button>
               )}
 
-              {/* Botão Acesso do Dentista — abre modal de login/cadastro Pro */}
+              {/* Botão Acesso do Dentista — abre modal de login/cadastro Pro ou vai direto pro perfil se já for dentista */}
               <button
-                onClick={() => setModalAberto("dentista")}
+                onClick={() => {
+                  if (user?.role === "dentista") {
+                    navigate("/pro/perfil");
+                  } else {
+                    setModalAberto("dentista");
+                  }
+                }}
                 className="text-[15px] font-semibold px-5 py-3 rounded-[14px] text-white min-h-[44px] transition-all duration-200"
                 style={{ background: "#E6004C", boxShadow: "0 4px 16px rgba(230,0,76,0.28)" }}
                 onMouseEnter={(e) => {
@@ -621,7 +627,14 @@ export default function Header() {
 
               {/* Acesso do Dentista (mobile) */}
               <button
-                onClick={() => { setMenuOpen(false); setModalAberto("dentista"); }}
+                onClick={() => {
+                  setMenuOpen(false);
+                  if (user?.role === "dentista") {
+                    navigate("/pro/perfil");
+                  } else {
+                    setModalAberto("dentista");
+                  }
+                }}
                 className="w-full text-[15px] font-semibold py-3 rounded-[14px] text-white min-h-[48px]"
                 style={{ background: "#E6004C", boxShadow: "0 4px 12px rgba(230,0,76,0.25)" }}
               >
