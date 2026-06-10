@@ -20,7 +20,7 @@
 //   - EnderecoCard: card de endereço com accordion de agenda
 // ═══════════════════════════════════════════════════════════════════════════════
 
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   Star,
   MapPin,
@@ -51,6 +51,12 @@ import { Loader2 } from "lucide-react";
 import { CachedDentistResult, loadProfileCache, saveProfileCache } from "@/lib/dentistCache";
 import Header from "@/components/layout/Header";
 import logoProAltUrl from "@/assets/logos/logo-pro-alt.png";
+import { ESPECIALIDADES_SEO } from "@/constants/especialidadesSEO";
+
+/** Retorna o slug da especialidade a partir do nome */
+function slugifyEspecialidade(nome: string): string {
+  return ESPECIALIDADES_SEO[nome]?.slug || nome.toLowerCase().replace(/\s+/g, "-");
+}
 
 // ─── Helpers de estilo para formas de pagamento ──────────────────────────────
 
@@ -180,9 +186,13 @@ function BarraAvaliacao({ atividade, onVerAvaliacoes }: {
       {/* Nome da atividade + badge de pódio + nota e total de avaliações */}
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[13px] font-medium" style={{ color: "#3A3A3C" }}>
+          <Link
+            to={`/especialidade/${slugifyEspecialidade(atividade.nome_atividade)}`}
+            className="text-[13px] font-medium hover:underline"
+            style={{ color: "#3A3A3C" }}
+          >
             {atividade.nome_atividade}
-          </span>
+          </Link>
           {/* Badge de pódio por atividade — visível apenas quando Top 1, 2 ou 3 */}
           {atividade.posicao_ranking != null && atividade.posicao_ranking <= 3 && (
             <BadgePodio posicao={atividade.posicao_ranking} tamanho="sm" />
@@ -334,9 +344,10 @@ function EnderecoCard({ endereco, index, nomeDentista, onContactRequest }: {
         </p>
         <div className="flex flex-wrap gap-1.5">
           {endereco.atividades.map((atividade) => (
-            <span
+            <Link
               key={atividade}
-              className="px-3 py-1 rounded-full text-[12px] font-medium"
+              to={`/especialidade/${slugifyEspecialidade(atividade)}`}
+              className="px-3 py-1 rounded-full text-[12px] font-medium inline-block hover:opacity-80 transition-opacity"
               style={{
                 background: "rgba(10,42,102,0.06)",
                 color: "#0A2A66",
@@ -344,7 +355,7 @@ function EnderecoCard({ endereco, index, nomeDentista, onContactRequest }: {
               }}
             >
               {atividade}
-            </span>
+            </Link>
           ))}
         </div>
       </div>
@@ -1016,9 +1027,13 @@ export default function DentistProfilePage() {
                 )}
               </div>
 
-              <p className="text-[14px] font-semibold mb-1" style={{ color: "#E6004C" }}>
+              <Link
+                to={`/especialidade/${slugifyEspecialidade(perfil.especialidade_principal)}`}
+                className="inline-block text-[14px] font-semibold mb-1 hover:underline"
+                style={{ color: "#E6004C" }}
+              >
                 {perfil.especialidade_principal}
-              </p>
+              </Link>
 
               {/* CRO com ícone de verificação */}
               <div className="flex items-center gap-2 justify-center sm:justify-start mb-2">
