@@ -99,6 +99,15 @@ export default function VerificarCroModal({
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || "Erro desconhecido");
 
+      if (status === "falhou") {
+        toast.warning(
+          `Perfil de ${nome} desativado. Envie um email para suporte@curadentes.com.br informando sobre a inativação.`,
+          { duration: 8000 }
+        );
+      } else {
+        toast.success("CRO verificado com sucesso!");
+      }
+
       onSaved();
       onClose();
     } catch (err) {

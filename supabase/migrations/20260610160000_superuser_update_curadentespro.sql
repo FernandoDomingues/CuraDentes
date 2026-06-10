@@ -114,7 +114,10 @@ BEGIN
 
   -- Atualiza flag na tabela principal
   UPDATE public.curadentespro
-  SET cro_verificado = p_verificado
+  SET
+    cro_verificado = p_verificado,
+    deleted_at = CASE WHEN NOT p_verificado THEN now() ELSE NULL END,
+    deleted_by = CASE WHEN NOT p_verificado THEN auth.uid() ELSE NULL END
   WHERE id = p_dentista_id;
 
   v_result := jsonb_build_object(

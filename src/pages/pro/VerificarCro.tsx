@@ -26,6 +26,7 @@ type VerificacaoRow = {
   nome: string;
   email: string;
   cro_verificado: boolean;
+  deleted_at: string | null;
 };
 
 export default function VerificarCro() {
@@ -36,17 +37,17 @@ export default function VerificarCro() {
   const [busca, setBusca] = useState("");
   const [modalAberta, setModalAberta] = useState(false);
   const [modalDados, setModalDados] = useState<{ dentista_id: string; nome: string; cro: string; verificacao_id: string | null } | null>(null);
+  const [recarregar, setRecarregar] = useState(0);
 
   useEffect(() => {
     async function carregar() {
       try {
-        // Busca todos os dentistas com CRO, com ou sem verificação
+        // Busca todos os dentistas com CRO (inclusive inativos)
         const { data: dentistas, error: errDentistas } = await supabase
           .from("curadentespro")
-          .select("id, nome, email, cro, cro_verificado")
+          .select("id, nome, email, cro, cro_verificado, deleted_at")
           .not("cro", "is", null)
-          .neq("cro", "")
-          .is("deleted_at", null);
+          .neq("cro", "");
 
         if (errDentistas) throw errDentistas;
 
@@ -82,6 +83,7 @@ export default function VerificarCro() {
             nome: pro.nome,
             email: pro.email,
             cro_verificado: !!pro.cro_verificado,
+            deleted_at: pro.deleted_at || null,
           };
         });
 
@@ -94,7 +96,7 @@ export default function VerificarCro() {
       }
     }
     carregar();
-  }, []);
+  }, [recarregar]);
 
   const filtradas = verificacoes.filter((v) => {
     if (filtro === "pendentes" && v.status !== "pendente") return false;
@@ -111,7 +113,7 @@ export default function VerificarCro() {
 
   const pendentes = verificacoes.filter((v) => v.status === "pendente").length;
   const verificadas = verificacoes.filter((v) => v.status === "verificado").length;
-  const falhas = verificacoes.filter((v) => v.status === "falhou").length;
+  const inativas = verificacoes.filter((v) => v.status === "falhou").length;
 
   const statusIcon = (status: string) => {
     switch (status) {
@@ -126,7 +128,7 @@ export default function VerificarCro() {
     switch (status) {
       case "verificado": return "Verificado";
       case "pendente": return "Pendente";
-      case "falhou": return "Falhou";
+      case "falhou": return "Inativo";
       default: return "Processando";
     }
   };
@@ -180,8 +182,8 @@ export default function VerificarCro() {
             <div className="flex items-center gap-3">
               <XCircle size={20} style={{ color: "#FF3B30" }} />
               <div>
-                <p className="text-xs text-[#6B7280]">Falhas</p>
-                <p className="text-2xl font-bold text-[#0A2A66]">{falhas}</p>
+                <p className="text-xs text-[#6B7280]">Inativas</p>
+                <p className="text-2xl font-bold text-[#0A2A66]">{inativas}</p>
               </div>
             </div>
           </div>
@@ -193,7 +195,7 @@ export default function VerificarCro() {
             { key: "todas", label: "Todas" },
             { key: "pendentes", label: "Pendentes" },
             { key: "verificadas", label: "Verificadas" },
-            { key: "falhas", label: "Falhas" },
+            { key: "falhas", label: "Inativas" },
           ].map((f) => (
             <button
               key={f.key}
@@ -256,6 +258,11 @@ export default function VerificarCro() {
                       <div>
                         <p className="font-semibold text-[#0A2A66]">
                           {v.nome || "Sem nome"}
+                          {v.deleted_at && (
+                            <span className="ml-2 text-[10px] font-medium text-[#FF3B30] bg-red-50 px-1.5 py-0.5 rounded-full">
+                              Inativo
+                            </span>
+                          )}
                         </p>
                         <div className="flex items-center gap-3 text-sm text-[#6B7280] mt-1">
                           <span className="font-mono">{v.cro}</span>
@@ -312,10 +319,7 @@ export default function VerificarCro() {
             nome={modalDados.nome}
             cro={modalDados.cro}
             verificacaoId={modalDados.verificacao_id}
-            onSaved={() => {
-              // Recarrega a lista
-              window.location.reload();
-            }}
+            onSaved={() => setRecarregar((n) => n + 1)}
           />
         )}
       </main>
