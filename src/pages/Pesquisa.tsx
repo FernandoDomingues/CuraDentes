@@ -352,16 +352,16 @@ export default function Pesquisa() {
             const p1 = partes[0];
             const p2 = partes[1];
             queryBuilder = queryBuilder
-              .or(`bairro.ilike.%${p1}%,cidade.ilike.%${p1}%,nome.ilike.%${p1}%,nome_clinica.ilike.%${p1}%,logradouro.ilike.%${p1}%`)
+              .or(`bairro.ilike.%${p1}%,cidade.ilike.%${p1}%,curadentespro.nome.ilike.%${p1}%,nome_clinica.ilike.%${p1}%,logradouro.ilike.%${p1}%`)
               .or(`cidade.ilike.%${p2}%,estado.ilike.%${p2}%`);
           } else {
             queryBuilder = queryBuilder.or([
               `bairro.ilike.%${q}%`,
               `cidade.ilike.%${q}%`,
               `estado.ilike.%${q}%`,
-              `nome.ilike.%${q}%`,
               `logradouro.ilike.%${q}%`,
-              `nome_clinica.ilike.%${q}%`
+              `nome_clinica.ilike.%${q}%`,
+              `curadentespro.nome.ilike.%${q}%`
             ].join(','));
           }
 
