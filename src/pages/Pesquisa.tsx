@@ -21,6 +21,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { saveToSearchCache, saveQueryCache, loadQueryCache, buildQueryCacheKey } from "@/lib/dentistCache";
 import { ESPECIALIDADES } from "@/constants/data";
 import { useAddressSuggestions } from "@/hooks/useAddressSuggestions";
+import { useLogSearch } from "@/hooks/useLogSearch";
 import type { AddressSuggestion } from "@/hooks/useAddressSuggestions";
 
 // ─── Subcomponentes para o Autocomplete ──────────────────────────────────────
@@ -176,6 +177,7 @@ const PAGAMENTOS_OPCOES = [
 export default function Pesquisa() {
   const navigate = useNavigate();
   const location = useLocation();
+  const logSearch = useLogSearch();
 
   // Lê o estado da navegação com fallback para sessionStorage (F5)
   const estadoNavegacao = (location.state as { q?: string; lat?: string; lng?: string; atividade?: string }) || {};
@@ -531,6 +533,20 @@ export default function Pesquisa() {
         }
 
         console.log("[Pesquisa] 🏁 Busca finalizada com sucesso! Total de resultados combinados:", finalResults.length);
+
+        if (query) {
+          const primeiro = finalResults[0];
+          logSearch({
+            query,
+            cidade: primeiro?.cidade ?? null,
+            estado: primeiro?.estado ?? null,
+            bairro: primeiro?.bairro ?? null,
+            latitude: finalLat,
+            longitude: finalLng,
+            resultados_count: finalResults.length,
+          });
+        }
+
         if (!cancelled) setResultadosBrutos(finalResults);
 
         // 6. Salva no cache por query (restauração no F5) e no cache de perfis

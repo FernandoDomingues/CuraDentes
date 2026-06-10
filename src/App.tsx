@@ -38,6 +38,7 @@ const Dashboard = lazy(() => import("@/pages/pro/Dashboard"));
 const MeuPerfil = lazy(() => import("@/pages/pro/MeuPerfil"));
 const RedefinirSenha = lazy(() => import("@/pages/pro/RedefinirSenha"));
 const EditorDeFotos = lazy(() => import("@/pages/pro/EditorDeFotos"));
+const DashboardAnalytics = lazy(() => import("@/pages/pro/DashboardAnalytics"));
 const Privacidade = lazy(() => import("@/pages/Privacidade"));
 const TermosDeUso = lazy(() => import("@/pages/TermosDeUso"));
 const Sobre = lazy(() => import("@/pages/Sobre"));
@@ -78,6 +79,7 @@ export default function App() {
           <Route path="/pro/perfil" element={<MeuPerfil />} />
           <Route path="/pro/editor-de-fotos" element={<EditorDeFotos />} />
           <Route path="/pro/redefinir-senha" element={<RedefinirSenha />} />
+          <Route path="/pro/dashboard-analytics" element={<DashboardAnalytics />} />
           <Route path="/privacidade" element={<Privacidade />} />
           <Route path="/termos" element={<TermosDeUso />} />
           <Route path="/sobre" element={<Sobre />} />
