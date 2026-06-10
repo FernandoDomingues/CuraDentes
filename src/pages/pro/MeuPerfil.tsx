@@ -38,7 +38,7 @@ import { ESPECIALIDADES } from "@/constants/data";
 const CONVENIOS_OPCOES = [
   "Amil Dental", "Bradesco Dental", "SulAmérica Odonto", "Hapvida Odonto",
   "Odontoprev", "Unimed Odonto", "Porto Seguro Saúde", "NotreDame Intermédica",
-  "Ameplan", "Metlife Odonto",
+  "Ameplan", "Metlife Odonto", "Uniodonto",
 ];
 const PAGAMENTOS_OPCOES = [
   "Dinheiro", "PIX", "Cartão de débito", "Cartão de crédito (à vista)",

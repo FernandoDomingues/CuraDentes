@@ -69,6 +69,7 @@ const CONVENIOS_OPCOES = [
   "NotreDame Intermédica",
   "Ameplan",
   "Metlife Odonto",
+  "Uniodonto",
 ];
 
 // ─── Formas de pagamento disponíveis ─────────────────────────────────────────

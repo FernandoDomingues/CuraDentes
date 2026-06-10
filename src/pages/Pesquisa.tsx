@@ -155,7 +155,7 @@ interface SupabaseError {
 
 const CONVENIOS_OPCOES = [
   "Amil Dental", "Bradesco Dental", "SulAmérica Odonto", "Hapvida Odonto",
-  "Odontoprev", "Unimed Odonto", "Porto Seguro Saúde", "NotreDame Intermédica"
+  "Odontoprev", "Unimed Odonto", "Porto Seguro Saúde", "NotreDame Intermédica", "Uniodonto"
 ];
 
 const PAGAMENTOS_OPCOES = [

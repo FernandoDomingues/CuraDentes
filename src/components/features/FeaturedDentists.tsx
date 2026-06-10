@@ -43,7 +43,7 @@ const ESPECIALIDADES_DISPONIVEIS = Array.from(
 const CONVENIOS_DISPONIVEIS = [
   "Amil Dental", "Bradesco Dental", "SulAmérica Odonto",
   "Hapvida Odonto", "Odontoprev", "Unimed Odonto",
-  "Porto Seguro Saúde", "NotreDame Intermédica",
+  "Porto Seguro Saúde", "NotreDame Intermédica", "Uniodonto",
 ];
 
 // ─── Componente principal ────────────────────────────────────────────────────
