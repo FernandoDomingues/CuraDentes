@@ -25,7 +25,7 @@ export default function LatestDentists() {
     async function fetchLatest() {
       const CACHE_KEY = "curadentes_latest_dentists_cache";
       const CACHE_VERSION = "v3";
-      const EXPIRATION_TIME = 24 * 60 * 60 * 1000; // 24 horas
+      const EXPIRATION_TIME = 60 * 1000; // 1 minuto
 
       try {
         setLoading(true);
