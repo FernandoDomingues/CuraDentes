@@ -193,7 +193,7 @@ site-k7/
 
 ### ⏳ Pendente (fora do código)
 
-- **#13 — Textos legais de Privacidade/Termos** — depende de decisão/redação jurídica (`docs/PENDENCIAS.md:73-80`).
+- **#13 — Textos legais de Privacidade/Termos** — depende de decisão/redação jurídica (`docs/PENDENCIAS.md:47-54`).
 
 ---
 

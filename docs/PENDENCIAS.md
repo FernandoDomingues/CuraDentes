@@ -44,42 +44,16 @@ Em uma sessão de QA, mapeamos 10 itens de melhoria no projeto. Itens 1, 2, 3 fo
 
 ## Pendências TÉCNICAS (não estavam no checklist, mas valem nota)
 
-### A. Backfill de `user_id` em dentistas seed
-
-Após a migration de segurança (item 8), os 50 dentistas do seed ficaram com `user_id = NULL`. Eles continuam visíveis (SELECT público), mas **não conseguem editar o próprio perfil via painel** porque a policy exige `auth.uid() = user_id`.
-
-**Solução:**
-- Dentistas que fizerem signup no site vão popular `user_id` automaticamente (via `signUp` do Supabase Auth + `upsert` na tabela `curadentespro`)
-- Para os 50 do seed, rodar manualmente no Studio:
-  ```sql
-  UPDATE public.curadentespro
-    SET user_id = u.id
-    FROM auth.users u
-    WHERE lower(u.email) = lower(curadentespro.email)
-      AND curadentespro.user_id IS NULL;
-  ```
-
-### B. FK em `avaliacoes.paciente_id`
-
-A coluna existe mas não tem `REFERENCES auth.users(id)`. INSERT autenticado aceita qualquer UUID. **Não é crítico** (RLS já bloqueia anon), mas seria mais limpo:
-```sql
-ALTER TABLE public.avaliacoes
-  ADD CONSTRAINT avaliacoes_paciente_id_fkey
-  FOREIGN KEY (paciente_id) REFERENCES auth.users(id) ON DELETE CASCADE;
-```
-
-**Atenção:** pode falhar se houver `paciente_id` órfão. Rodar `SELECT DISTINCT paciente_id FROM avaliacoes WHERE paciente_id NOT IN (SELECT id FROM auth.users);` antes.
-
-### C. LGPD — Política de Privacidade e Termos de Uso (pendente)
+### A. LGPD — Política de Privacidade e Termos de Uso (pendente)
 
 - ✅ Soft delete (`deleted_at`/`deleted_by`) implementado em `curadentespro` e `clientes`
 - ✅ Função `apagar_dados_cliente()` criada (right to be forgotten)
-- ❌ Política de retenção/expurgo de `clientes.latitude`/`longitude` — depende de decisão jurídica
+- ✅ Política de retenção/expurgo de `clientes.latitude`/`longitude` — **definida: retenção zero**. A `apagar_dados_cliente()` zera lat/lng no momento da exclusão (`migration 20260612250000`). A coordenada é só cache de conveniência, readquirível pelo navegador; eliminada ao fim da finalidade (LGPD art. 15/16).
 - ❌ Texto de Política de Privacidade + Termos de Uso (hoje são âncoras vazias no Header)
 
-**Decisão jurídica necessária:** prazo de retenção dos dados após "esquecimento".
+**Pendente (decisão jurídica):** apenas a redação dos textos de Privacidade/Termos. A questão de retenção de dados após o "esquecimento" foi resolvida adotando expurgo na exclusão (sem prazo a definir).
 
-### D. ~~Conflito de peer dependencies (Vite 8)~~ ✅ Resolvido
+### B. ~~Conflito de peer dependencies (Vite 8)~~ ✅ Resolvido
 
 `@vitejs/plugin-react-swc` substituído por `@vitejs/plugin-react` (Babel). `npm install` funciona sem `--legacy-peer-deps`.
 
