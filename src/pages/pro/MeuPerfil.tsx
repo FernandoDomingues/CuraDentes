@@ -26,7 +26,7 @@ import { getCoordenadas } from "@/lib/geocoding";
 import { formatarInstagram, extrairUserInstagram, INSTAGRAM_BASE } from "@/utils/instagram";
 import {
   User, Building2, Save, ArrowLeft, Loader2,
-  Camera, Plus, Trash2, ShieldCheck, Mail, KeyRound
+  Camera, Plus, Trash2, ShieldCheck, Mail, KeyRound, AlertTriangle
 } from "lucide-react";
 import logoProUrl from "@/assets/logos/logo-pro.png";
 import { CepInputComBusca } from "@/components/ui/CepInputComBusca";
@@ -113,6 +113,8 @@ export default function MeuPerfil() {
   const [userId, setUserId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [enviandoLinkSenha, setEnviandoLinkSenha] = useState(false);
+  const [modoExclusao, setModoExclusao] = useState(false);
+  const [excluindo, setExcluindo] = useState(false);
 
   // Dados Pessoais
   const [nome, setNome] = useState("");
@@ -346,6 +348,28 @@ export default function MeuPerfil() {
       toast.error(message, { id: toastId });
     } finally {
       setEnviandoLinkSenha(false);
+    }
+  }
+
+  // Exclusão da própria conta (soft-delete do perfil + remoção do CPF) e logout
+  async function handleExcluirConta() {
+    setExcluindo(true);
+    const toastId = toast.loading("Excluindo sua conta...");
+    try {
+      const { error } = await supabase.rpc("apagar_minha_conta_dentista");
+      if (error) throw error;
+
+      // Atualiza a home (contagem/listas) para refletir a saída imediatamente
+      localStorage.removeItem("curadentes_hero_stats_cache");
+      localStorage.removeItem("curadentes_latest_dentists_cache");
+
+      await supabase.auth.signOut();
+      toast.success("Sua conta foi excluída. Sentiremos sua falta!", { id: toastId });
+      navigate("/");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Tente novamente em instantes.";
+      toast.error("Erro ao excluir a conta: " + message, { id: toastId });
+      setExcluindo(false);
     }
   }
 
@@ -737,6 +761,58 @@ export default function MeuPerfil() {
               )}
             </button>
           </div>
+        </div>
+
+        {/* Seção 4: Zona de perigo — excluir a própria conta */}
+        <div className="bg-white p-6 rounded-[24px] shadow-sm border border-red-100 flex flex-col gap-4">
+          <div className="flex items-center gap-2">
+            <AlertTriangle size={20} className="text-[#FF3B30]" />
+            <h2 className="text-[20px] font-bold text-[#FF3B30]">Excluir conta</h2>
+          </div>
+          <p className="text-[14px] text-gray-600">
+            Ao excluir sua conta, seu perfil deixa de aparecer no site imediatamente e
+            seus dados sensíveis são removidos. Esta ação não pode ser desfeita por você.
+          </p>
+
+          {!modoExclusao ? (
+            <button
+              onClick={() => setModoExclusao(true)}
+              className="self-start flex items-center gap-2 px-5 py-2.5 rounded-[12px] font-semibold text-[14px] text-[#FF3B30] border border-red-200 bg-red-50 hover:bg-red-100 transition-all"
+            >
+              <Trash2 size={14} /> Excluir minha conta
+            </button>
+          ) : (
+            <div className="bg-red-50 p-4 rounded-[12px] border border-red-200 flex flex-col gap-3">
+              <p className="text-[14px] font-semibold text-[#0A2A66]">
+                Tem certeza? Esta ação é irreversível.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={handleExcluirConta}
+                  disabled={excluindo}
+                  className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-[12px] font-semibold text-[14px] text-white transition-all disabled:opacity-50"
+                  style={{ background: "#FF3B30" }}
+                >
+                  {excluindo ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" /> Excluindo...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={14} /> Sim, excluir minha conta
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => setModoExclusao(false)}
+                  disabled={excluindo}
+                  className="px-5 py-2.5 rounded-[12px] font-semibold text-[14px] text-gray-600 border border-gray-200 hover:bg-gray-50 transition-all disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </main>
 
