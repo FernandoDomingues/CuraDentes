@@ -881,10 +881,19 @@ export default function DentistProfilePage() {
           // Salva no cache de perfil completo para F5
           if (cacheKey) saveProfileCache(cacheKey, perfilMontado);
 
-          // Registra a visualização (métrica do dashboard do dentista) — fire-and-forget
-          if (typeof pro.id === "string" && !visualizacoesRegistradas.has(pro.id)) {
-            visualizacoesRegistradas.add(pro.id);
-            supabase.from("perfil_visualizacoes").insert({ dentista_id: pro.id }).then(undefined, () => {});
+          // Registra a visualização: 1x/dia por conta LOGADA (anon não conta).
+          // O dedup por dia é garantido pela constraint única no banco (ON CONFLICT DO NOTHING).
+          if (typeof pro.id === "string" && user) {
+            const chave = `${user.id}:${pro.id}`;
+            if (!visualizacoesRegistradas.has(chave)) {
+              visualizacoesRegistradas.add(chave);
+              supabase.from("perfil_visualizacoes")
+                .upsert(
+                  { dentista_id: pro.id, viewer_id: user.id },
+                  { onConflict: "dentista_id,viewer_id,data_visita", ignoreDuplicates: true },
+                )
+                .then(undefined, () => {});
+            }
           }
         }
       } catch (err) {
