@@ -678,19 +678,19 @@ export default function MeuPerfil() {
                   <label style={{ ...labelStyle, marginBottom: "8px" }}>Horários de Atendimento</label>
                   <div className="flex flex-col gap-2">
                     {end.agenda.map((diaAg, idxDia) => (
-                      <div key={diaAg.dia} className="flex items-center gap-3 p-2 rounded-lg bg-gray-50 border border-gray-100">
-                        <label className="flex items-center gap-2 w-[140px] cursor-pointer">
+                      <div key={diaAg.dia} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-2 rounded-lg bg-gray-50 border border-gray-100">
+                        <label className="flex items-center gap-2 sm:w-[140px] flex-shrink-0 cursor-pointer">
                           <input type="checkbox" checked={diaAg.ativo} onChange={(e) => atualizarAgenda(idx, idxDia, "ativo", e.target.checked)} className="w-4 h-4" />
                           <span className={`text-[13px] font-medium ${diaAg.ativo ? "text-gray-900" : "text-gray-400"}`}>{diaAg.dia}</span>
                         </label>
                         {diaAg.ativo ? (
-                          <div className="flex items-center gap-2">
-                            <input type="time" value={diaAg.inicio} onChange={(e) => atualizarAgenda(idx, idxDia, "inicio", e.target.value)} className="text-[13px] p-1 border rounded" />
-                            <span className="text-gray-400 text-[12px]">às</span>
-                            <input type="time" value={diaAg.fim} onChange={(e) => atualizarAgenda(idx, idxDia, "fim", e.target.value)} className="text-[13px] p-1 border rounded" />
+                          <div className="flex items-center gap-2 w-full sm:w-auto pl-6 sm:pl-0">
+                            <input type="time" value={diaAg.inicio} onChange={(e) => atualizarAgenda(idx, idxDia, "inicio", e.target.value)} className="flex-1 sm:flex-none min-w-0 text-[13px] p-1 border rounded" />
+                            <span className="text-gray-400 text-[12px] flex-shrink-0">às</span>
+                            <input type="time" value={diaAg.fim} onChange={(e) => atualizarAgenda(idx, idxDia, "fim", e.target.value)} className="flex-1 sm:flex-none min-w-0 text-[13px] p-1 border rounded" />
                           </div>
                         ) : (
-                          <span className="text-[12px] text-gray-400 italic">Fechado</span>
+                          <span className="text-[12px] text-gray-400 italic pl-6 sm:pl-0">Fechado</span>
                         )}
                       </div>
                     ))}

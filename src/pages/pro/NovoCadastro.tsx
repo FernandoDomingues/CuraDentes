@@ -2065,10 +2065,10 @@ export default function NovoCadastro() {
                 {end.agenda.map((dia, idxDia) => (
                   <div
                     key={dia.dia}
-                    className="flex flex-row flex-wrap sm:flex-nowrap items-center justify-between gap-3 py-2 transition-all duration-200"
+                    className="flex flex-col sm:flex-row sm:flex-nowrap sm:items-center sm:justify-between gap-2 sm:gap-3 py-2 transition-all duration-200"
                     style={{ borderBottom: "0.5px solid rgba(60,60,67,0.06)" }}
                   >
-                    <label className="flex items-center gap-2 cursor-pointer w-[110px] sm:w-[130px] flex-shrink-0">
+                    <label className="flex items-center gap-2 cursor-pointer sm:w-[130px] flex-shrink-0">
                       <input
                         type="checkbox"
                         checked={dia.ativo}
@@ -2080,25 +2080,25 @@ export default function NovoCadastro() {
                       </span>
                     </label>
                     {dia.ativo ? (
-                      <div className="flex items-center gap-2 flex-grow sm:flex-grow-0 justify-end">
+                      <div className="flex items-center gap-2 w-full sm:w-auto sm:justify-end pl-6 sm:pl-0">
                         <input
                           type="time"
                           value={dia.inicio}
                           onChange={(e) => atualizarHorario(idx, idxDia, "inicio", e.target.value)}
-                          className="text-[13px] font-medium px-2.5 py-1.5 rounded-[8px]"
+                          className="flex-1 sm:flex-none min-w-0 text-[13px] font-medium px-2 py-1.5 rounded-[8px]"
                           style={{ border: "0.5px solid rgba(60,60,67,0.18)", color: "#1C1C1E", background: "#fff" }}
                         />
-                        <span className="text-[12px]" style={{ color: "#8E8E93" }}>até</span>
+                        <span className="text-[12px] flex-shrink-0" style={{ color: "#8E8E93" }}>até</span>
                         <input
                           type="time"
                           value={dia.fim}
                           onChange={(e) => atualizarHorario(idx, idxDia, "fim", e.target.value)}
-                          className="text-[13px] font-medium px-2.5 py-1.5 rounded-[8px]"
+                          className="flex-1 sm:flex-none min-w-0 text-[13px] font-medium px-2 py-1.5 rounded-[8px]"
                           style={{ border: "0.5px solid rgba(60,60,67,0.18)", color: "#1C1C1E", background: "#fff" }}
                         />
                       </div>
                     ) : (
-                      <span className="text-[12px] font-semibold pr-2" style={{ color: "#AEAEB2" }}>
+                      <span className="text-[12px] font-semibold pr-2 pl-6 sm:pl-0" style={{ color: "#AEAEB2" }}>
                         Fechado
                       </span>
                     )}
