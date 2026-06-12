@@ -170,43 +170,30 @@ site-k7/
 
 ---
 
-## 🚨 Pendências de Segurança (auditoria 2026-06-11)
+## 🛡️ Auditoria de Segurança (2026-06-11) — resolvida em 2026-06-12
 
-> **Status:** identificadas em análise de código. **#1 e #6 corrigidas em 2026-06-12** (ver abaixo); demais pendentes.
-> Falsos positivos já descartados: `.env` está no `.gitignore` (não versionado); anon key e Google Client ID são públicos por design; tabelas `curadentespro`/`clientes`/`enderecos` têm RLS por `auth.uid()`; o "DELETE policy ausente" é soft-delete proposital.
+> Todas as falhas de código identificadas na auditoria foram corrigidas e aplicadas em produção. Resta apenas item de decisão jurídica.
+> Falsos positivos descartados: `.env` está no `.gitignore`; anon key e Google Client ID são públicos por design; o "DELETE policy ausente" é soft-delete proposital.
 
-### ✅ Resolvidas (2026-06-12)
+### ✅ Resolvidas
 
-- **#1 — Escalada de privilégio na RPC `marcar_verificacao_cro`** — corrigida em `supabase/migrations/20260612090000_fix_marcar_verificacao_cro_authz.sql` (aplicada no remoto via `supabase db push`). Adicionado gate de autorização **dentro** da função (`IF NOT public.is_superuser() THEN RETURN não-autorizado`). Regressão coberta em `tests/security/rls.test.ts` (testes [7] anon e [8] não-superuser, este último condicional a `TEST_DENTISTA_EMAIL`/`TEST_DENTISTA_PASSWORD` no `.env`).
-- **#6 — Email de superadmin hardcoded** — centralizado no helper `public.is_superuser()` (fonte única da verdade). As policies de `cro_verificacoes` e `logs_busca` agora chamam o helper; para trocar o admin, altera-se só a função. _(Resta migrar as policies antigas de `curadentespro`, se houver, para o helper.)_
+- **#0 — Vazamento de CPF (LGPD)** — `migration 20260612110000`. O RLS é row-level, não column-level, então qualquer um lia o CPF de todos via REST. Removido o SELECT de tabela de anon/authenticated + GRANT por coluna (tudo menos `cpf`); o dono lê o próprio CPF via RPC `meu_cpf()`. Teste [9] em `rls.test.ts`.
+- **#1 — Escalada de privilégio na RPC `marcar_verificacao_cro`** — `migration 20260612090000`. Gate `IF NOT public.is_superuser()` dentro da função SECURITY DEFINER. Testes [7]/[8] em `rls.test.ts`.
+- **#2 — Edge function `send-rating-notification` (relay aberto)** — agora exige usuário autenticado real (`auth.getUser()` na função) e CORS reflete a origem. Verificado: chamada só com anon key → 401. Redeployada.
+- **#3 — Edge function `scrape-cro`** — **removida** (deployada + local). Era código morto, sem auth, com sessões em memória. Superfície de ataque eliminada.
+- **#4 — Guarda de rota** — criado `RequireSuperuser` envolvendo `/pro/dashboard-analytics`, `/pro/verificar-cro` e `/pro/verificar-cro/:id`. As demais `/pro/*` se auto-protegem (checagem de sessão + RLS).
+- **#5 — Validação de upload no servidor** — bucket `fotos-dentistas` já tem `file_size_limit = 2MB` e `allowed_mime_types` (jpeg/png/webp); documentado em `migration 20260612120000`.
+- **#6 — Email de superadmin hardcoded** — centralizado no helper `public.is_superuser()` (fonte única).
+- **#7 — Mock de produção** — removido o `dentista.id === 101` do `Dashboard.tsx`; urgência passa a vir do campo real `atende_urgencias`.
+- **#8 — `window.location.reload()`** — trocado por `setRecarregar()` (refetch) em `VerificarCro.tsx`.
+- **#9 — Backfill de `user_id`** — verificado: 0 dentistas ativos sem `user_id` (já estava feito).
+- **#10 — CPF/CRO no `localStorage`** — removidos do rascunho do cadastro (`NovoCadastro.tsx`); ficam só em memória até o upsert.
+- **#11 — FK `avaliacoes.paciente_id → auth.users`** — `migration 20260612120000` (0 órfãos verificados, `ON DELETE CASCADE`).
+- **#12 — `signInWithOAuth` redirect** — `redirectTo` passou de `window.location.href` para `origin + pathname` (sem query/hash).
 
-### 🔴 Críticas (exploráveis por qualquer conta autenticada hoje)
+### ⏳ Pendente (fora do código)
 
-2. **Edge function `send-rating-notification` é relay de email aberto** — `supabase/functions/send-rating-notification/index.ts:16-67`.
-   Sem verificação de identidade/role, sem rate limiting, CORS `*`. Payload (`dentistEmail`, `dentistName`, `patientName`) totalmente controlado pelo chamador → spam/phishing via `do-not-reply@curadentes.com.br` e consumo de créditos do Resend.
-3. **Edge function `scrape-cro` sem auth + sessões em memória** — `supabase/functions/scrape-cro/index.ts:238-292` (CORS `*` na linha 243).
-   Sem autenticação (força-bruta/scraping do SISCAF via nossa infra). Além disso, sessões num `Map` em memória (linha 51) **quebram entre instâncias/cold starts** → fluxo captcha→consulta falha de forma intermitente. Migrar para Supabase KV/tabela.
-
-### 🟠 Altas
-
-4. **Não existe `ProtectedRoute`** — `src/App.tsx:75-92`. Todas as rotas `/pro/*` (incl. admin `/pro/verificar-cro` e `/pro/verificar-cro/:id`) estão no router **sem guarda de autorização**, apesar de `docs/SEGURANCA.md:248` afirmar que existe. Hoje só o RLS protege — e a falha #1 mostra que o RLS está furado para a operação sensível.
-5. **Validação de upload só no cliente** — `src/lib/uploadService.ts`. Tamanho (2MB) e MIME checados apenas no front; bucket Storage sem limite/allowed-mime por policy → contornável via API direta.
-6. ~~**Email de superadmin hardcoded em 7 policies**~~ — ✅ **resolvida em 2026-06-12** (centralizada no helper `public.is_superuser()`; ver seção "✅ Resolvidas"). Evolução futura: tabela de roles em vez de email único.
-
-### 🟡 Médias
-
-7. **Mock de produção** — `src/pages/pro/Dashboard.tsx:554` (`dentista.id === 101 ? ["end-1-a"] : []`).
-8. **`window.location.reload()` após verificar CRO** — `src/pages/pro/VerificarCro.tsx`. Descarta estado React; preferir refetch.
-9. **Modelo de identidade ambíguo (`id` vs `user_id`)** — `src/hooks/useAuth.ts:246-253` grava ambos como `authUser.id`, enquanto os 50 dentistas seed têm `user_id = NULL` (ver `docs/PENDENCIAS.md:47-60`) e não conseguem editar o próprio perfil.
-10. **Rascunho do cadastro em `localStorage` com CPF/CRO em texto puro** — `src/pages/pro/NovoCadastro.tsx`. Senha é corretamente omitida, mas PII sensível (LGPD) fica exposta a XSS. Limpar rascunho ao concluir.
-
-### ⚪ Baixas / qualidade
-
-11. `avaliacoes.paciente_id` sem FK para `auth.users` (já em `docs/PENDENCIAS.md:62-71`).
-12. `signInWithOAuth` com `redirectTo: window.location.href` (`src/hooks/useAuth.ts:95`) — usar rota de callback fixa.
-13. Textos legais de Privacidade/Termos ainda pendentes (decisão jurídica — `docs/PENDENCIAS.md:73-80`).
-
-**Ordem de ataque sugerida:** #1 → #2/#3 → #4. As três primeiras são exploráveis por qualquer conta autenticada hoje.
+- **#13 — Textos legais de Privacidade/Termos** — depende de decisão/redação jurídica (`docs/PENDENCIAS.md:73-80`).
 
 ---
 

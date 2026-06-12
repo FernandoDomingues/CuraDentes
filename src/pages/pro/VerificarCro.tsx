@@ -267,8 +267,8 @@ export default function VerificarCro() {
                             p_observacao: null,
                           });
                           if (data?.success) {
-                            // Recarrega para obter o ID da verificação
-                            window.location.reload();
+                            // Refaz a busca para obter o ID da verificação (sem reload da página)
+                            setRecarregar((n) => n + 1);
                           }
                         }
                       }}

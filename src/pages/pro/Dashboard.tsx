@@ -563,11 +563,6 @@ export default function Dashboard() {
   // Dashboard autenticado
   // ─────────────────────────────────────────────────────────────────────────
 
-  // Identifica endereços que atendem urgências (para destaque visual)
-  // Como os dados demo vêm de EnderecoClinica (sem campo atende_urgencias),
-  // usamos uma lógica mock: primeiro endereço do demo user 1 atende urgências
-  const idsComUrgencia = dentista.id === 101 ? ["end-1-a"] : [];
-
   return (
     <div className="min-h-screen" style={{ background: "#F2F2F7" }}>
 
@@ -859,7 +854,7 @@ export default function Dashboard() {
                   <EnderecoCard
                     key={end.id}
                     endereco={end}
-                    isUrgencia={idsComUrgencia.includes(end.id)}
+                    isUrgencia={Boolean((end as { atende_urgencias?: boolean }).atende_urgencias)}
                   />
                 ))}
               </div>

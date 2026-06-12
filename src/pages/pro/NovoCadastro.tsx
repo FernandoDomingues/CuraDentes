@@ -371,8 +371,9 @@ export default function NovoCadastro() {
       emailVerificado,
       telefone,
       telefoneVerificado,
-      cpf,
-      cro,
+      // cpf e cro NAO sao persistidos no localStorage (LGPD/#10) — ficam so no
+      // estado em memoria ate o upsert no banco. Se houver sessao, sao restaurados
+      // do banco (cpf via RPC meu_cpf).
       anoFormacao,
       fotoUrl,
       enderecos,

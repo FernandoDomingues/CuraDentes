@@ -93,7 +93,9 @@ export const useAuth = create<AuthState>((set, get) => ({
     }
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: window.location.href },
+      // Sem query/hash na URL de retorno (#12): evita repassar parametros
+      // arbitrarios para o fluxo OAuth. Volta para a mesma rota, limpa.
+      options: { redirectTo: window.location.origin + window.location.pathname },
     });
     if (error) { console.error("Erro no login com Supabase:", error); throw error; }
   },
