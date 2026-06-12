@@ -4,6 +4,17 @@ Lista de itens do checklist de QA que ainda não foram concluídos, com contexto
 
 ---
 
+## 🔴 Pendências em aberto (atualizado 2026-06-12)
+
+Tudo o que depende de **código** está resolvido. Restam apenas itens cadastrais/jurídicos:
+
+1. **Endereço físico da empresa** — preencher o placeholder `[Inserir endereço da empresa]` na seção "Contato" das páginas `/privacidade` (`src/pages/Privacidade.tsx`) e `/termos` (`src/pages/TermosDeUso.tsx`). Dado cadastral, basta substituir o texto.
+2. **Revisão jurídica final (recomendado, não bloqueante)** — os textos de Privacidade e Termos já existem completos (11 seções cada) e a política de retenção está definida (expurgo de geo na exclusão, sem prazo). Recomenda-se um aval jurídico antes de tratar como definitivos.
+
+> A questão original de "prazo de retenção de geolocalização" (antigo item C) foi **encerrada**: adotamos retenção zero / expurgo na exclusão (`migration 20260612250000`). Detalhes na seção "A. LGPD" abaixo.
+
+---
+
 ## Como o checklist foi construído
 
 Em uma sessão de QA, mapeamos 10 itens de melhoria no projeto. Itens 1, 2, 3 foram resolvidos antes do checklist formal (observação inicial, mocks substituídos por Supabase real, e `.env` migrado para Vercel). Itens 5, 6, 7, 8, 9 estão **concluídos**. Em sessões seguintes (itens 11-14) foram feitas mais melhorias de UX/auth. **Todos os 10 itens originais estão concluídos.**
