@@ -179,6 +179,11 @@ export default function Header() {
         throw new Error("E-mail ou senha incorretos.");
       }
 
+      // Se a conta estava em soft-delete, restaura ao logar (zera deleted_at/deleted_by)
+      if (!isSuperuserEmail(email)) {
+        await supabase.rpc("restaurar_minha_conta_dentista");
+      }
+
       toast.success("Login realizado com sucesso!", { id: toastId });
       fecharModal();
       navigate(isSuperuserEmail(email) ? "/pro/dashboard-analytics" : "/pro/dashboard");
