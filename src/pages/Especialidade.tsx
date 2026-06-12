@@ -158,8 +158,32 @@ export default function Especialidade() {
     );
   }
 
+  // Resolve a cidade do usuário: usa o cache (userCity/sessionStorage) ou faz o
+  // reverse-geocode da localização do login sob demanda (garante a cidade no clique).
+  const resolverCidadeUsuario = async (): Promise<string> => {
+    if (userCity) return userCity;
+    const lat = user?.latitude;
+    const lng = user?.longitude;
+    if (!lat || !lng) return "";
+    try {
+      const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=pt`;
+      const r = await fetch(url, { headers: { "User-Agent": "CuraDentes/1.0" } });
+      const data = await r.json();
+      const city =
+        data?.address?.city || data?.address?.town || data?.address?.village ||
+        data?.address?.municipality || data?.address?.county || "";
+      if (city) {
+        setUserCity(city);
+        try { sessionStorage.setItem("curadentes_user_city", city); } catch { /* sessionStorage indisponível */ }
+      }
+      return city;
+    } catch {
+      return "";
+    }
+  };
+
   const saveAndRedirectToLogin = () => {
-    const searchQuery = userCity || nome;
+    const searchQuery = userCity || ""; // texto da busca = cidade do usuário (a especialidade vai em "atividade")
     sessionStorage.setItem(
       "curadentes_pending_nav",
       JSON.stringify({
@@ -203,14 +227,14 @@ export default function Especialidade() {
     }
   };
 
-  const handleSearchNearby = () => {
+  const handleSearchNearby = async () => {
     if (!user) {
       saveAndRedirectToLogin();
       return;
     }
     const userLat = user?.latitude;
     const userLng = user?.longitude;
-    const searchQuery = userCity || nome;
+    const searchQuery = await resolverCidadeUsuario(); // cidade do usuário (a especialidade vai em "atividade")
     navigate(
       `/pesquisa?q=${encodeURIComponent(searchQuery)}`,
       {
