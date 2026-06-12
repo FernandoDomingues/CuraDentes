@@ -480,6 +480,9 @@ export default function Dashboard() {
         return;
       }
 
+      // Se a conta foi excluída (soft-delete) e o usuário voltou, restaura o perfil
+      await supabase.rpc("restaurar_minha_conta_dentista");
+
       // Cadastro incompleto/inexistente → retoma o fluxo de cadastro
       const { data: perfil } = await supabase
         .from('curadentespro')
@@ -523,6 +526,9 @@ export default function Dashboard() {
         return;
       }
 
+      // Se a conta foi excluída (soft-delete) e o usuário voltou, restaura o perfil
+      const { data: restaurou } = await supabase.rpc("restaurar_minha_conta_dentista");
+
       // Verifica se o cadastro está completo
       const { data: perfil } = await supabase
         .from('curadentespro')
@@ -538,8 +544,8 @@ export default function Dashboard() {
         navigate('/pro/novo-cadastro');
         return;
       }
-      
-      toast.success("Bem-vindo ao painel!", { id: toastId });
+
+      toast.success(restaurou ? "Bem-vindo de volta! Sua conta foi restaurada." : "Bem-vindo ao painel!", { id: toastId });
       await carregarPerfilReal(data.user.id);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Erro inesperado ao entrar.";
