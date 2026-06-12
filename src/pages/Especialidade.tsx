@@ -95,9 +95,30 @@ export default function Especialidade() {
         especialidade_nome: nome,
         cidade_usuario: userCity,
       })
-      .then(({ data, error }) => {
+      .then(async ({ data, error }) => {
         if (!cancelled && !error && data) {
-          setTopDentistas(data as TopDentista[]);
+          let top = data as TopDentista[];
+          // Enriquece o nome com o tratamento (Dr./Dra.)
+          const ids = top.map((d) => d.dentista_id).filter(Boolean);
+          if (ids.length > 0) {
+            const { data: trats } = await supabase
+              .from("curadentespro")
+              .select("id, tratamento")
+              .in("id", ids);
+            if (trats && trats.length > 0) {
+              const tratMap: Record<string, string> = {};
+              trats.forEach((t: { id: string; tratamento: string | null }) => {
+                if (t.tratamento) tratMap[t.id] = t.tratamento;
+              });
+              top = top.map((d) => {
+                const t = tratMap[d.dentista_id];
+                return t && !d.dentista_nome.startsWith(t)
+                  ? { ...d, dentista_nome: `${t} ${d.dentista_nome}` }
+                  : d;
+              });
+            }
+          }
+          if (!cancelled) setTopDentistas(top);
         }
         if (!cancelled) setTopLoading(false);
       });

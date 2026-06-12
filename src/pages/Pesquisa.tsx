@@ -595,6 +595,28 @@ export default function Pesquisa() {
           } catch (err) {
             console.error("[Pesquisa] Erro ao buscar avaliações:", err);
           }
+
+          // ─── Enriquece o nome com o tratamento (Dr./Dra.) ──────────────────
+          try {
+            const { data: trats } = await supabase
+              .from('curadentespro')
+              .select('id, tratamento')
+              .in('id', dentistaIds);
+            if (trats && trats.length > 0) {
+              const tratMap: Record<string, string> = {};
+              trats.forEach((t: { id: string; tratamento: string | null }) => {
+                if (t.tratamento) tratMap[t.id] = t.tratamento;
+              });
+              finalResults.forEach(r => {
+                const t = tratMap[r.dentista_id];
+                if (t && !r.dentista_nome.startsWith(t)) {
+                  r.dentista_nome = `${t} ${r.dentista_nome}`;
+                }
+              });
+            }
+          } catch (err) {
+            console.error("[Pesquisa] Erro ao buscar tratamento:", err);
+          }
         }
 
         console.log("[Pesquisa] 🏁 Busca finalizada com sucesso! Total de resultados combinados:", finalResults.length);
