@@ -208,7 +208,7 @@ export default function NovoCadastro() {
         const { data: pro } = await supabase
           .from('curadentespro')
           // cpf é lido à parte via RPC meu_cpf() (coluna protegida — LGPD)
-          .select('id, nome, email, telefone, cro, ano_formacao, foto_url, bio, instagram, lgpd_aceito')
+          .select('id, nome, nome_completo, email, telefone, cro, ano_formacao, foto_url, bio, instagram, lgpd_aceito')
           .eq('id', user.id)
           .is('deleted_at', null)
           .maybeSingle();
@@ -216,6 +216,7 @@ export default function NovoCadastro() {
         if (pro) {
           // Preenche os campos com os dados do banco
           if (pro.nome) setNome(pro.nome);
+          if (pro.nome_completo) setNomeCompleto(pro.nome_completo);
           if (pro.email) setEmail(pro.email);
           if (pro.telefone) setTelefone(pro.telefone);
           const { data: cpfProprio } = await supabase.rpc("meu_cpf");
@@ -835,10 +836,15 @@ export default function NovoCadastro() {
           }
 
           toast.success("Cadastro concluído com sucesso!", { id: toastId });
-          
+
           // Limpa rascunho
           localStorage.removeItem("curadentes_pro_cadastro_rascunho");
-          
+
+          // Invalida os caches da home para o dentista recém-cadastrado aparecer
+          // de imediato na contagem total e na lista de "novos dentistas"
+          localStorage.removeItem("curadentes_hero_stats_cache");
+          localStorage.removeItem("curadentes_latest_dentists_cache");
+
           navigate("/pro/perfil");
         })()
       ]);
