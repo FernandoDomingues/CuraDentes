@@ -193,7 +193,7 @@ site-k7/
 
 ### ⏳ Pendente (fora do código)
 
-- **#13 — Textos legais de Privacidade/Termos** — depende de decisão/redação jurídica (`docs/PENDENCIAS.md:47-54`).
+- **#13 — Textos legais de Privacidade/Termos** — páginas `/privacidade` e `/termos` já existem e estão completas (linkadas no Header/Footer). Resta só **preencher o endereço da empresa** (placeholder) e, opcionalmente, **revisão jurídica final** (`docs/PENDENCIAS.md:47-56`).
 
 ---
 

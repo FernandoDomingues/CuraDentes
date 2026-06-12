@@ -49,9 +49,11 @@ Em uma sessão de QA, mapeamos 10 itens de melhoria no projeto. Itens 1, 2, 3 fo
 - ✅ Soft delete (`deleted_at`/`deleted_by`) implementado em `curadentespro` e `clientes`
 - ✅ Função `apagar_dados_cliente()` criada (right to be forgotten)
 - ✅ Política de retenção/expurgo de `clientes.latitude`/`longitude` — **definida: retenção zero**. A `apagar_dados_cliente()` zera lat/lng no momento da exclusão (`migration 20260612250000`). A coordenada é só cache de conveniência, readquirível pelo navegador; eliminada ao fim da finalidade (LGPD art. 15/16).
-- ❌ Texto de Política de Privacidade + Termos de Uso (hoje são âncoras vazias no Header)
+- ✅ Texto de Política de Privacidade (`/privacidade`, `src/pages/Privacidade.tsx`, 11 seções) e Termos de Uso (`/termos`, `src/pages/TermosDeUso.tsx`, 11 seções) — completos e linkados no Header/Footer. A seção 8 (retenção) da Privacidade reflete o expurgo de geo na exclusão.
+- ❌ Preencher o endereço físico da empresa (placeholder `[Inserir endereço da empresa]` em ambas as páginas, seção "Contato") — dado cadastral.
+- ⚠️ Recomendado: revisão jurídica final dos textos antes de tratar como definitivos.
 
-**Pendente (decisão jurídica):** apenas a redação dos textos de Privacidade/Termos. A questão de retenção de dados após o "esquecimento" foi resolvida adotando expurgo na exclusão (sem prazo a definir).
+**Pendente:** apenas (a) preencher o endereço da empresa e (b) revisão jurídica final. A redação base já existe e a retenção de dados após o "esquecimento" foi resolvida com expurgo na exclusão (sem prazo a definir).
 
 ### B. ~~Conflito de peer dependencies (Vite 8)~~ ✅ Resolvido
 

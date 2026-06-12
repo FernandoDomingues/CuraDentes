@@ -319,7 +319,9 @@ export default function Privacidade() {
                   </li>
                   <li>
                     <strong>Pacientes:</strong> enquanto o usuário mantiver seu vínculo com a plataforma
-                    (login social). Avaliações anônimas podem ser mantidas após o desligamento.
+                    (login social). Ao excluir a conta, sua <strong>geolocalização (latitude/longitude) é
+                    eliminada imediatamente</strong> — não há retenção da localização precisa após o
+                    "esquecimento". Avaliações anônimas podem ser mantidas após o desligamento.
                   </li>
                   <li>
                     <strong>Dados de cache local:</strong> por até 7 dias (CEP) ou 30 minutos (localização),
