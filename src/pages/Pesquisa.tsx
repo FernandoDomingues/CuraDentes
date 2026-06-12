@@ -487,15 +487,11 @@ export default function Pesquisa() {
                 };
               });
 
-            // Aplica filtro de raio APENAS em dentistas com coordenadas cadastradas
-            if (finalLat !== null) {
-              const antesFiltro = textResults.length;
-              textResults = textResults.filter((r) => {
-                const temCoordenadas = r.distancia_km > 0;
-                return !temCoordenadas || r.distancia_km <= raio;
-              });
-              console.log("[Pesquisa] Aplicado filtro de raio. Antes:", antesFiltro, "Depois:", textResults.length);
-            }
+            // NÃO aplica filtro de raio nos resultados textuais: eles já casaram
+            // com o termo buscado (ex.: cidade/bairro "Sorocaba"), então devem
+            // aparecer mesmo que estejam a >5km da localização exata do usuário.
+            // (A proximidade por raio é responsabilidade da busca geográfica/RPC;
+            // a distância aqui serve apenas para ordenação.)
           } else if (textError) {
             console.error("[Pesquisa] Erro na busca por texto:", textError);
           }
