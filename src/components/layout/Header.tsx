@@ -148,6 +148,18 @@ export default function Header() {
   // Função: Redireciona para o painel do dentista
   // Em produção: validar credenciais antes via Supabase Auth
   // ─────────────────────────────────────────────────────────────────────────
+  // Clique em "Acesso do Dentista": se já logado, vai direto para a área certa
+  // (sem pedir login de novo); caso contrário, abre o modal de login Pro.
+  function acessoDentista() {
+    if (user?.role === "superuser") {
+      navigate("/pro/dashboard-analytics");
+    } else if (user?.role === "dentista") {
+      navigate("/pro/dashboard");
+    } else {
+      setModalAberto("dentista");
+    }
+  }
+
   async function loginDentista() {
     if (!emailLogin || !senhaLogin) {
       toast.error("Por favor, preencha e-mail e senha.");
@@ -169,7 +181,7 @@ export default function Header() {
 
       toast.success("Login realizado com sucesso!", { id: toastId });
       fecharModal();
-      navigate(isSuperuserEmail(email) ? "/pro/dashboard-analytics" : "/pro/perfil");
+      navigate(isSuperuserEmail(email) ? "/pro/dashboard-analytics" : "/pro/dashboard");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Erro desconhecido ao fazer login.";
       toast.error(message, { id: toastId });
@@ -536,15 +548,9 @@ export default function Header() {
                 </button>
               )}
 
-              {/* Botão Acesso do Dentista — abre modal de login/cadastro Pro ou vai direto pro perfil se já for dentista */}
+              {/* Botão Acesso do Dentista — já logado vai direto pra área; senão abre o modal */}
               <button
-                onClick={() => {
-                  if (user?.role === "dentista") {
-                    navigate("/pro/perfil");
-                  } else {
-                    setModalAberto("dentista");
-                  }
-                }}
+                onClick={acessoDentista}
                 className="text-[15px] font-semibold px-5 py-3 rounded-[14px] text-white min-h-[44px] transition-all duration-200"
                 style={{ background: "#E6004C", boxShadow: "0 4px 16px rgba(230,0,76,0.28)" }}
                 onMouseEnter={(e) => {
@@ -629,14 +635,7 @@ export default function Header() {
 
               {/* Acesso do Dentista (mobile) */}
               <button
-                onClick={() => {
-                  setMenuOpen(false);
-                  if (user?.role === "dentista") {
-                    navigate("/pro/perfil");
-                  } else {
-                    setModalAberto("dentista");
-                  }
-                }}
+                onClick={() => { setMenuOpen(false); acessoDentista(); }}
                 className="w-full text-[15px] font-semibold py-3 rounded-[14px] text-white min-h-[48px]"
                 style={{ background: "#E6004C", boxShadow: "0 4px 12px rgba(230,0,76,0.25)" }}
               >
