@@ -16,6 +16,7 @@ import CroVerificationBadge from "@/components/analytics/CroVerificationBadge";
 interface DentistaRecente {
   id: string;
   nome: string;
+  tratamento?: string | null;
   foto_url: string;
   bio: string;
   cro: string;
@@ -33,7 +34,7 @@ export default function LatestDentists() {
   useEffect(() => {
     async function fetchLatest() {
       const CACHE_KEY = "curadentes_latest_dentists_cache";
-      const CACHE_VERSION = "v3";
+      const CACHE_VERSION = "v4";
       const EXPIRATION_TIME = 60 * 1000; // 1 minuto
 
       try {
@@ -60,7 +61,7 @@ export default function LatestDentists() {
         // 2. Busca do Supabase se não houver cache válido
         const { data: pros, error } = await supabase
           .from("curadentespro")
-          .select("id, nome, foto_url, bio, cro, cro_verificado, criado_em")
+          .select("id, nome, tratamento, foto_url, bio, cro, cro_verificado, criado_em")
           .eq("lgpd_aceito", true)
           .is("deleted_at", null)
           .order("criado_em", { ascending: false })
@@ -87,12 +88,14 @@ export default function LatestDentists() {
               });
               const especialidades = Array.from(todasAtividadesSet);
 
-              return { 
+              return {
                 id: p.id,
                 nome: p.nome,
+                tratamento: p.tratamento,
                 foto_url: p.foto_url,
                 bio: p.bio,
                 cro: p.cro,
+                cro_verificado: p.cro_verificado,
                 especialidades,
                 criado_em: p.criado_em
               };
@@ -210,7 +213,7 @@ export default function LatestDentists() {
                 />
                 <div className="flex-1 mt-1">
                   <h3 className="font-bold text-[16px] text-[#1C1C1E] leading-tight line-clamp-1 group-hover:text-[#007AFF] transition-colors">
-                    {dentista.nome}
+                    {dentista.tratamento ? dentista.tratamento + " " : ""}{dentista.nome}
                   </h3>
                   <div className="flex items-center gap-2 mt-0.5">
                     <p className="text-[12px] text-gray-400 font-medium">
