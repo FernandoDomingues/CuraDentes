@@ -579,10 +579,21 @@ export default function DentistProfilePage() {
   const handleContactRequest = useCallback((url: string) => {
     if (user) {
       window.open(url, "_blank", "noopener,noreferrer");
+
+      // Registra o clique de contato (1x/dia por conta por tipo) — métrica do dashboard
+      const tipo = url.startsWith("https://wa.me") ? "whatsapp" : url.startsWith("tel:") ? "telefone" : null;
+      if (tipo && perfil && typeof perfil.dentista_id === "string") {
+        supabase.from("perfil_contatos")
+          .upsert(
+            { dentista_id: perfil.dentista_id, viewer_id: user.id, tipo },
+            { onConflict: "dentista_id,viewer_id,tipo,data_visita", ignoreDuplicates: true },
+          )
+          .then(undefined, () => {});
+      }
     } else {
       setShowLoginModal(true);
     }
-  }, [user]);
+  }, [user, perfil]);
 
   const handleGoogleLogin = async () => {
     const loadingToast = toast.loading("Redirecionando para o Google...");

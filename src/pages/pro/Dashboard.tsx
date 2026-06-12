@@ -64,6 +64,8 @@ type DashboardResumo = {
   media_geral: number; total_avaliacoes: number; posicao_geral: number;
   por_atividade: { nome_atividade: string; media_nota: number; total_avaliacoes: number; posicao: number }[];
   total_visualizacoes: number; visualizacoes_30d: number;
+  total_whatsapp: number; whatsapp_30d: number;
+  total_telefone: number; telefone_30d: number;
 };
 
 import logoProUrl from "@/assets/logos/logo-pro.png";
@@ -352,7 +354,7 @@ export default function Dashboard() {
   // ─ Estado de autenticação e dados reais do dentista logado ─────────────────
   const [dentista, setDentista] = useState<DentistaPro | null>(null);
   const [carregando, setCarregando] = useState(true);
-  const [metricas, setMetricas] = useState<{ total_visualizacoes: number; visualizacoes_30d: number } | null>(null);
+  const [metricas, setMetricas] = useState<DashboardResumo | null>(null);
   const [loginUsuario, setLoginUsuario] = useState("");
   const [loginSenha, setLoginSenha] = useState("");
   const [loginErro, setLoginErro] = useState("");
@@ -436,7 +438,7 @@ export default function Dashboard() {
       }));
 
       const r = resumoRes.data as DashboardResumo | null;
-      setMetricas(r ? { total_visualizacoes: r.total_visualizacoes, visualizacoes_30d: r.visualizacoes_30d } : null);
+      setMetricas(r);
 
       setDentista({
         id: pro.id,
@@ -925,7 +927,7 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* ── Visualizações do perfil ── */}
+          {/* ── Métricas do perfil (visualizações + contatos) ── */}
           {metricas && (
             <div
               style={{
@@ -937,19 +939,38 @@ export default function Dashboard() {
               }}
             >
               <div className="flex items-center gap-2 mb-4">
-                <Eye size={16} style={{ color: "#007AFF" }} />
+                <BarChart2 size={16} style={{ color: "#007AFF" }} />
                 <h2 className="text-[16px] font-bold" style={{ color: "#0A2A66", fontFamily: "Inter, sans-serif" }}>
-                  Visualizações do perfil
+                  Métricas do perfil
                 </h2>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* Visualizações */}
                 <div className="rounded-[14px] p-4" style={{ background: "rgba(0,122,255,0.06)" }}>
-                  <p className="text-[26px] font-bold" style={{ color: "#0A2A66" }}>{metricas.total_visualizacoes}</p>
-                  <p className="text-[12px]" style={{ color: "#8E8E93" }}>Total de visualizações</p>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Eye size={14} style={{ color: "#007AFF" }} />
+                    <p className="text-[12px] font-semibold" style={{ color: "#8E8E93" }}>Visualizações</p>
+                  </div>
+                  <p className="text-[26px] font-bold leading-none" style={{ color: "#0A2A66" }}>{metricas.total_visualizacoes}</p>
+                  <p className="text-[11px] mt-1.5" style={{ color: "#8E8E93" }}>{metricas.visualizacoes_30d} nos últimos 30 dias</p>
                 </div>
-                <div className="rounded-[14px] p-4" style={{ background: "rgba(52,199,89,0.06)" }}>
-                  <p className="text-[26px] font-bold" style={{ color: "#0A2A66" }}>{metricas.visualizacoes_30d}</p>
-                  <p className="text-[12px]" style={{ color: "#8E8E93" }}>Nos últimos 30 dias</p>
+                {/* Cliques no WhatsApp */}
+                <div className="rounded-[14px] p-4" style={{ background: "rgba(37,211,102,0.08)" }}>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <MessageCircle size={14} style={{ color: "#25D366" }} />
+                    <p className="text-[12px] font-semibold" style={{ color: "#8E8E93" }}>WhatsApp</p>
+                  </div>
+                  <p className="text-[26px] font-bold leading-none" style={{ color: "#0A2A66" }}>{metricas.total_whatsapp}</p>
+                  <p className="text-[11px] mt-1.5" style={{ color: "#8E8E93" }}>{metricas.whatsapp_30d} nos últimos 30 dias</p>
+                </div>
+                {/* Ligações */}
+                <div className="rounded-[14px] p-4" style={{ background: "rgba(0,122,255,0.06)" }}>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Phone size={14} style={{ color: "#007AFF" }} />
+                    <p className="text-[12px] font-semibold" style={{ color: "#8E8E93" }}>Ligações</p>
+                  </div>
+                  <p className="text-[26px] font-bold leading-none" style={{ color: "#0A2A66" }}>{metricas.total_telefone}</p>
+                  <p className="text-[11px] mt-1.5" style={{ color: "#8E8E93" }}>{metricas.telefone_30d} nos últimos 30 dias</p>
                 </div>
               </div>
             </div>
