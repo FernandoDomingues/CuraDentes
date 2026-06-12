@@ -207,7 +207,7 @@ export default function HeroSection() {
       try {
         const { count, error } = await supabase
           .from("curadentespro")
-          .select("*", { count: "exact", head: true })
+          .select("id", { count: "exact", head: true })
           .eq("lgpd_aceito", true)
           .is("deleted_at", null);
           

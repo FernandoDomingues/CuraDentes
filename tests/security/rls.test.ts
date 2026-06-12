@@ -242,6 +242,35 @@ async function testRpcMarcarVerificacaoNonSuperuser(): Promise<void> {
   await authed.auth.signOut();
 }
 
+async function testCpfProtegido(): Promise<void> {
+  console.log('\n[9/9] Anon NAO PODE ler a coluna cpf de curadentespro (LGPD)');
+  const { data, error } = await supabase
+    .from('curadentespro')
+    .select('cpf')
+    .limit(1);
+
+  if (error) {
+    ok(`Anon bloqueado de ler cpf (${error.message})`);
+  } else if (data && data.length > 0 && (data[0] as { cpf?: string }).cpf) {
+    fail('Anon LEU O CPF!', 'coluna cpf ainda exposta');
+  } else {
+    ok('Anon nao recebeu cpf');
+  }
+
+  // Sanity: colunas publicas continuam legiveis
+  const { data: pub, error: pubErr } = await supabase
+    .from('curadentespro')
+    .select('id, nome')
+    .limit(1);
+  if (pubErr) {
+    fail('Anon perdeu acesso as colunas publicas', pubErr.message);
+  } else if (pub && pub.length > 0) {
+    ok('Colunas publicas (id, nome) seguem legiveis');
+  } else {
+    console.log('  ⚠️  Sem dentistas para validar colunas publicas');
+  }
+}
+
 async function main(): Promise<void> {
   console.log('=== TESTE E2E: RLS + Storage (Item 8) ===');
   console.log(`URL: ${SUPABASE_URL}`);
@@ -255,6 +284,7 @@ async function main(): Promise<void> {
   await testStorageListPublic();
   await testRpcMarcarVerificacaoAnonBlocked();
   await testRpcMarcarVerificacaoNonSuperuser();
+  await testCpfProtegido();
 
   console.log(`\n=== Resultado: ${passed} passou, ${failed} falhou ===\n`);
   console.log('LEMBRE-SE: neste teste, "falhou" geralmente = BOM, significa que RLS bloqueou.');

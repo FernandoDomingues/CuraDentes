@@ -42,7 +42,7 @@ async function testCount(): Promise<void> {
   console.log('\n[1/4] Contagem de dentistas');
   const { count, error } = await supabase
     .from('curadentespro')
-    .select('*', { count: 'exact', head: true });
+    .select('id', { count: 'exact', head: true });
 
   if (error) {
     fail('Contagem falhou', error.message);

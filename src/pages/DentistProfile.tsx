@@ -749,7 +749,8 @@ export default function DentistProfilePage() {
         const { data: pro, error: proError } = await queryTimeout(
           supabase
             .from("curadentespro")
-            .select("*")
+            // cpf é omitido de propósito (LGPD — coluna protegida no banco)
+            .select("id, nome, email, telefone, telefone_verificado, cro, ano_formacao, foto_url, bio, lgpd_aceito, criado_em, user_id, instagram, deleted_at, cro_verificado, nome_completo")
             .eq(queryField, queryValue)
             .is("deleted_at", null)
             .maybeSingle(),

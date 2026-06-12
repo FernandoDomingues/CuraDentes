@@ -201,7 +201,8 @@ export default function NovoCadastro() {
         // Sessão encontrada: busca dados já salvos no banco
         const { data: pro } = await supabase
           .from('curadentespro')
-          .select('*')
+          // cpf é lido à parte via RPC meu_cpf() (coluna protegida — LGPD)
+          .select('id, nome, email, telefone, cro, ano_formacao, foto_url, bio, instagram, lgpd_aceito')
           .eq('id', user.id)
           .is('deleted_at', null)
           .maybeSingle();
@@ -211,7 +212,8 @@ export default function NovoCadastro() {
           if (pro.nome) setNome(pro.nome);
           if (pro.email) setEmail(pro.email);
           if (pro.telefone) setTelefone(pro.telefone);
-          if (pro.cpf) setCpf(pro.cpf);
+          const { data: cpfProprio } = await supabase.rpc("meu_cpf");
+          if (typeof cpfProprio === "string" && cpfProprio) setCpf(cpfProprio);
           if (pro.cro) setCro(pro.cro);
           if (pro.ano_formacao) setAnoFormacao(String(pro.ano_formacao));
           if (pro.foto_url) setFotoUrl(pro.foto_url);

@@ -146,7 +146,8 @@ export default function MeuPerfil() {
 
         const { data: perfil, error: perfilError } = await supabase
           .from("curadentespro")
-          .select("*")
+          // cpf é lido à parte via RPC meu_cpf() (coluna protegida — LGPD)
+          .select("id, nome, nome_completo, email, telefone, cro, ano_formacao, foto_url, bio, instagram, lgpd_aceito")
           .eq("id", uid)
           .is("deleted_at", null)
           .single();
@@ -162,7 +163,8 @@ export default function MeuPerfil() {
         setNome(perfil.nome || "");
         setNomeCompleto(perfil.nome_completo || "");
         setTelefone(perfil.telefone || "");
-        setCpf(perfil.cpf || "");
+        const { data: cpfProprio } = await supabase.rpc("meu_cpf");
+        setCpf(typeof cpfProprio === "string" ? cpfProprio : "");
         setCro(perfil.cro || "");
         setAnoFormacao(perfil.ano_formacao ? perfil.ano_formacao.toString() : "");
         setBio(perfil.bio || "");
