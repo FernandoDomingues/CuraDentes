@@ -10,7 +10,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { toast } from "sonner";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { getCoordenadas, getEnderecoFromCoordenadas } from "@/lib/geocoding";
 import { supabase } from "@/lib/supabase";
 import Header from "@/components/layout/Header";
@@ -179,10 +179,16 @@ const PAGAMENTOS_OPCOES = [
 export default function Pesquisa() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const logSearch = useLogSearch();
 
-  // Lê o estado da navegação com fallback para sessionStorage (F5)
+  // Lê o estado da navegação com fallback para os parâmetros da URL (?q=...) e
+  // depois para o sessionStorage (F5). A URL permite entrar já com a busca pronta.
   const estadoNavegacao = (location.state as { q?: string; lat?: string; lng?: string; atividade?: string }) || {};
+  const paramQ = searchParams.get("q") || undefined;
+  const paramLat = searchParams.get("lat") || undefined;
+  const paramLng = searchParams.get("lng") || undefined;
+  const paramAtividade = searchParams.get("atividade") || undefined;
   const estadoSalvo = (() => {
     try {
       const raw = sessionStorage.getItem("curadentes_search_state");
@@ -190,17 +196,17 @@ export default function Pesquisa() {
     } catch { return {}; }
   })();
 
-  const [query, setQuery] = useState<string | null>(estadoNavegacao.q || estadoSalvo.q || null);
-  const [latPesquisa, setLatPesquisa] = useState<string | null>(estadoNavegacao.lat || estadoSalvo.lat || null);
-  const [lngPesquisa, setLngPesquisa] = useState<string | null>(estadoNavegacao.lng || estadoSalvo.lng || null);
-  const atividadeInicial = estadoNavegacao.atividade || null;
+  const [query, setQuery] = useState<string | null>(estadoNavegacao.q || paramQ || estadoSalvo.q || null);
+  const [latPesquisa, setLatPesquisa] = useState<string | null>(estadoNavegacao.lat || paramLat || estadoSalvo.lat || null);
+  const [lngPesquisa, setLngPesquisa] = useState<string | null>(estadoNavegacao.lng || paramLng || estadoSalvo.lng || null);
+  const atividadeInicial = estadoNavegacao.atividade || paramAtividade || null;
 
-  const [searchInput, setSearchInput] = useState(estadoNavegacao.q || estadoSalvo.q || "");
+  const [searchInput, setSearchInput] = useState(estadoNavegacao.q || paramQ || estadoSalvo.q || "");
   const [usandoLocalizacao, setUsandoLocalizacao] = useState(false);
 
   const [raio] = useState(5);
 
-  // Sincroniza estado da navegação sempre que location.state mudar
+  // Sincroniza o estado sempre que a navegação (state) ou a URL (?q=...) mudar
   useEffect(() => {
     const nav = (location.state as { q?: string; lat?: string; lng?: string; atividade?: string }) || {};
     const saved = (() => {
@@ -209,9 +215,12 @@ export default function Pesquisa() {
         return raw ? JSON.parse(raw) as { q?: string; lat?: string; lng?: string } : {};
       } catch { return {}; }
     })();
-    const newQ = nav.q || saved.q || null;
-    const newLat = nav.lat || saved.lat || null;
-    const newLng = nav.lng || saved.lng || null;
+    const pQ = searchParams.get("q") || undefined;
+    const pLat = searchParams.get("lat") || undefined;
+    const pLng = searchParams.get("lng") || undefined;
+    const newQ = nav.q || pQ || saved.q || null;
+    const newLat = nav.lat || pLat || saved.lat || null;
+    const newLng = nav.lng || pLng || saved.lng || null;
     setQuery(newQ);
     setLatPesquisa(newLat);
     setLngPesquisa(newLng);
@@ -219,18 +228,18 @@ export default function Pesquisa() {
       setSearchInput(newQ);
       sessionStorage.setItem("curadentes_search_state", JSON.stringify({ q: newQ, lat: newLat ?? undefined, lng: newLng ?? undefined }));
     }
-  }, [location.state]);
+  }, [location.state, searchParams]);
 
   // Lazy initializers
   const [loading, setLoading] = useState(() => {
     const cached = loadQueryCache(
-      buildQueryCacheKey(estadoNavegacao.q || estadoSalvo.q || null, estadoNavegacao.lat || estadoSalvo.lat || null, estadoNavegacao.lng || estadoSalvo.lng || null, 5)
+      buildQueryCacheKey(estadoNavegacao.q || paramQ || estadoSalvo.q || null, estadoNavegacao.lat || paramLat || estadoSalvo.lat || null, estadoNavegacao.lng || paramLng || estadoSalvo.lng || null, 5)
     );
     return !cached || cached.length === 0;
   });
   const [resultadosBrutos, setResultadosBrutos] = useState<DentistaResultado[]>(() => {
     const cached = loadQueryCache(
-      buildQueryCacheKey(estadoNavegacao.q || estadoSalvo.q || null, estadoNavegacao.lat || estadoSalvo.lat || null, estadoNavegacao.lng || estadoSalvo.lng || null, 5)
+      buildQueryCacheKey(estadoNavegacao.q || paramQ || estadoSalvo.q || null, estadoNavegacao.lat || paramLat || estadoSalvo.lat || null, estadoNavegacao.lng || paramLng || estadoSalvo.lng || null, 5)
     );
     return (cached ?? []) as DentistaResultado[];
   });

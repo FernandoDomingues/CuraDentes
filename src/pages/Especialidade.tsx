@@ -235,8 +235,14 @@ export default function Especialidade() {
     const userLat = user?.latitude;
     const userLng = user?.longitude;
     const searchQuery = await resolverCidadeUsuario(); // cidade do usuário (a especialidade vai em "atividade")
+    // URL com o contexto completo: a /pesquisa ja entra com os resultados (e refresh funciona)
+    const params = new URLSearchParams();
+    if (searchQuery) params.set("q", searchQuery);
+    if (userLat) params.set("lat", String(userLat));
+    if (userLng) params.set("lng", String(userLng));
+    if (nome) params.set("atividade", nome);
     navigate(
-      `/pesquisa?q=${encodeURIComponent(searchQuery)}`,
+      `/pesquisa?${params.toString()}`,
       {
         state: {
           q: searchQuery,
