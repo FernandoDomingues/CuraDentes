@@ -43,8 +43,27 @@ import {
   Trophy,
   Check,
   Loader2,
+  Eye,
 } from "lucide-react";
 import type { DentistaPro } from "@/constants/demoDentists";
+
+// Linha de endereço como vem do banco (curadentespro_enderecos)
+type EnderecoDbRow = {
+  id: string;
+  nome_clinica?: string; logradouro?: string; numero?: string; complemento?: string;
+  bairro?: string; cidade?: string; estado?: string; cep?: string;
+  telefone?: string; whatsapp?: string;
+  atividades?: string[]; convenios?: string[]; formas_pagamento?: string[];
+  atende_urgencias?: boolean;
+  agenda?: { dia?: string; dia_semana?: string; inicio?: string; horario_inicio?: string; fim?: string; horario_fim?: string; ativo?: boolean }[];
+};
+
+// Resumo retornado pela RPC meu_dashboard_resumo()
+type DashboardResumo = {
+  media_geral: number; total_avaliacoes: number; posicao_geral: number;
+  por_atividade: { nome_atividade: string; media_nota: number; total_avaliacoes: number; posicao: number }[];
+  total_visualizacoes: number; visualizacoes_30d: number;
+};
 
 import logoProUrl from "@/assets/logos/logo-pro.png";
 import logoProAltUrl from "@/assets/logos/logo-pro-alt.png";
@@ -329,8 +348,10 @@ function EnderecoCard({
 export default function Dashboard() {
   const navigate = useNavigate();
 
-  // ─ Estado de autenticação (login demo) ────────────────────────────────────
+  // ─ Estado de autenticação e dados reais do dentista logado ─────────────────
   const [dentista, setDentista] = useState<DentistaPro | null>(null);
+  const [carregando, setCarregando] = useState(true);
+  const [metricas, setMetricas] = useState<{ total_visualizacoes: number; visualizacoes_30d: number } | null>(null);
   const [loginUsuario, setLoginUsuario] = useState("");
   const [loginSenha, setLoginSenha] = useState("");
   const [loginErro, setLoginErro] = useState("");
@@ -355,9 +376,8 @@ export default function Dashboard() {
     try {
       setIsUploadingFoto(true);
 
-      // Em produção, o ID virá do banco de dados (UUID real).
-      // Aqui usamos o ID do mock convertendo para string.
-      const dentistaId = dentista.id.toString();
+      // ID real (UUID) do dentista logado; uploadFotoDentista também atualiza foto_url no banco
+      const dentistaId = String(dentista.id);
       const publicUrl = await uploadFotoDentista(file, dentistaId);
 
       // Atualiza a interface
@@ -374,35 +394,110 @@ export default function Dashboard() {
     }
   }
 
+  // ─ Carrega os dados reais do dentista logado para o painel ────────────────
+  async function carregarPerfilReal(userId: string) {
+    setCarregando(true);
+    try {
+      const [proRes, endsRes, resumoRes] = await Promise.all([
+        supabase.from("curadentespro")
+          .select("id, nome, nome_completo, cro, cro_verificado, foto_url, bio, instagram, telefone, lgpd_aceito")
+          .eq("id", userId).is("deleted_at", null).maybeSingle(),
+        supabase.from("curadentespro_enderecos").select("*").eq("curadentespro_id", userId),
+        supabase.rpc("meu_dashboard_resumo"),
+      ]);
+
+      const pro = proRes.data;
+      if (!pro) { navigate("/pro/novo-cadastro"); return; }
+
+      const enderecos = ((endsRes.data as EnderecoDbRow[] | null) || []).map((e) => ({
+        id: e.id,
+        nome_clinica: e.nome_clinica || "",
+        logradouro: e.logradouro || "",
+        numero: e.numero || "",
+        complemento: e.complemento || "",
+        bairro: e.bairro || "",
+        cidade: e.cidade || "",
+        estado: e.estado || "",
+        cep: e.cep || "",
+        telefone: e.telefone || "",
+        whatsapp: e.whatsapp || "",
+        atividades: e.atividades || [],
+        agenda: (e.agenda || [])
+          .filter((a) => a && a.ativo !== false)
+          .map((a) => ({
+            dia_semana: a.dia || a.dia_semana || "",
+            horario_inicio: a.inicio || a.horario_inicio || "",
+            horario_fim: a.fim || a.horario_fim || "",
+          })),
+        formas_pagamento: (e.formas_pagamento || []).map((fp, i) => ({ id: `${i}`, nome: fp, tipo: "dinheiro" as const })),
+        convenios: (e.convenios || []).map((c, i) => ({ id: `${i}`, nome: c })),
+        atende_urgencias: e.atende_urgencias,
+      }));
+
+      const r = resumoRes.data as DashboardResumo | null;
+      setMetricas(r ? { total_visualizacoes: r.total_visualizacoes, visualizacoes_30d: r.visualizacoes_30d } : null);
+
+      setDentista({
+        id: pro.id,
+        usuario: "", senha: "", cpf: "", ano_formacao: 0, email: "",
+        nome_completo: pro.nome_completo || pro.nome || "",
+        telefone: pro.telefone || "",
+        foto_url: pro.foto_url || "",
+        cro: pro.cro || "",
+        bio: pro.bio || "",
+        instagram: pro.instagram || undefined,
+        cadastro_completo: !!pro.lgpd_aceito,
+        enderecos,
+        avaliacoes: {
+          media_geral: Number(r?.media_geral) || 0,
+          total_avaliacoes: r?.total_avaliacoes || 0,
+          por_atividade: (r?.por_atividade || []).map((a) => ({
+            nome_atividade: a.nome_atividade,
+            media_nota: Number(a.media_nota) || 0,
+            total_avaliacoes: a.total_avaliacoes,
+            posicao: a.posicao,
+          })),
+        },
+        posicao_geral: r?.posicao_geral || 0,
+      });
+    } catch (err) {
+      console.error("[Dashboard] Erro ao carregar perfil:", err);
+      toast.error("Erro ao carregar seu painel.");
+    } finally {
+      setCarregando(false);
+    }
+  }
+
   // ─ Efeito para carregar sessão existente ────────────────────────────────
   useEffect(() => {
     async function carregarSessao() {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        // Superuser (SuperDom) não tem perfil de dentista → vai para analytics
-        if (isSuperuserEmail(session.user.email)) {
-          navigate("/pro/dashboard-analytics");
-          return;
-        }
+      if (!session) { setCarregando(false); return; } // sem sessão → tela de login
 
-        // Verifica se o cadastro está completo antes de exibir o dashboard
-        const { data: perfil } = await supabase
-          .from('curadentespro')
-          .select('lgpd_aceito')
-          .eq('id', session.user.id)
-          .is('deleted_at', null)
-          .maybeSingle();
-
-        if (!perfil || !perfil.lgpd_aceito) {
-          // Cadastro incompleto ou inexistente → retoma o fluxo de cadastro
-          navigate('/pro/novo-cadastro');
-          return;
-        }
-
-        navigate("/pro/perfil");
+      // Superuser (SuperDom) não tem perfil de dentista → vai para analytics
+      if (isSuperuserEmail(session.user.email)) {
+        navigate("/pro/dashboard-analytics");
+        return;
       }
+
+      // Cadastro incompleto/inexistente → retoma o fluxo de cadastro
+      const { data: perfil } = await supabase
+        .from('curadentespro')
+        .select('lgpd_aceito')
+        .eq('id', session.user.id)
+        .is('deleted_at', null)
+        .maybeSingle();
+
+      if (!perfil || !perfil.lgpd_aceito) {
+        navigate('/pro/novo-cadastro');
+        return;
+      }
+
+      // Cadastro completo → carrega o painel real
+      await carregarPerfilReal(session.user.id);
     }
     carregarSessao();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -445,7 +540,7 @@ export default function Dashboard() {
       }
       
       toast.success("Bem-vindo ao painel!", { id: toastId });
-      navigate("/pro/perfil");
+      await carregarPerfilReal(data.user.id);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Erro inesperado ao entrar.";
       setLoginErro(message);
@@ -468,12 +563,46 @@ export default function Dashboard() {
   // Função: Salva a bio editada
   // Em produção: UPDATE em dentistas_perfis SET bio = :bio WHERE id = :id
   // ─────────────────────────────────────────────────────────────────────────
-  function salvarBio() {
-    if (dentista) {
-      setDentista({ ...dentista, bio: bioEditada });
-      setEditandoBio(false);
-      setModalConfig(false);
+  async function salvarBio() {
+    if (!dentista) return;
+    const { error } = await supabase.from("curadentespro").update({ bio: bioEditada }).eq("id", dentista.id);
+    if (error) {
+      toast.error("Erro ao salvar a bio: " + error.message);
+      return;
     }
+    setDentista({ ...dentista, bio: bioEditada });
+    setEditandoBio(false);
+    setModalConfig(false);
+    toast.success("Bio atualizada!");
+  }
+
+  // Exclui a própria conta (soft-delete + remoção do CPF) e desloga
+  async function handleExcluirPerfil() {
+    const toastId = toast.loading("Excluindo conta...");
+    try {
+      const { error } = await supabase.rpc("apagar_minha_conta_dentista");
+      if (error) throw error;
+      localStorage.removeItem("curadentes_hero_stats_cache");
+      localStorage.removeItem("curadentes_latest_dentists_cache");
+      setModalExcluir(false);
+      await supabase.auth.signOut();
+      setDentista(null);
+      toast.success("Sua conta foi excluída.", { id: toastId });
+      navigate("/");
+    } catch (err) {
+      toast.error("Erro ao excluir: " + (err instanceof Error ? err.message : "tente novamente"), { id: toastId });
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Enquanto carrega a sessão/painel, mostra loader (evita flash da tela de login)
+  // ─────────────────────────────────────────────────────────────────────────
+  if (carregando) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#F2F2F7" }}>
+        <Loader2 className="animate-spin" size={32} style={{ color: "#007AFF" }} />
+      </div>
+    );
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -769,6 +898,36 @@ export default function Dashboard() {
             )}
           </div>
 
+          {/* ── Visualizações do perfil ── */}
+          {metricas && (
+            <div
+              style={{
+                background: "#fff",
+                borderRadius: "20px",
+                border: "0.5px solid rgba(60,60,67,0.10)",
+                boxShadow: "0 2px 8px rgba(16,24,64,0.06)",
+                padding: "20px",
+              }}
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <Eye size={16} style={{ color: "#007AFF" }} />
+                <h2 className="text-[16px] font-bold" style={{ color: "#0A2A66", fontFamily: "Inter, sans-serif" }}>
+                  Visualizações do perfil
+                </h2>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-[14px] p-4" style={{ background: "rgba(0,122,255,0.06)" }}>
+                  <p className="text-[26px] font-bold" style={{ color: "#0A2A66" }}>{metricas.total_visualizacoes}</p>
+                  <p className="text-[12px]" style={{ color: "#8E8E93" }}>Total de visualizações</p>
+                </div>
+                <div className="rounded-[14px] p-4" style={{ background: "rgba(52,199,89,0.06)" }}>
+                  <p className="text-[26px] font-bold" style={{ color: "#0A2A66" }}>{metricas.visualizacoes_30d}</p>
+                  <p className="text-[12px]" style={{ color: "#8E8E93" }}>Nos últimos 30 dias</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* ── Pontuação e ranking ── */}
           {dentista.avaliacoes.total_avaliacoes > 0 && (
             <div
@@ -820,13 +979,13 @@ export default function Dashboard() {
                 <p className="text-[12px] font-bold uppercase tracking-wider mb-3" style={{ color: "#8E8E93" }}>
                   Por especialidade
                 </p>
-                {dentista.avaliacoes.por_atividade.map((av, idx) => (
+                {dentista.avaliacoes.por_atividade.map((av) => (
                   <BarraAvaliacao
                     key={av.nome_atividade}
                     nome={av.nome_atividade}
                     media={av.media_nota}
                     total={av.total_avaliacoes}
-                    posicao={idx + 1}
+                    posicao={av.posicao}
                   />
                 ))}
               </div>
@@ -906,7 +1065,7 @@ export default function Dashboard() {
 
             {/* Opções */}
             <button
-              onClick={() => { setEditandoBio(true); setModalConfig(false); }}
+              onClick={() => { setBioEditada(dentista?.bio || ""); setEditandoBio(true); setModalConfig(false); }}
               className="flex items-center gap-3 px-5 py-4 rounded-[16px] text-left transition-colors min-h-[60px]"
               onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(0,122,255,0.06)"; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
@@ -1010,7 +1169,7 @@ export default function Dashboard() {
             </div>
             <div className="flex flex-col gap-2">
               <button
-                onClick={() => { setModalExcluir(false); fazerLogoff(); navigate("/"); }}
+                onClick={handleExcluirPerfil}
                 className="w-full py-3 rounded-[14px] font-semibold text-[15px] min-h-[48px] text-white"
                 style={{ background: "#FF3B30" }}
               >

@@ -135,6 +135,9 @@ function BadgePodio({ posicao, tamanho }: BadgePodioProps) {
   );
 }
 
+// Dedup de visualizações registradas nesta sessão SPA (evita contar refresh/StrictMode)
+const visualizacoesRegistradas = new Set<string>();
+
 /** normalizar agenda do banco para o frontend */
 type AgendaItemRaw = {
   ativo?: boolean;
@@ -877,6 +880,12 @@ export default function DentistProfilePage() {
           setLoading(false);
           // Salva no cache de perfil completo para F5
           if (cacheKey) saveProfileCache(cacheKey, perfilMontado);
+
+          // Registra a visualização (métrica do dashboard do dentista) — fire-and-forget
+          if (typeof pro.id === "string" && !visualizacoesRegistradas.has(pro.id)) {
+            visualizacoesRegistradas.add(pro.id);
+            supabase.from("perfil_visualizacoes").insert({ dentista_id: pro.id }).then(undefined, () => {});
+          }
         }
       } catch (err) {
         if (cancel) return;

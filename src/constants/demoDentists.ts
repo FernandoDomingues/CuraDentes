@@ -46,7 +46,7 @@ export interface DentistaPro {
   avaliacoes: {
     media_geral: number;
     total_avaliacoes: number;
-    por_atividade: { nome_atividade: string; media_nota: number; total_avaliacoes: number }[];
+    por_atividade: { nome_atividade: string; media_nota: number; total_avaliacoes: number; posicao?: number }[];
   };
   /** Colocação geral no ranking */
   posicao_geral: number;
