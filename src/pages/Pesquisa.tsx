@@ -577,6 +577,36 @@ export default function Pesquisa() {
 
         const finalResults = Array.from(mergedMap.values());
 
+        // ─── Enriquece TODOS os resultados com atividades/convênios/pagamentos ──
+        // A busca geográfica (RPC get_dentistas_proximos) pode não trazer esses
+        // campos, o que zerava os filtros (ex.: ao entrar pela página de uma
+        // especialidade, o filtro de atividade removia todos os resultados geo).
+        const enderecoIds = [...new Set(finalResults.map(r => r.endereco_id))].filter(Boolean);
+        if (enderecoIds.length > 0) {
+          try {
+            const { data: endsExtra } = await supabase
+              .from("curadentespro_enderecos")
+              .select("id, atividades, convenios, formas_pagamento")
+              .in("id", enderecoIds);
+            if (endsExtra && endsExtra.length > 0) {
+              const extraMap: Record<string, { atividades: string[]; convenios: string[]; formas_pagamento: string[] }> = {};
+              endsExtra.forEach((e: { id: string; atividades: string[] | null; convenios: string[] | null; formas_pagamento: string[] | null }) => {
+                extraMap[e.id] = { atividades: e.atividades || [], convenios: e.convenios || [], formas_pagamento: e.formas_pagamento || [] };
+              });
+              finalResults.forEach(r => {
+                const ext = extraMap[r.endereco_id];
+                if (ext) {
+                  if (!r.atividades || r.atividades.length === 0) r.atividades = ext.atividades;
+                  if (!r.convenios || r.convenios.length === 0) r.convenios = ext.convenios;
+                  if (!r.formas_pagamento || r.formas_pagamento.length === 0) r.formas_pagamento = ext.formas_pagamento;
+                }
+              });
+            }
+          } catch (err) {
+            console.error("[Pesquisa] Erro ao enriquecer atividades/convênios:", err);
+          }
+        }
+
         // ─── Busca avaliações reais da tabela avaliacoes ─────────────────────
         const dentistaIds = [...new Set(finalResults.map(r => r.dentista_id))].filter(Boolean);
         if (dentistaIds.length > 0) {
