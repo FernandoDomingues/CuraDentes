@@ -28,6 +28,7 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
+import RequireSuperuser from "@/components/auth/RequireSuperuser";
 
 const Index = lazy(() => import("@/pages/Index"));
 const Pesquisa = lazy(() => import("@/pages/Pesquisa"));
@@ -81,9 +82,9 @@ export default function App() {
           <Route path="/pro/perfil" element={<MeuPerfil />} />
           <Route path="/pro/editor-de-fotos" element={<EditorDeFotos />} />
           <Route path="/pro/redefinir-senha" element={<RedefinirSenha />} />
-          <Route path="/pro/dashboard-analytics" element={<DashboardAnalytics />} />
-          <Route path="/pro/verificar-cro" element={<VerificarCro />} />
-          <Route path="/pro/verificar-cro/:id" element={<VerificarCroDetalhe />} />
+          <Route path="/pro/dashboard-analytics" element={<RequireSuperuser><DashboardAnalytics /></RequireSuperuser>} />
+          <Route path="/pro/verificar-cro" element={<RequireSuperuser><VerificarCro /></RequireSuperuser>} />
+          <Route path="/pro/verificar-cro/:id" element={<RequireSuperuser><VerificarCroDetalhe /></RequireSuperuser>} />
           <Route path="/privacidade" element={<Privacidade />} />
           <Route path="/termos" element={<TermosDeUso />} />
           <Route path="/sobre" element={<Sobre />} />

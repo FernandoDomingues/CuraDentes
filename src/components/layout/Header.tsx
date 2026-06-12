@@ -22,6 +22,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth"; // Hook global que controla quem está logado
 import { toast } from "sonner"; // Notificações amigáveis na tela
 import { supabase } from "@/lib/supabase";
+import { resolveLoginEmail, isSuperuserEmail } from "@/utils/superuser";
 
 import logoComNome from "@/assets/logos/logo-com-nome.png";
 import logoIcon from "@/assets/logos/logo-icon.png";
@@ -156,8 +157,9 @@ export default function Header() {
     const toastId = toast.loading("Verificando credenciais...");
 
     try {
+      const email = resolveLoginEmail(emailLogin);
       const { error } = await supabase.auth.signInWithPassword({
-        email: emailLogin,
+        email,
         password: senhaLogin,
       });
 
@@ -167,7 +169,7 @@ export default function Header() {
 
       toast.success("Login realizado com sucesso!", { id: toastId });
       fecharModal();
-      navigate("/pro/perfil");
+      navigate(isSuperuserEmail(email) ? "/pro/dashboard-analytics" : "/pro/perfil");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Erro desconhecido ao fazer login.";
       toast.error(message, { id: toastId });

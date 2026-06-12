@@ -17,6 +17,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { uploadFotoDentista } from "@/lib/uploadService";
 import { supabase } from "@/lib/supabase";
+import { resolveLoginEmail, isSuperuserEmail } from "@/utils/superuser";
 import {
   LogOut,
   Settings,
@@ -378,6 +379,12 @@ export default function Dashboard() {
     async function carregarSessao() {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
+        // Superuser (SuperDom) não tem perfil de dentista → vai para analytics
+        if (isSuperuserEmail(session.user.email)) {
+          navigate("/pro/dashboard-analytics");
+          return;
+        }
+
         // Verifica se o cadastro está completo antes de exibir o dashboard
         const { data: perfil } = await supabase
           .from('curadentespro')
@@ -405,12 +412,20 @@ export default function Dashboard() {
     setLoginErro("");
     const toastId = toast.loading("Entrando...");
     try {
+      const email = resolveLoginEmail(loginUsuario);
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: loginUsuario,
+        email,
         password: loginSenha
       });
       if (error) {
         throw new Error("E-mail ou senha incorretos.");
+      }
+
+      // Superuser (SuperDom) → vai direto para a dashboard de analytics
+      if (isSuperuserEmail(email)) {
+        toast.success("Bem-vindo, SuperDom!", { id: toastId });
+        navigate("/pro/dashboard-analytics");
+        return;
       }
 
       // Verifica se o cadastro está completo

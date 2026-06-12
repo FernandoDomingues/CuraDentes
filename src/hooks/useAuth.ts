@@ -12,6 +12,7 @@
 import { create } from "zustand";
 import type { Session, Subscription, User as SupabaseUser } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
+import { isSuperuserEmail } from "@/utils/superuser";
 
 // ============================================================================
 // DEFINIÇÃO DO TIPO DE USUÁRIO NO FRONTEND
@@ -22,7 +23,7 @@ export interface User {
   email: string;
   picture: string;
   createdAt: string;
-  role: 'paciente' | 'dentista';
+  role: 'paciente' | 'dentista' | 'superuser';
   latitude?: number | null;
   longitude?: number | null;
 }
@@ -152,7 +153,16 @@ export const useAuth = create<AuthState>((set, get) => ({
     // Restaura do banco (somente quando o cache não existe)
     const restoreFromDB = async (authUser: SupabaseUser) => {
       if (!authUser) { set({ isInitializing: false }); return; }
-      
+
+      // 0. Superuser (SuperDom): não é dentista nem paciente — não cria nada no banco
+      if (isSuperuserEmail(authUser.email)) {
+        setAndCache({
+          id: authUser.id, name: "SuperDom", email: authUser.email,
+          picture: "", createdAt: new Date().toISOString(), role: 'superuser',
+        });
+        return;
+      }
+
       // 1. Verifica se é dentista
       const dentista = await checkIfDentista(authUser);
       if (dentista) {
@@ -199,6 +209,15 @@ export const useAuth = create<AuthState>((set, get) => ({
     const signInAndSync = async (session: Session) => {
       const authUser = session.user;
       if (!authUser) return;
+
+      // 0. Superuser (SuperDom): não é dentista nem paciente — não cria nada no banco
+      if (isSuperuserEmail(authUser.email)) {
+        setAndCache({
+          id: authUser.id, name: "SuperDom", email: authUser.email,
+          picture: "", createdAt: new Date().toISOString(), role: 'superuser',
+        });
+        return;
+      }
 
       // 1. Verifica se é dentista
       const dentista = await checkIfDentista(authUser);

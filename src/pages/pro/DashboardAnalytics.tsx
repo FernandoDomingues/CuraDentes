@@ -12,13 +12,14 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import { useEffect, useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import Header from "@/components/layout/Header";
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid,
 } from "recharts";
-import { Loader2, Search, MapPin, Building2, Activity, TrendingUp, AlertTriangle } from "lucide-react";
+import { Loader2, Search, MapPin, Building2, Activity, TrendingUp, AlertTriangle, ShieldCheck } from "lucide-react";
 import HeatMapLayer from "@/components/analytics/HeatMapLayer";
 
 type LogRow = {
@@ -38,6 +39,7 @@ type DentistaEndereco = {
 };
 
 export default function DashboardAnalytics() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [logs, setLogs] = useState<LogRow[]>([]);
   const [enderecos, setEnderecos] = useState<DentistaEndereco[]>([]);
@@ -169,7 +171,16 @@ export default function DashboardAnalytics() {
     <div className="min-h-screen bg-[#F2F2F7]">
       <Header />
       <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-        <h1 className="text-2xl font-bold text-[#0A2A66]">Analytics do Site</h1>
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <h1 className="text-2xl font-bold text-[#0A2A66]">Analytics do Site</h1>
+          <button
+            onClick={() => navigate("/pro/verificar-cro")}
+            className="inline-flex items-center gap-2 rounded-xl bg-[#0A6E5C] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#08594b]"
+          >
+            <ShieldCheck className="h-4 w-4" />
+            Conferência de CRO
+          </button>
+        </div>
 
         {/* ─── KPIs ──────────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
