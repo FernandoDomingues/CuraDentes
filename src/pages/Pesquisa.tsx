@@ -243,7 +243,7 @@ export default function Pesquisa() {
     );
     return (cached ?? []) as DentistaResultado[];
   });
-  const [ordenacao, setOrdenacao] = useState<"distancia" | "avaliacao">("distancia");
+  const [ordenacao, setOrdenacao] = useState<"distancia" | "avaliacao">("avaliacao");
 
   // Autocomplete
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -1152,8 +1152,8 @@ export default function Pesquisa() {
                   onChange={(e) => setOrdenacao(e.target.value as "distancia" | "avaliacao")}
                   className="bg-transparent text-[13px] font-semibold text-[#1C1C1E] outline-none cursor-pointer w-full"
                 >
-                  <option value="distancia">Mais próximos</option>
                   <option value="avaliacao">Melhor avaliados</option>
+                  <option value="distancia">Mais próximos</option>
                 </select>
               </div>
             </div>
