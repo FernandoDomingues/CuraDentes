@@ -36,6 +36,8 @@ export default function EditorDeFotos() {
   
   // Rota de retorno (padrão é perfil se não especificado)
   const fromPath = location.state?.from || "/pro/perfil";
+  // Etapa de origem (quando vem do cadastro) — devolvida para retomar no passo certo
+  const voltarParaEtapa = location.state?.etapa;
 
   useEffect(() => {
     // Carregar usuário autenticado
@@ -106,7 +108,7 @@ export default function EditorDeFotos() {
           }
 
           // Retorna
-          setTimeout(() => navigate(fromPath), 1000);
+          setTimeout(() => navigate(fromPath, { state: { voltarParaEtapa } }), 1000);
         } catch (err) {
           toast.error("Erro ao salvar foto: " + (err instanceof Error ? err.message : err), { id: toastId });
           setSaving(false);
@@ -124,7 +126,7 @@ export default function EditorDeFotos() {
       <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
         <div className="container mx-auto px-4 md:px-8 h-[60px] flex items-center justify-between">
           <button 
-            onClick={() => navigate(fromPath)} 
+            onClick={() => navigate(fromPath, { state: { voltarParaEtapa } })} 
             disabled={saving}
             className="flex items-center gap-1.5 text-[13px] font-semibold text-gray-500 hover:text-gray-900 transition-colors disabled:opacity-50"
           >

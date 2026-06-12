@@ -243,21 +243,23 @@ async function testRpcMarcarVerificacaoNonSuperuser(): Promise<void> {
 }
 
 async function testCpfProtegido(): Promise<void> {
-  console.log('\n[9/9] Anon NAO PODE ler a coluna cpf de curadentespro (LGPD)');
+  console.log('\n[9/9] CPF isolado em curadentespro_cpf (owner-only, LGPD)');
+
+  // O cpf saiu da curadentespro e foi para a tabela curadentespro_cpf (RLS owner-only)
   const { data, error } = await supabase
-    .from('curadentespro')
+    .from('curadentespro_cpf')
     .select('cpf')
     .limit(1);
 
   if (error) {
-    ok(`Anon bloqueado de ler cpf (${error.message})`);
-  } else if (data && data.length > 0 && (data[0] as { cpf?: string }).cpf) {
-    fail('Anon LEU O CPF!', 'coluna cpf ainda exposta');
+    ok(`Anon bloqueado de ler curadentespro_cpf (${error.message})`);
+  } else if (data && data.length > 0) {
+    fail('Anon LEU O CPF!', 'RLS de curadentespro_cpf nao esta bloqueando');
   } else {
-    ok('Anon nao recebeu cpf');
+    ok('Anon nao recebe nenhum cpf (RLS filtrou)');
   }
 
-  // Sanity: colunas publicas continuam legiveis
+  // Sanity: a curadentespro publica continua legivel e nao tem mais a coluna cpf
   const { data: pub, error: pubErr } = await supabase
     .from('curadentespro')
     .select('id, nome')

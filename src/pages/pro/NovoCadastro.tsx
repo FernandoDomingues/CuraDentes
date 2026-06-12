@@ -14,7 +14,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   ChevronRight,
   ChevronLeft,
@@ -179,6 +179,7 @@ function calcularForcaSenha(senha: string): number {
 // ─── Componente principal ────────────────────────────────────────────────────
 export default function NovoCadastro() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   // ─ Estado da etapa atual ──────────────────────────────────────────────────
   const [etapa, setEtapa] = useState(1);
@@ -194,6 +195,11 @@ export default function NovoCadastro() {
   // ────────────────────────────────────────────────────────────────────────────
   useEffect(() => {
     async function restaurar() {
+      // Ao voltar de outra rota (ex.: editor de fotos), retoma na etapa de origem
+      // em vez de cair no passo 2 (a regra "incompleto → passo 2" vale só quando
+      // o usuário ABRE o cadastro do zero, não em navegações internas).
+      const etapaForcada = (location.state as { voltarParaEtapa?: number } | null)?.voltarParaEtapa;
+
       // 1. Verifica sessão ativa no Supabase
       const { data: { user } } = await supabase.auth.getUser();
 
@@ -265,7 +271,7 @@ export default function NovoCadastro() {
             navigate('/pro/perfil');
             return;
           } else {
-            setEtapa(2); // Cadastro incompleto → sempre retoma no passo 2
+            setEtapa(etapaForcada ?? 2); // Incompleto → passo 2 (ou a etapa de origem)
           }
 
           return; // Dados do banco têm prioridade, ignora localStorage
@@ -281,7 +287,7 @@ export default function NovoCadastro() {
             navigate('/pro/perfil');
             return;
           } else if (dados.emailVerificado) {
-            setEtapa(2); // Rascunho incompleto e email verificado → sempre retoma no passo 2
+            setEtapa(etapaForcada ?? 2); // Incompleto → passo 2 (ou a etapa de origem)
           } else {
             setEtapa(1);
           }
@@ -536,6 +542,22 @@ export default function NovoCadastro() {
   // o que só ocorre ao concluir o cadastro na Etapa 6.
   // ─────────────────────────────────────────────────────────────────────────
 
+  /** Salva o CPF na tabela separada curadentespro_cpf (RLS owner-only, LGPD). */
+  async function salvarCpf(userId: string) {
+    if (!cpf) return;
+    const { error } = await supabase.from('curadentespro_cpf')
+      .upsert({ curadentespro_id: userId, cpf }, { onConflict: 'curadentespro_id' });
+    if (error) {
+      console.error('[cpf]', error);
+      toast.error(
+        error.code === '23505'
+          ? 'Este CPF já está cadastrado na plataforma.'
+          : 'Erro ao salvar o CPF: ' + error.message,
+      );
+      throw error;
+    }
+  }
+
   /** Etapa 1 → banco: nome + email (pré-cadastro mínimo) */
   async function salvarEtapa1NoBanco(userId: string) {
     const { error } = await supabase.from('curadentespro').upsert({
@@ -582,7 +604,6 @@ export default function NovoCadastro() {
       nome,
       nome_completo: nomeCompleto,
       email,
-      cpf: cpf || null,
       cro: cro || null,
       ano_formacao: anoFormacao ? parseInt(anoFormacao) : null,
       foto_url: fotoUrl || null,
@@ -592,6 +613,8 @@ export default function NovoCadastro() {
       toast.error('Erro ao salvar identidade profissional: ' + error.message);
       throw error;
     }
+    // CPF vai para a tabela separada curadentespro_cpf (LGPD — dado sensivel)
+    await salvarCpf(user.id);
   }
 
   /** Etapa 4 → banco: endereços (apaga e reinserc para manter sincronia) */
@@ -763,7 +786,6 @@ export default function NovoCadastro() {
             email: email,
             telefone: telefone,
             telefone_verificado: validarTelefone(telefone),
-            cpf: cpf,
             cro: cro,
             ano_formacao: anoFormacao ? parseInt(anoFormacao) : null,
             foto_url: fotoUrl || null,
@@ -773,6 +795,9 @@ export default function NovoCadastro() {
           }, { onConflict: 'id' });
 
           if (errorPro) throw errorPro;
+
+          // CPF na tabela separada (LGPD) — idempotente
+          await salvarCpf(user.id);
 
           // 3. Deletar endereços existentes para evitar duplicações se for uma re-tentativa/atualização
           const { error: errorDelete } = await supabase
@@ -1580,7 +1605,7 @@ export default function NovoCadastro() {
             const file = e.target.files?.[0];
             if (file) {
               if (fileInputRef.current) fileInputRef.current.value = "";
-              navigate("/pro/editor-de-fotos", { state: { imageFile: file, from: "/pro/novo-cadastro" } });
+              navigate("/pro/editor-de-fotos", { state: { imageFile: file, from: "/pro/novo-cadastro", etapa } });
             }
           }}
         />

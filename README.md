@@ -177,7 +177,7 @@ site-k7/
 
 ### ✅ Resolvidas
 
-- **#0 — Vazamento de CPF (LGPD)** — `migration 20260612110000`. O RLS é row-level, não column-level, então qualquer um lia o CPF de todos via REST. Removido o SELECT de tabela de anon/authenticated + GRANT por coluna (tudo menos `cpf`); o dono lê o próprio CPF via RPC `meu_cpf()`. Teste [9] em `rls.test.ts`.
+- **#0 — Vazamento de CPF (LGPD)** — o RLS é row-level, não column-level, então qualquer um lia o CPF de todos via REST. **Solução final** (`migration 20260612130000`): o `cpf` saiu da `curadentespro` e foi para a tabela `curadentespro_cpf` com RLS owner-only; o dono lê o próprio CPF via RPC `meu_cpf()`. _(A 1ª tentativa por GRANT de coluna — `migration 20260612110000` — quebrava os upserts do cadastro, pois o PostgREST retorna a representação da linha inteira; por isso a abordagem por tabela separada.)_ Teste [9] em `rls.test.ts`.
 - **#1 — Escalada de privilégio na RPC `marcar_verificacao_cro`** — `migration 20260612090000`. Gate `IF NOT public.is_superuser()` dentro da função SECURITY DEFINER. Testes [7]/[8] em `rls.test.ts`.
 - **#2 — Edge function `send-rating-notification` (relay aberto)** — agora exige usuário autenticado real (`auth.getUser()` na função) e CORS reflete a origem. Verificado: chamada só com anon key → 401. Redeployada.
 - **#3 — Edge function `scrape-cro`** — **removida** (deployada + local). Era código morto, sem auth, com sessões em memória. Superfície de ataque eliminada.
