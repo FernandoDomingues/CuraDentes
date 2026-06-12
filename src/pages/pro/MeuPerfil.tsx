@@ -118,6 +118,7 @@ export default function MeuPerfil() {
 
   // Dados Pessoais
   const [nome, setNome] = useState("");
+  const [tratamento, setTratamento] = useState(""); // "Dr." ou "Dra."
   const [nomeCompleto, setNomeCompleto] = useState("");
   const [telefone, setTelefone] = useState("");
   const [cpf, setCpf] = useState("");
@@ -149,7 +150,7 @@ export default function MeuPerfil() {
         const { data: perfil, error: perfilError } = await supabase
           .from("curadentespro")
           // cpf é lido à parte via RPC meu_cpf() (coluna protegida — LGPD)
-          .select("id, nome, nome_completo, email, telefone, cro, ano_formacao, foto_url, bio, instagram, lgpd_aceito")
+          .select("id, nome, tratamento, nome_completo, email, telefone, cro, ano_formacao, foto_url, bio, instagram, lgpd_aceito")
           .eq("id", uid)
           .is("deleted_at", null)
           .single();
@@ -163,6 +164,7 @@ export default function MeuPerfil() {
         }
 
         setNome(perfil.nome || "");
+        setTratamento(perfil.tratamento || "");
         setNomeCompleto(perfil.nome_completo || "");
         setTelefone(perfil.telefone || "");
         const { data: cpfProprio } = await supabase.rpc("meu_cpf");
@@ -241,6 +243,7 @@ export default function MeuPerfil() {
         .from("curadentespro")
         .update({
           nome,
+          tratamento: tratamento || null,
           telefone,
           ano_formacao: anoFormacao ? parseInt(anoFormacao) : null,
           bio,
@@ -487,6 +490,24 @@ export default function MeuPerfil() {
               <div className="md:col-span-2">
                 <label style={labelStyle}>Nome de Exibição</label>
                 <input type="text" value={nome} onChange={(e) => setNome(e.target.value)} style={inputStyle} />
+              </div>
+              <div className="md:col-span-2">
+                <label style={labelStyle}>Como aparece no seu perfil</label>
+                <div className="flex gap-2">
+                  {(["Dr.", "Dra."] as const).map((t) => (
+                    <button
+                      type="button"
+                      key={t}
+                      onClick={() => setTratamento(t)}
+                      className="flex-1 py-2.5 rounded-[12px] font-semibold text-[14px] transition-all"
+                      style={tratamento === t
+                        ? { background: "#007AFF", color: "#fff" }
+                        : { background: "rgba(60,60,67,0.06)", color: "#3A3A3C", border: "0.5px solid rgba(60,60,67,0.12)" }}
+                    >
+                      {t} {nome.trim() ? nome.trim().split(" ")[0] : ""}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div className="md:col-span-2">
                 <label style={{ ...labelStyle, color: "#8E8E93" }}>Nome Completo (para verificação do CRO)</label>

@@ -20,6 +20,8 @@ export interface DentistaPro {
   usuario: string;
   /** Senha para acesso demo */
   senha: string;
+  /** Pronome de tratamento exibido antes do nome (ex.: "Dr." / "Dra.") */
+  tratamento?: string | null;
   /** Nome completo do profissional */
   nome_completo: string;
   /** Email de cadastro */

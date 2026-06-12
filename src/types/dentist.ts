@@ -172,6 +172,8 @@ export interface Convenio {
 export interface DentistProfile {
   /** FK para Dentist.id / tabela: dentistas */
   dentista_id: string | number;
+  /** Pronome de tratamento exibido antes do nome (ex.: "Dr." / "Dra.") */
+  tratamento?: string | null;
   nome_completo: string;
   nome_legal?: string;
   foto_url: string;

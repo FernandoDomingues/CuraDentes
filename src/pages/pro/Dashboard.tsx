@@ -400,7 +400,7 @@ export default function Dashboard() {
     try {
       const [proRes, endsRes, resumoRes] = await Promise.all([
         supabase.from("curadentespro")
-          .select("id, nome, nome_completo, cro, cro_verificado, foto_url, bio, instagram, telefone, lgpd_aceito")
+          .select("id, nome, tratamento, nome_completo, cro, cro_verificado, foto_url, bio, instagram, telefone, lgpd_aceito")
           .eq("id", userId).is("deleted_at", null).maybeSingle(),
         supabase.from("curadentespro_enderecos").select("*").eq("curadentespro_id", userId),
         supabase.rpc("meu_dashboard_resumo"),
@@ -440,6 +440,7 @@ export default function Dashboard() {
       setDentista({
         id: pro.id,
         usuario: "", senha: "", cpf: "", ano_formacao: 0, email: "",
+        tratamento: pro.tratamento,
         nome_completo: pro.nome_completo || pro.nome || "",
         telefone: pro.telefone || "",
         foto_url: pro.foto_url || "",
@@ -835,7 +836,7 @@ export default function Dashboard() {
                     letterSpacing: "-0.02em",
                   }}
                 >
-                  {dentista.nome_completo}
+                  {dentista.tratamento ? dentista.tratamento + " " : ""}{dentista.nome_completo}
                 </h1>
 
                 <div className="flex items-center gap-2 justify-center sm:justify-start mb-2">

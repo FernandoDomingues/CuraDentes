@@ -157,7 +157,8 @@ function testEtapasCompleteness() {
   console.log("\n[7/7] Validação de Etapas");
   try {
     const baseParams: EtapaValidationParams = {
-      nome: "Dr. Fernando Domingues",
+      nome: "Fernando Domingues",
+      tratamento: "Dr.",
       emailVerificado: true,
       senhaSincronizada: true,
       senha: "",
@@ -180,6 +181,7 @@ function testEtapasCompleteness() {
     assert.strictEqual(isEtapaConcluida(1, baseParams), true, "Etapa 1 concluída");
     assert.strictEqual(isEtapaConcluida(1, { ...baseParams, nome: "" }), false, "Etapa 1 pendente: nome vazio");
     assert.strictEqual(isEtapaConcluida(1, { ...baseParams, emailVerificado: false }), false, "Etapa 1 pendente: email não verificado");
+    assert.strictEqual(isEtapaConcluida(1, { ...baseParams, tratamento: "" }), false, "Etapa 1 pendente: tratamento (Dr./Dra.) não escolhido");
 
     // Etapa 2
     assert.strictEqual(isEtapaConcluida(2, baseParams), true, "Etapa 2 concluída");

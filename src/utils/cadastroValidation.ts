@@ -88,6 +88,7 @@ export function validarAnoFormacao(valor: string): boolean {
 
 export interface EtapaValidationParams {
   nome: string;
+  tratamento: string;
   emailVerificado: boolean;
   senhaSincronizada: boolean;
   senha: string;
@@ -105,6 +106,7 @@ export function isEtapaConcluida(etapaId: number, params: EtapaValidationParams)
     case 1:
       return (
         !!params.nome.trim() &&
+        !!params.tratamento &&
         params.emailVerificado &&
         (params.senhaSincronizada || (params.senha.length >= 8 && params.senha === params.confirmaSenha))
       );

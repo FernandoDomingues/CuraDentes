@@ -209,7 +209,7 @@ export default function NovoCadastro() {
         const { data: pro } = await supabase
           .from('curadentespro')
           // cpf é lido à parte via RPC meu_cpf() (coluna protegida — LGPD)
-          .select('id, nome, nome_completo, email, telefone, cro, ano_formacao, foto_url, bio, instagram, lgpd_aceito')
+          .select('id, nome, tratamento, nome_completo, email, telefone, cro, ano_formacao, foto_url, bio, instagram, lgpd_aceito')
           .eq('id', user.id)
           .is('deleted_at', null)
           .maybeSingle();
@@ -217,6 +217,7 @@ export default function NovoCadastro() {
         if (pro) {
           // Preenche os campos com os dados do banco
           if (pro.nome) setNome(pro.nome);
+          if (pro.tratamento) setTratamento(pro.tratamento);
           if (pro.nome_completo) setNomeCompleto(pro.nome_completo);
           if (pro.email) setEmail(pro.email);
           if (pro.telefone) setTelefone(pro.telefone);
@@ -294,6 +295,7 @@ export default function NovoCadastro() {
             setEtapa(1);
           }
           if (dados.nome) setNome(dados.nome);
+          if (dados.tratamento) setTratamento(dados.tratamento);
           if (dados.nomeCompleto) setNomeCompleto(dados.nomeCompleto);
           if (dados.email) setEmail(dados.email);
           if (dados.emailVerificado) setEmailVerificado(dados.emailVerificado);
@@ -319,6 +321,7 @@ export default function NovoCadastro() {
 
   // ─ Etapa 1: Conta ─────────────────────────────────────────────────────────
   const [nome, setNome] = useState("");
+  const [tratamento, setTratamento] = useState(""); // "Dr." ou "Dra."
   const [nomeCompleto, setNomeCompleto] = useState("");
   const [email, setEmail] = useState("");
   const [emailVerificado, setEmailVerificado] = useState(false);
@@ -374,6 +377,7 @@ export default function NovoCadastro() {
     const rascunho = {
       etapa,
       nome,
+      tratamento,
       nomeCompleto,
       email,
       emailVerificado,
@@ -392,7 +396,7 @@ export default function NovoCadastro() {
     };
     localStorage.setItem("curadentes_pro_cadastro_rascunho", JSON.stringify(rascunho));
   }, [
-    etapa, nome, nomeCompleto, email, emailVerificado,
+    etapa, nome, tratamento, nomeCompleto, email, emailVerificado,
     telefone, telefoneVerificado,
     cpf, cro, anoFormacao, fotoUrl,
     enderecos, bio, instagram, lgpdAceito,
@@ -566,6 +570,7 @@ export default function NovoCadastro() {
       id: userId,
       user_id: userId,
       nome,
+      tratamento: tratamento || null,
       nome_completo: nomeCompleto,
       email,
     }, { onConflict: 'id' });
@@ -584,6 +589,7 @@ export default function NovoCadastro() {
       id: user.id,
       user_id: user.id,
       nome,
+      tratamento: tratamento || null,
       nome_completo: nomeCompleto,
       email,
       telefone,
@@ -604,6 +610,7 @@ export default function NovoCadastro() {
       id: user.id,
       user_id: user.id,
       nome,
+      tratamento: tratamento || null,
       nome_completo: nomeCompleto,
       email,
       cro: cro || null,
@@ -679,6 +686,7 @@ export default function NovoCadastro() {
       id: user.id,
       user_id: user.id,
       nome,
+      tratamento: tratamento || null,
       nome_completo: nomeCompleto,
       email,
       bio: bio || null,
@@ -784,6 +792,7 @@ export default function NovoCadastro() {
             id: user.id,
             user_id: user.id,
             nome: nome,
+            tratamento: tratamento || null,
             nome_completo: nomeCompleto,
             email: email,
             telefone: telefone,
@@ -908,6 +917,7 @@ export default function NovoCadastro() {
     const rascunho = {
       etapa,
       nome,
+      tratamento,
       nomeCompleto,
       email,
       emailVerificado,
@@ -1042,6 +1052,7 @@ export default function NovoCadastro() {
   const renderBarraProgresso = () => {
     const validationParams: EtapaValidationParams = {
       nome,
+      tratamento,
       emailVerificado,
       senhaSincronizada,
       senha,
@@ -1221,9 +1232,29 @@ export default function NovoCadastro() {
           type="text"
           value={nome}
           onChange={(e) => setNome(e.target.value)}
-          placeholder="Dr. João Silva"
+          placeholder="João Silva"
           style={inputStyle}
         />
+      </div>
+
+      {/* Pronome de tratamento (Dr. / Dra.) — exibido antes do nome no perfil */}
+      <div>
+        <label style={labelStyle}>Como aparece no seu perfil *</label>
+        <div className="flex gap-2">
+          {(["Dr.", "Dra."] as const).map((t) => (
+            <button
+              type="button"
+              key={t}
+              onClick={() => setTratamento(t)}
+              className="flex-1 py-2.5 rounded-[12px] font-semibold text-[14px] transition-all"
+              style={tratamento === t
+                ? { background: "#007AFF", color: "#fff" }
+                : { background: "rgba(60,60,67,0.06)", color: "#3A3A3C", border: "0.5px solid rgba(60,60,67,0.12)" }}
+            >
+              {t} {nome.trim() ? nome.trim().split(" ")[0] : ""}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Nome completo (para verificação do CRO) */}

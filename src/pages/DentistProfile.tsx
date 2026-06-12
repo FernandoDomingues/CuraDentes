@@ -753,7 +753,7 @@ export default function DentistProfilePage() {
           supabase
             .from("curadentespro")
             // cpf é omitido de propósito (LGPD — coluna protegida no banco)
-            .select("id, nome, email, telefone, telefone_verificado, cro, ano_formacao, foto_url, bio, lgpd_aceito, criado_em, user_id, instagram, deleted_at, cro_verificado, nome_completo")
+            .select("id, nome, tratamento, email, telefone, telefone_verificado, cro, ano_formacao, foto_url, bio, lgpd_aceito, criado_em, user_id, instagram, deleted_at, cro_verificado, nome_completo")
             .eq(queryField, queryValue)
             .is("deleted_at", null)
             .maybeSingle(),
@@ -857,6 +857,7 @@ export default function DentistProfilePage() {
 
         const perfilMontado: DentistProfile = {
           dentista_id: pro.id,
+          tratamento: pro.tratamento,
           nome_completo: pro.nome,
           foto_url: (pro.foto_url && !pro.foto_url.startsWith("blob:")) ? pro.foto_url : "",
           cro: (pro.cro || "").replace(/\s/g, ""),
@@ -1039,7 +1040,7 @@ export default function DentistProfilePage() {
                     letterSpacing: "-0.02em",
                   }}
                 >
-                  {perfil.nome_completo}
+                  {perfil.tratamento ? perfil.tratamento + " " : ""}{perfil.nome_completo}
                 </h1>
                 {/* Badge exibido apenas quando o dentista está no Top 1, 2 ou 3 da cidade */}
                 {perfil.posicao_cidade != null && perfil.posicao_cidade <= 3 && (
