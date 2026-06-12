@@ -324,7 +324,7 @@ export default function HeroSection() {
   };
 
   const processarBuscaPorCoordenadas = async (lat: number, lng: number, toastIdToDismiss?: string) => {
-    let loaderToastId = toastIdToDismiss || toast.loading("Identificando seu bairro...");
+    const loaderToastId = toastIdToDismiss || toast.loading("Identificando seu bairro...");
     try {
       const enderecoTexto = await getEnderecoFromCoordenadas(lat, lng);
       toast.dismiss(loaderToastId);

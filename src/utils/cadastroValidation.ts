@@ -55,7 +55,16 @@ export function validarCro(valor: string): boolean {
   return ufsValidas.includes(uf);
 }
 
-export function validarEnderecos(enderecos: any[]): { valido: boolean; erros: string[] } {
+type EnderecoInput = {
+  nome_clinica?: string;
+  logradouro?: string;
+  bairro?: string;
+  cidade?: string;
+  estado?: string;
+  cep?: string;
+};
+
+export function validarEnderecos(enderecos: EnderecoInput[]): { valido: boolean; erros: string[] } {
   const erros: string[] = [];
   enderecos.forEach((end, i) => {
     const prefixo = `Endereço ${i + 1}`;
@@ -86,7 +95,7 @@ export interface EtapaValidationParams {
   telefone: string;
   cpf: string;
   cro: string;
-  enderecos: any[];
+  enderecos: EnderecoInput[];
   lgpdAceito: boolean;
   anoFormacao?: string;
 }

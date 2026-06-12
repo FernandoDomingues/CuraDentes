@@ -38,28 +38,6 @@ export default function Especialidade() {
     };
   }, [especialidade]);
 
-  if (notFound) {
-    return (
-      <>
-        <Header />
-        <main className="min-h-[60vh] flex items-center justify-center px-5">
-          <div className="text-center max-w-md">
-            <h1 className="text-3xl font-bold mb-4" style={{ color: "#0A2A66" }}>Especialidade não encontrada</h1>
-            <p className="text-gray-500 mb-6">A especialidade que você procura não existe ou foi removida.</p>
-            <Link
-              to="/"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-semibold text-white transition-all"
-              style={{ background: "#007AFF" }}
-            >
-              Voltar para Home
-            </Link>
-          </div>
-        </main>
-        <Footer />
-      </>
-    );
-  }
-
   const navigate = useNavigate();
   const { user, signInWithGoogle } = useAuth();
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -101,7 +79,7 @@ export default function Especialidade() {
           "";
         if (city) {
           setUserCity(city);
-          try { sessionStorage.setItem("curadentes_user_city", city); } catch {}
+          try { sessionStorage.setItem("curadentes_user_city", city); } catch { /* sessionStorage indisponível */ }
         }
       })
       .catch(() => {});
@@ -135,6 +113,29 @@ export default function Especialidade() {
     const nav = JSON.parse(pending);
     navigate(nav.path + (nav.params || ""), { state: nav.state, replace: true });
   }, [user, navigate]);
+
+  // Early return só APÓS todos os hooks (rules-of-hooks)
+  if (notFound) {
+    return (
+      <>
+        <Header />
+        <main className="min-h-[60vh] flex items-center justify-center px-5">
+          <div className="text-center max-w-md">
+            <h1 className="text-3xl font-bold mb-4" style={{ color: "#0A2A66" }}>Especialidade não encontrada</h1>
+            <p className="text-gray-500 mb-6">A especialidade que você procura não existe ou foi removida.</p>
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-semibold text-white transition-all"
+              style={{ background: "#007AFF" }}
+            >
+              Voltar para Home
+            </Link>
+          </div>
+        </main>
+        <Footer />
+      </>
+    );
+  }
 
   const saveAndRedirectToLogin = () => {
     const searchQuery = userCity || nome;

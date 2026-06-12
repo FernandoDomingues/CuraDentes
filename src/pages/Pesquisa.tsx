@@ -459,7 +459,7 @@ export default function Pesquisa() {
                 return {
                   dentista_id: pro.id,
                   dentista_cro: (pro.cro || "").replace(/\s/g, ""),
-                  dentista_cro_verificado: !!(pro as any).cro_verificado,
+                  dentista_cro_verificado: !!(pro as { cro_verificado?: boolean }).cro_verificado,
                   dentista_nome: pro.nome || "Dentista Parceiro",
                   dentista_foto: pro.foto_url || "",
                   dentista_bio: pro.bio || "",
@@ -530,7 +530,7 @@ export default function Pesquisa() {
                     return {
                       dentista_id: pro.id,
                       dentista_cro: (pro.cro || "").replace(/\s/g, ""),
-                  dentista_cro_verificado: !!(pro as any).cro_verificado,
+                  dentista_cro_verificado: !!(pro as { cro_verificado?: boolean }).cro_verificado,
                       dentista_nome: pro.nome || "Dentista Parceiro",
                       dentista_foto: pro.foto_url || "",
                       dentista_bio: pro.bio || "",

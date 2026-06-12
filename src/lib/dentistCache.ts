@@ -165,10 +165,10 @@ export function saveQueryCache(key: string, results: CachedDentistResult[]): voi
 // ─── Cache de perfil completo (com agenda) ────────────────────────────────────
 const PROFILE_CACHE_KEY = "curadentes_profile_cache";
 
-export function saveProfileCache(id: string, profile: any): void {
+export function saveProfileCache(id: string, profile: unknown): void {
   try {
     const raw = localStorage.getItem(PROFILE_CACHE_KEY);
-    let entries: Record<string, { data: any; savedAt: number }> = {};
+    let entries: Record<string, { data: unknown; savedAt: number }> = {};
     if (raw) {
       try { entries = JSON.parse(raw); } catch { entries = {}; }
     }
@@ -187,14 +187,14 @@ export function saveProfileCache(id: string, profile: any): void {
   }
 }
 
-export function loadProfileCache(id: string): any | null {
+export function loadProfileCache<T = unknown>(id: string): T | null {
   try {
     const raw = localStorage.getItem(PROFILE_CACHE_KEY);
     if (!raw) return null;
     const entries = JSON.parse(raw);
     const entry = entries[id];
     if (!entry) return null;
-    return entry.data;
+    return entry.data as T;
   } catch {
     return null;
   }

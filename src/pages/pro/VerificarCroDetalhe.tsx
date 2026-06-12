@@ -83,10 +83,11 @@ export default function VerificarCroDetalhe() {
           .single();
 
         if (error) throw error;
+        const row = data as { observacao?: string | null; dados_consultados?: DadosExtraidos | null };
         setVerificacao(data as unknown as VerificacaoDetalhe);
-        setObservacao((data as any).observacao || "");
+        setObservacao(row.observacao || "");
 
-        const consultados = (data as any).dados_consultados as DadosExtraidos | null;
+        const consultados = (row.dados_consultados ?? null) as DadosExtraidos | null;
         if (consultados) {
           setDadosExtraidos(consultados);
         }

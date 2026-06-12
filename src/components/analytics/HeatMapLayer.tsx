@@ -59,7 +59,7 @@ export default function HeatMapLayer({
           (p) => [p[0], p[1], p[2] / maxIntensidade] as [number, number, number]
         );
 
-        heatLayerRef.current = (L as any).heatLayer(normalizados, {
+        heatLayerRef.current = L.heatLayer(normalizados, {
           radius: 25,
           blur: 15,
           maxZoom: 10,

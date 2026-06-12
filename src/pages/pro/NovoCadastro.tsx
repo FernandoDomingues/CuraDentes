@@ -229,7 +229,7 @@ export default function NovoCadastro() {
 
           if (ends && ends.length > 0) {
             // Mapeia os endereços do banco para o formato do formulário
-            setEnderecos(ends.map((e: any) => ({
+            setEnderecos(ends.map((e: Partial<EnderecoForm>) => ({
               id: e.id || `end-${Date.now()}-${Math.random()}`,
               nome_clinica: e.nome_clinica || '',
               logradouro: e.logradouro || '',
@@ -814,14 +814,15 @@ export default function NovoCadastro() {
           navigate("/pro/perfil");
         })()
       ]);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Erro ao salvar cadastro:", error);
-      
+
       let message = "Ocorreu um erro ao salvar o cadastro.";
-      
+      const e = error as { code?: string; message?: string };
+
       if (error && typeof error === "object") {
-        if (error.code === "23505") {
-          const errMsg = error.message || "";
+        if (e.code === "23505") {
+          const errMsg = e.message || "";
           if (errMsg.includes("curadentespro_cpf_key") || errMsg.includes("cpf")) {
             message = "Este CPF já está cadastrado na plataforma. Caso seja seu, acesse o painel com o e-mail que você utilizou anteriormente.";
           } else if (errMsg.includes("curadentespro_cro_key") || errMsg.includes("cro")) {
@@ -831,8 +832,8 @@ export default function NovoCadastro() {
           } else {
             message = "Este CPF, CRO ou e-mail já está cadastrado em outra conta.";
           }
-        } else if (error.message) {
-          message = error.message;
+        } else if (e.message) {
+          message = e.message;
         }
       } else if (error instanceof Error) {
         message = error.message;

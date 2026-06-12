@@ -136,16 +136,25 @@ function BadgePodio({ posicao, tamanho }: BadgePodioProps) {
 }
 
 /** normalizar agenda do banco para o frontend */
-function normalizarAgenda(agendaRaw: any): HorarioAtendimento[] {
+type AgendaItemRaw = {
+  ativo?: boolean;
+  dia?: string;
+  dia_semana?: string;
+  inicio?: string;
+  horario_inicio?: string;
+  fim?: string;
+  horario_fim?: string;
+};
+function normalizarAgenda(agendaRaw: unknown): HorarioAtendimento[] {
   if (!Array.isArray(agendaRaw)) return [];
-  return agendaRaw
-    .filter((item: any) => item && item.ativo !== false)
-    .map((item: any) => ({
+  return (agendaRaw as AgendaItemRaw[])
+    .filter((item) => item && item.ativo !== false)
+    .map((item) => ({
       dia_semana: item.dia || item.dia_semana || "",
       horario_inicio: item.inicio || item.horario_inicio || "",
       horario_fim: item.fim || item.horario_fim || "",
     }))
-    .filter((item: any) => item.dia_semana && item.horario_inicio && item.horario_fim);
+    .filter((item) => item.dia_semana && item.horario_inicio && item.horario_fim);
 }
 
 async function queryTimeout<T>(promise: PromiseLike<T>, ms: number): Promise<T> {
@@ -615,7 +624,7 @@ export default function DentistProfilePage() {
         return;
       }
 
-      const ids = [...new Set(avaliacoes.map((a: any) => a.paciente_id))];
+      const ids = [...new Set(avaliacoes.map((a: { paciente_id: string }) => a.paciente_id))];
       console.log("[fetchAvaliacoesIndividuais] Querying clients for patient_ids:", ids);
         const { data: pacientes, error: pacError } = await supabase
           .from("clientes")
@@ -630,13 +639,13 @@ export default function DentistProfilePage() {
       console.log("[fetchAvaliacoesIndividuais] Clients returned:", pacientes);
 
       const mapaPacientes = Object.fromEntries(
-        (pacientes || []).map((p: any) => [p.id, { nome: p.nome, foto: p.foto }])
+        (pacientes || []).map((p: { id: string; nome: string; foto: string }) => [p.id, { nome: p.nome, foto: p.foto }])
       );
 
       console.log("[fetchAvaliacoesIndividuais] Setting avaliacoesIndividuais state...");
       setAvaliacoesIndividuais({
         atividade,
-        ratings: (avaliacoes || []).map((r: any) => ({
+        ratings: (avaliacoes || []).map((r: { nota: number; paciente_id: string; criado_em: string }) => ({
           nota: r.nota,
           paciente_nome: mapaPacientes[r.paciente_id]?.nome || "Anônimo",
           paciente_foto: mapaPacientes[r.paciente_id]?.foto || "",
@@ -669,7 +678,7 @@ export default function DentistProfilePage() {
 
       // 0. Cache de perfil completo — mostra instantaneamente se existir
       if (cacheKey) {
-        const cachedProfile = loadProfileCache(cacheKey);
+        const cachedProfile = loadProfileCache<DentistProfile>(cacheKey);
         if (cachedProfile) {
           console.log("[DentistProfile] Profile cache hit:", cacheKey);
           if (!cancel) {
@@ -821,7 +830,7 @@ export default function DentistProfilePage() {
           telefone: string;
           whatsapp?: string;
           atividades?: string[];
-          agenda?: any;
+          agenda?: unknown;
           formas_pagamento?: string[];
           convenios?: string[];
         }) => ({
@@ -868,10 +877,10 @@ export default function DentistProfilePage() {
           // Salva no cache de perfil completo para F5
           if (cacheKey) saveProfileCache(cacheKey, perfilMontado);
         }
-      } catch (err: any) {
+      } catch (err) {
         if (cancel) return;
         // Se já temos um perfil do cache, não marca erro
-        if (err?.message === "timeout") {
+        if ((err instanceof Error ? err.message : "") === "timeout") {
           console.warn("[DentistProfile] Query timeout, usando dados do cache");
           // Loading já foi removido pelo cache
         } else {

@@ -47,8 +47,8 @@ function testTelefone() {
     assert.strictEqual(validarTelefone("1187654321"), false, "Celular inválido (sem 9 dígito)");
     assert.strictEqual(validarTelefone(""), false, "Telefone vazio");
     ok("Regras de telefone corretas");
-  } catch (err: any) {
-    fail("Erro em validarTelefone", err.message);
+  } catch (err) {
+    fail("Erro em validarTelefone", err instanceof Error ? err.message : String(err));
   }
 }
 
@@ -62,8 +62,8 @@ function testCpf() {
     // CPF real de teste válido (gerado pelo algoritmo de validação)
     assert.strictEqual(validarCpf("529.982.247-25"), true, "CPF válido real");
     ok("Regras de CPF corretas");
-  } catch (err: any) {
-    fail("Erro em validarCpf", err.message);
+  } catch (err) {
+    fail("Erro em validarCpf", err instanceof Error ? err.message : String(err));
   }
 }
 
@@ -77,8 +77,8 @@ function testCro() {
     assert.strictEqual(validarCro("CRO-XX123"), false, "CRO com UF inválida");
     assert.strictEqual(validarCro(""), false, "CRO vazio");
     ok("Regras de CRO corretas");
-  } catch (err: any) {
-    fail("Erro em validarCro", err.message);
+  } catch (err) {
+    fail("Erro em validarCro", err instanceof Error ? err.message : String(err));
   }
 }
 
@@ -109,8 +109,8 @@ function testEnderecos() {
     assert.strictEqual(resInvalido.valido, false, "Endereço incompleto é inválido");
     assert.strictEqual(resInvalido.erros.length, 3, "Deve listar 3 erros de campos");
     ok("Regras de endereço corretas");
-  } catch (err: any) {
-    fail("Erro em validarEnderecos", err.message);
+  } catch (err) {
+    fail("Erro em validarEnderecos", err instanceof Error ? err.message : String(err));
   }
 }
 
@@ -126,8 +126,8 @@ function testAnoFormacao() {
     assert.strictEqual(validarAnoFormacao("abc"), false, "Texto não numérico é inválido");
     assert.strictEqual(validarAnoFormacao("0"), false, "Ano zero é inválido");
     ok("Regras de ano de formação corretas");
-  } catch (err: any) {
-    fail("Erro em validarAnoFormacao", err.message);
+  } catch (err) {
+    fail("Erro em validarAnoFormacao", err instanceof Error ? err.message : String(err));
   }
 }
 
@@ -147,8 +147,8 @@ function testInstagram() {
     assert.strictEqual(formatarInstagram("user"), "https://www.instagram.com/user", "Username puro formatado");
     assert.strictEqual(formatarInstagram("invalido espaço"), null, "Username inválido retorna null");
     ok("Utilitários Instagram corretos");
-  } catch (err: any) {
-    fail("Erro em Instagram", err.message);
+  } catch (err) {
+    fail("Erro em Instagram", err instanceof Error ? err.message : String(err));
   }
 }
 
@@ -205,8 +205,8 @@ function testEtapasCompleteness() {
     assert.strictEqual(isEtapaConcluida(6, { ...baseParams, lgpdAceito: false }), false, "Etapa 6 pendente: LGPD não aceita");
 
     ok("Todas as regras de etapas testadas com sucesso");
-  } catch (err: any) {
-    fail("Erro em isEtapaConcluida", err.message);
+  } catch (err) {
+    fail("Erro em isEtapaConcluida", err instanceof Error ? err.message : String(err));
   }
 }
 

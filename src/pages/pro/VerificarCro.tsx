@@ -59,13 +59,32 @@ export default function VerificarCro() {
         if (errVerif) throw errVerif;
 
         // Monta mapa de verificação por dentista_id
-        const verifMap = new Map<string, any>();
-        for (const v of verificacoesData || []) {
+        type VerifDbRow = {
+          id: string;
+          dentista_id: string;
+          uf: string | null;
+          status: VerificacaoRow["status"];
+          dados_consultados: Record<string, unknown> | null;
+          erro: string | null;
+          observacao: string | null;
+          criado_em: string;
+        };
+        type DentistaDbRow = {
+          id: string;
+          nome: string;
+          email: string;
+          cro: string | null;
+          cro_verificado: boolean | null;
+          deleted_at: string | null;
+          criado_em?: string;
+        };
+        const verifMap = new Map<string, VerifDbRow>();
+        for (const v of (verificacoesData || []) as VerifDbRow[]) {
           verifMap.set(v.dentista_id, v);
         }
 
         // Combina: dentista + verificação (se existir)
-        const rows: VerificacaoRow[] = (dentistas || []).map((pro: any) => {
+        const rows: VerificacaoRow[] = (dentistas || []).map((pro: DentistaDbRow) => {
           const v = verifMap.get(pro.id);
           const uf = (pro.cro || "").includes("-")
             ? pro.cro.split("-")[1]?.trim()?.replace(/\d/g, "")?.trim() || ""
