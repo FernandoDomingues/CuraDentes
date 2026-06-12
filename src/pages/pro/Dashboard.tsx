@@ -44,6 +44,7 @@ import {
   Check,
   Loader2,
   Eye,
+  Home,
 } from "lucide-react";
 import type { DentistaPro } from "@/constants/demoDentists";
 
@@ -716,10 +717,29 @@ export default function Dashboard() {
       >
         <div className="container mx-auto px-4 md:px-8">
           <div className="flex items-center justify-between h-[60px]">
-            <img src={LOGO_PRO} alt="CuraDentes Pro" className="h-7 w-auto" />
+            <img
+              src={LOGO_PRO}
+              alt="CuraDentes Pro"
+              className="h-7 w-auto cursor-pointer"
+              onClick={() => navigate("/")}
+              title="Voltar para a home"
+            />
 
             {/* Menu do canto superior direito */}
             <div className="flex items-center gap-2">
+              {/* Botão Voltar para a home */}
+              <button
+                onClick={() => navigate("/")}
+                className="flex items-center gap-2 px-3 py-2 rounded-[12px] transition-all duration-200"
+                style={{ color: "#8E8E93", background: "rgba(60,60,67,0.06)" }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = "#007AFF"; e.currentTarget.style.background = "rgba(0,122,255,0.08)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = "#8E8E93"; e.currentTarget.style.background = "rgba(60,60,67,0.06)"; }}
+                title="Voltar para a home"
+              >
+                <Home size={16} />
+                <span className="text-[13px] font-medium hidden sm:inline">Home</span>
+              </button>
+
               {/* Botão Meu Perfil */}
               <button
                 onClick={() => navigate("/pro/perfil")}
