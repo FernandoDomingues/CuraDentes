@@ -22,7 +22,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
-import { getCoordenadas } from "@/lib/geocoding";
+import { geocodeEnderecoComFallback } from "@/lib/geocoding";
 import { formatarInstagram, extrairUserInstagram, INSTAGRAM_BASE } from "@/utils/instagram";
 import {
   User, Building2, Save, ArrowLeft, Loader2,
@@ -264,14 +264,13 @@ export default function MeuPerfil() {
 
       // Salvar/Atualizar locais
       for (const end of enderecos) {
-        // Obter coordenadas se possível
-        const enderecoBusca = `${end.logradouro}, ${end.numero}, ${end.bairro}, ${end.cidade}, ${end.estado}`;
         let lat = null;
         let lng = null;
-        
-        // Evita geocodificar endereços muito incompletos
-        if (end.logradouro && end.bairro && end.cidade) {
-          const coord = await getCoordenadas(enderecoBusca);
+
+        // Geocodifica com fallback (rua → bairro/cidade → cidade) para que mesmo
+        // endereços em cidades pequenas recebam ao menos as coordenadas da cidade
+        if (end.cidade) {
+          const coord = await geocodeEnderecoComFallback(end);
           if (coord) {
             lat = coord.latitude;
             lng = coord.longitude;

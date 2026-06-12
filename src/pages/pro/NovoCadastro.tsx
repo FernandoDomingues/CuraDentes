@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
+import { geocodeEnderecoComFallback } from "@/lib/geocoding";
 import { CepInputComBusca } from "@/components/ui/CepInputComBusca";
 import { formatarInstagram, extrairUserInstagram, INSTAGRAM_BASE } from "@/utils/instagram";
 
@@ -810,6 +811,8 @@ export default function NovoCadastro() {
 
           // 4. Inserir endereços na tabela curadentespro_enderecos
           for (const end of enderecos) {
+            // Geocodifica (com fallback p/ cidade) para o dentista aparecer no mapa
+            const coordEnd = end.cidade ? await geocodeEnderecoComFallback(end) : null;
             const { error: errorEnd } = await supabase.from('curadentespro_enderecos').insert({
               curadentespro_id: user.id,
               nome_clinica: end.nome_clinica,
@@ -829,7 +832,9 @@ export default function NovoCadastro() {
               atividades: end.atividades,
               convenios: end.convenios,
               formas_pagamento: end.formas_pagamento,
-              agenda: end.agenda
+              agenda: end.agenda,
+              latitude: coordEnd?.latitude ?? null,
+              longitude: coordEnd?.longitude ?? null,
             });
 
             if (errorEnd) throw errorEnd;

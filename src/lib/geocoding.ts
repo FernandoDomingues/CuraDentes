@@ -68,6 +68,34 @@ export async function getCoordenadas(
   }
 }
 
+/**
+ * Geocodifica um endereço estruturado com fallback progressivo.
+ * Em cidades pequenas o Nominatim costuma não ter a rua; nesse caso caímos
+ * para bairro/cidade e, por fim, só cidade/estado — garantindo que o endereço
+ * sempre receba ao menos as coordenadas da cidade (e apareça no mapa).
+ */
+export async function geocodeEnderecoComFallback(end: {
+  logradouro?: string | null;
+  numero?: string | null;
+  bairro?: string | null;
+  cidade?: string | null;
+  estado?: string | null;
+}): Promise<{ latitude: number; longitude: number } | null> {
+  const tentativas: (string | null | undefined)[][] = [
+    [end.logradouro, end.numero, end.bairro, end.cidade, end.estado],
+    [end.logradouro, end.bairro, end.cidade, end.estado],
+    [end.bairro, end.cidade, end.estado],
+    [end.cidade, end.estado],
+  ];
+  for (const partes of tentativas) {
+    const q = partes.filter(Boolean).join(", ");
+    if (!q) continue;
+    const coord = await getCoordenadas(q);
+    if (coord) return coord;
+  }
+  return null;
+}
+
 import { supabase } from "./supabase";
 
 /**
