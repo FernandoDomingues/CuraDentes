@@ -170,6 +170,46 @@ site-k7/
 
 ---
 
+## 🚨 Pendências de Segurança (auditoria 2026-06-11)
+
+> **Status:** identificadas em análise de código. **#1 e #6 corrigidas em 2026-06-12** (ver abaixo); demais pendentes.
+> Falsos positivos já descartados: `.env` está no `.gitignore` (não versionado); anon key e Google Client ID são públicos por design; tabelas `curadentespro`/`clientes`/`enderecos` têm RLS por `auth.uid()`; o "DELETE policy ausente" é soft-delete proposital.
+
+### ✅ Resolvidas (2026-06-12)
+
+- **#1 — Escalada de privilégio na RPC `marcar_verificacao_cro`** — corrigida em `supabase/migrations/20260612090000_fix_marcar_verificacao_cro_authz.sql` (aplicada no remoto via `supabase db push`). Adicionado gate de autorização **dentro** da função (`IF NOT public.is_superuser() THEN RETURN não-autorizado`). Regressão coberta em `tests/security/rls.test.ts` (testes [7] anon e [8] não-superuser, este último condicional a `TEST_DENTISTA_EMAIL`/`TEST_DENTISTA_PASSWORD` no `.env`).
+- **#6 — Email de superadmin hardcoded** — centralizado no helper `public.is_superuser()` (fonte única da verdade). As policies de `cro_verificacoes` e `logs_busca` agora chamam o helper; para trocar o admin, altera-se só a função. _(Resta migrar as policies antigas de `curadentespro`, se houver, para o helper.)_
+
+### 🔴 Críticas (exploráveis por qualquer conta autenticada hoje)
+
+2. **Edge function `send-rating-notification` é relay de email aberto** — `supabase/functions/send-rating-notification/index.ts:16-67`.
+   Sem verificação de identidade/role, sem rate limiting, CORS `*`. Payload (`dentistEmail`, `dentistName`, `patientName`) totalmente controlado pelo chamador → spam/phishing via `do-not-reply@curadentes.com.br` e consumo de créditos do Resend.
+3. **Edge function `scrape-cro` sem auth + sessões em memória** — `supabase/functions/scrape-cro/index.ts:238-292` (CORS `*` na linha 243).
+   Sem autenticação (força-bruta/scraping do SISCAF via nossa infra). Além disso, sessões num `Map` em memória (linha 51) **quebram entre instâncias/cold starts** → fluxo captcha→consulta falha de forma intermitente. Migrar para Supabase KV/tabela.
+
+### 🟠 Altas
+
+4. **Não existe `ProtectedRoute`** — `src/App.tsx:75-92`. Todas as rotas `/pro/*` (incl. admin `/pro/verificar-cro` e `/pro/verificar-cro/:id`) estão no router **sem guarda de autorização**, apesar de `docs/SEGURANCA.md:248` afirmar que existe. Hoje só o RLS protege — e a falha #1 mostra que o RLS está furado para a operação sensível.
+5. **Validação de upload só no cliente** — `src/lib/uploadService.ts`. Tamanho (2MB) e MIME checados apenas no front; bucket Storage sem limite/allowed-mime por policy → contornável via API direta.
+6. ~~**Email de superadmin hardcoded em 7 policies**~~ — ✅ **resolvida em 2026-06-12** (centralizada no helper `public.is_superuser()`; ver seção "✅ Resolvidas"). Evolução futura: tabela de roles em vez de email único.
+
+### 🟡 Médias
+
+7. **Mock de produção** — `src/pages/pro/Dashboard.tsx:554` (`dentista.id === 101 ? ["end-1-a"] : []`).
+8. **`window.location.reload()` após verificar CRO** — `src/pages/pro/VerificarCro.tsx`. Descarta estado React; preferir refetch.
+9. **Modelo de identidade ambíguo (`id` vs `user_id`)** — `src/hooks/useAuth.ts:246-253` grava ambos como `authUser.id`, enquanto os 50 dentistas seed têm `user_id = NULL` (ver `docs/PENDENCIAS.md:47-60`) e não conseguem editar o próprio perfil.
+10. **Rascunho do cadastro em `localStorage` com CPF/CRO em texto puro** — `src/pages/pro/NovoCadastro.tsx`. Senha é corretamente omitida, mas PII sensível (LGPD) fica exposta a XSS. Limpar rascunho ao concluir.
+
+### ⚪ Baixas / qualidade
+
+11. `avaliacoes.paciente_id` sem FK para `auth.users` (já em `docs/PENDENCIAS.md:62-71`).
+12. `signInWithOAuth` com `redirectTo: window.location.href` (`src/hooks/useAuth.ts:95`) — usar rota de callback fixa.
+13. Textos legais de Privacidade/Termos ainda pendentes (decisão jurídica — `docs/PENDENCIAS.md:73-80`).
+
+**Ordem de ataque sugerida:** #1 → #2/#3 → #4. As três primeiras são exploráveis por qualquer conta autenticada hoje.
+
+---
+
 ## Documentação adicional
 
 - **[`docs/PENDENCIAS.md`](./docs/PENDENCIAS.md)** — Itens pendentes do checklist de QA

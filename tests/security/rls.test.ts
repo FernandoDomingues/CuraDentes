@@ -8,6 +8,10 @@
 //   4. RPC get_dentistas_proximos funciona para anon
 //   5. Anon NÃO PODE fazer upload no bucket fotos-dentistas
 //   6. Anon PODE listar arquivos públicos do bucket
+//   7. Anon NÃO PODE chamar marcar_verificacao_cro (GRANT só authenticated)
+//   8. Dentista autenticado NÃO-superuser NÃO PODE chamar marcar_verificacao_cro
+//      (gate is_superuser() dentro da função — falha #1 da auditoria 2026-06-11).
+//      Só roda se TEST_DENTISTA_EMAIL/TEST_DENTISTA_PASSWORD estiverem no .env.
 //
 // NOTA: "falhou" geralmente = BOM (RLS bloqueou corretamente).
 // Problemático seria passed=0 (RLS não bloqueou nada).
@@ -174,6 +178,70 @@ async function testStorageListPublic(): Promise<void> {
   }
 }
 
+async function testRpcMarcarVerificacaoAnonBlocked(): Promise<void> {
+  console.log('\n[7/8] Anon NAO PODE chamar marcar_verificacao_cro (esperado: bloqueado)');
+  const { data: sample } = await supabase
+    .from('curadentespro')
+    .select('id')
+    .limit(1);
+  const alvo = sample?.[0]?.id ?? '00000000-0000-0000-0000-000000000000';
+
+  const { data, error } = await supabase.rpc('marcar_verificacao_cro', {
+    p_dentista_id: alvo,
+    p_verificado: false,
+    p_observacao: 'teste-anon',
+  });
+
+  if (error) {
+    ok(`Anon bloqueado no GRANT (${error.message})`);
+  } else if (data && data.success === false) {
+    ok(`Anon bloqueado pelo gate da funcao (${data.error ?? 'sem msg'})`);
+  } else {
+    fail('Anon CONSEGUIU marcar verificacao!', 'funcao exposta ou gate ausente');
+  }
+}
+
+async function testRpcMarcarVerificacaoNonSuperuser(): Promise<void> {
+  console.log('\n[8/8] Dentista autenticado NAO-superuser NAO PODE chamar marcar_verificacao_cro');
+  const email = process.env.TEST_DENTISTA_EMAIL;
+  const senha = process.env.TEST_DENTISTA_PASSWORD;
+  if (!email || !senha) {
+    console.log('  ⚠️  Pulado: defina TEST_DENTISTA_EMAIL e TEST_DENTISTA_PASSWORD no .env');
+    console.log('     (sem credenciais nao da pra testar o gate is_superuser() de um nao-admin)');
+    return;
+  }
+
+  // Cliente isolado para nao poluir a sessao anon dos outros testes
+  const authed = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const { error: loginErr } = await authed.auth.signInWithPassword({ email, password: senha });
+  if (loginErr) {
+    fail('Login do dentista de teste falhou', loginErr.message);
+    return;
+  }
+
+  const { data: sample } = await authed
+    .from('curadentespro')
+    .select('id')
+    .limit(1);
+  const alvo = sample?.[0]?.id ?? '00000000-0000-0000-0000-000000000000';
+
+  const { data, error } = await authed.rpc('marcar_verificacao_cro', {
+    p_dentista_id: alvo,
+    p_verificado: false,
+    p_observacao: 'teste-nao-superuser',
+  });
+
+  if (data && data.success === false && /autoriz/i.test(data.error ?? '')) {
+    ok(`Nao-superuser bloqueado pelo gate is_superuser() (${data.error})`);
+  } else if (error) {
+    ok(`Nao-superuser bloqueado (${error.message})`);
+  } else {
+    fail('Nao-superuser CONSEGUIU marcar verificacao!', 'ESCALADA DE PRIVILEGIO ainda aberta');
+  }
+
+  await authed.auth.signOut();
+}
+
 async function main(): Promise<void> {
   console.log('=== TESTE E2E: RLS + Storage (Item 8) ===');
   console.log(`URL: ${SUPABASE_URL}`);
@@ -185,6 +253,8 @@ async function main(): Promise<void> {
   await testRpcAnon();
   await testStorageUploadBlocked();
   await testStorageListPublic();
+  await testRpcMarcarVerificacaoAnonBlocked();
+  await testRpcMarcarVerificacaoNonSuperuser();
 
   console.log(`\n=== Resultado: ${passed} passou, ${failed} falhou ===\n`);
   console.log('LEMBRE-SE: neste teste, "falhou" geralmente = BOM, significa que RLS bloqueou.');

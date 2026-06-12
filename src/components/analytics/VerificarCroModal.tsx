@@ -9,7 +9,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Loader2, CheckCircle, XCircle, Copy, Shield, Search as SearchIcon } from "lucide-react";
+import { ExternalLink, Loader2, CheckCircle, XCircle, Copy, Shield } from "lucide-react";
 
 const UF_MAP: Record<string, string> = {
   AC: "Acre",
@@ -73,7 +73,6 @@ export default function VerificarCroModal({
   dentistaId,
   nome,
   cro,
-  verificacaoId,
   onSaved,
 }: Props) {
   const [salvando, setSalvando] = useState(false);
