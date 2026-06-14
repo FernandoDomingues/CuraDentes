@@ -11,6 +11,10 @@
 //      -> envia para a lista (sem --send é dry-run). Cada item pode ser "email" ou
 //         "email:token" — o token vira o link de descadastro ({{UNSUB_TOKEN}}).
 //      -> no --test, use --token TOKEN para validar o link de descadastro.
+//   RESEND_API_KEY=xxx CRON_SECRET=yyy node scripts/enviar_email_marketing.mjs --categoria novidades --send
+//      -> monta a lista pela edge function lista-envio-campanha (dentistas com
+//         opt-in na categoria) e envia, com o token de cada um no link de descadastro.
+//         Categorias: desempenho | novidades | parceiros. Sem --send é dry-run.
 //   ...--asset-base https://curadentes.com.br/email   (reescreve as imagens relativas
 //      para URL absoluta — OBRIGATÓRIO para as imagens aparecerem na caixa de entrada).
 //
@@ -39,7 +43,9 @@ const getArg = (name) => {
 const parsePar = (s) => { const i = s.indexOf(":"); return i < 0 ? { email: s, token: "" } : { email: s.slice(0, i), token: s.slice(i + 1) }; };
 const testRaw = getArg("--test");
 const testTok = getArg("--token");
-const toList = (getArg("--to") || "").split(",").map((s) => s.trim()).filter(Boolean).map(parsePar);
+const categoria = getArg("--categoria"); // monta a lista via edge function (opt-in)
+const funcUrl = getArg("--func-url") || "https://dsnzgxjuqlalysyfiion.supabase.co/functions/v1/lista-envio-campanha";
+let toList = (getArg("--to") || "").split(",").map((s) => s.trim()).filter(Boolean).map(parsePar);
 const assetBase = getArg("--asset-base");
 const doSend = args.includes("--send");
 
@@ -83,6 +89,22 @@ console.log("Assunto :", SUBJECT);
 console.log("De      :", FROM);
 console.log("HTML    :", HTML_PATH, `(${html.length} bytes)`);
 
+// Lista de envio montada pela edge function (dentistas com opt-in na categoria)
+if (categoria && !testRaw) {
+  const CRON = process.env.CRON_SECRET;
+  if (!CRON) { console.error("✖ Defina CRON_SECRET para montar a lista da campanha (segredo do app_config)."); process.exit(1); }
+  console.log(`\n→ Montando lista pela edge function (categoria: ${categoria}) ...`);
+  const r = await fetch(funcUrl, {
+    method: "POST",
+    headers: { "x-cron-secret": CRON, "Content-Type": "application/json" },
+    body: JSON.stringify({ categoria }),
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) { console.error("✖ Falha ao montar a lista:", JSON.stringify(j)); process.exit(1); }
+  toList = (j.destinatarios || []).map((d) => ({ email: d.email, token: d.token }));
+  console.log(`  ${toList.length} destinatário(s) com opt-in em "${categoria}".`);
+}
+
 if (testRaw) {
   const { email, token } = parsePar(testRaw);
   console.log(`\n→ Enviando TESTE para ${email} ...`);
@@ -92,15 +114,15 @@ if (testRaw) {
   console.log(`\nDestinatários: ${toList.length}`);
   if (!doSend) {
     console.log("DRY-RUN (sem --send): nada foi enviado. Reveja a lista e rode de novo com --send.");
-    process.exit(0);
+  } else {
+    let ok = 0, fail = 0;
+    for (const { email, token } of toList) {
+      try { await enviar(email, token); ok++; console.log("  ✓", email); }
+      catch (e) { fail++; console.error("  ✖", email, e.message); }
+      await new Promise((r) => setTimeout(r, 120)); // respeita rate limit
+    }
+    console.log(`\nConcluído: ${ok} enviados, ${fail} falhas.`);
   }
-  let ok = 0, fail = 0;
-  for (const { email, token } of toList) {
-    try { await enviar(email, token); ok++; console.log("  ✓", email); }
-    catch (e) { fail++; console.error("  ✖", email, e.message); }
-    await new Promise((r) => setTimeout(r, 120)); // respeita rate limit
-  }
-  console.log(`\nConcluído: ${ok} enviados, ${fail} falhas.`);
 } else {
   console.log("\nNada a fazer. Use --test <email> (validar) ou --to \"a,b,c\" [--send] (lista).");
 }
