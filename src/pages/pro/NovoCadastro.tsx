@@ -229,6 +229,15 @@ export default function NovoCadastro() {
           if (pro.bio) setBio(pro.bio);
           if (pro.instagram) setInstagram(extrairUserInstagram(pro.instagram));
           if (pro.lgpd_aceito) setLgpdAceito(pro.lgpd_aceito);
+          // Preferências de e-mail ficam em tabela separada (token protegido)
+          const { data: prefRow } = await supabase
+            .from('curadentespro_email').select('prefs').eq('curadentespro_id', user.id).maybeSingle();
+          const prefs = prefRow?.prefs as { desempenho?: boolean; novidades?: boolean; parceiros?: boolean } | undefined;
+          if (prefs) setEmailPrefs({
+            desempenho: !!prefs.desempenho,
+            novidades: !!prefs.novidades,
+            parceiros: !!prefs.parceiros,
+          });
           setEmailVerificado(true);
           setSenhaSincronizada(true);
 
@@ -309,6 +318,7 @@ export default function NovoCadastro() {
           if (dados.bio) setBio(dados.bio);
           if (dados.instagram) setInstagram(extrairUserInstagram(dados.instagram));
           if (dados.lgpdAceito) setLgpdAceito(dados.lgpdAceito);
+          if (dados.emailPrefs) setEmailPrefs(dados.emailPrefs);
           if (dados.senhaSincronizada) setSenhaSincronizada(dados.senhaSincronizada);
         } catch (e) {
           console.error('Erro ao recuperar rascunho de cadastro:', e);
@@ -358,6 +368,9 @@ export default function NovoCadastro() {
 
   // ─ Etapa 6: LGPD ──────────────────────────────────────────────────────────
   const [lgpdAceito, setLgpdAceito] = useState(false);
+  // Preferências de e-mail (opt-in, desmarcado por padrão — LGPD). Categorias
+  // opcionais; e-mails essenciais (conta/segurança/serviço) independem disto.
+  const [emailPrefs, setEmailPrefs] = useState({ desempenho: false, novidades: false, parceiros: false });
 
   // ─ Modal de cadastro incompleto ───────────────────────────────────────────
   const [exibirModalIncompleto, setExibirModalIncompleto] = useState(false);
@@ -392,6 +405,7 @@ export default function NovoCadastro() {
       bio,
       instagram,
       lgpdAceito,
+      emailPrefs,
       senhaSincronizada,
     };
     localStorage.setItem("curadentes_pro_cadastro_rascunho", JSON.stringify(rascunho));
@@ -399,7 +413,7 @@ export default function NovoCadastro() {
     etapa, nome, tratamento, nomeCompleto, email, emailVerificado,
     telefone, telefoneVerificado,
     cpf, cro, anoFormacao, fotoUrl,
-    enderecos, bio, instagram, lgpdAceito,
+    enderecos, bio, instagram, lgpdAceito, emailPrefs,
     senhaSincronizada,
   ]);
 
@@ -806,6 +820,13 @@ export default function NovoCadastro() {
           }, { onConflict: 'id' });
 
           if (errorPro) throw errorPro;
+
+          // Preferências de e-mail em tabela separada (o token de descadastro fica
+          // protegido — curadentespro tem SELECT público, então não pode guardá-lo).
+          await supabase.from('curadentespro_email').upsert(
+            { curadentespro_id: user.id, prefs: emailPrefs },
+            { onConflict: 'curadentespro_id' },
+          );
 
           // CPF na tabela separada (LGPD) — idempotente
           await salvarCpf(user.id);
@@ -2314,6 +2335,40 @@ export default function NovoCadastro() {
           <span className="font-semibold" style={{ color: "#E6004C" }}>*</span>
         </span>
       </label>
+
+      {/* Preferências de e-mail (opcionais, opt-in) */}
+      <div className="flex flex-col gap-2">
+        <p className="text-[14px] font-semibold" style={{ color: "#0A2A66" }}>
+          Quero receber por e-mail{" "}
+          <span className="font-normal" style={{ color: "#8E8E93" }}>(opcional)</span>
+        </p>
+        {[
+          { key: "desempenho", titulo: "Desempenho do meu perfil", desc: "Resumos de visualizações, contatos e novas avaliações." },
+          { key: "novidades", titulo: "Novidades e dicas", desc: "Novos recursos, dicas para atrair pacientes e ofertas do CuraDentes." },
+          { key: "parceiros", titulo: "Ofertas de parceiros", desc: "Comunicações de empresas parceiras selecionadas." },
+        ].map((opt) => (
+          <label
+            key={opt.key}
+            className="flex items-start gap-3 cursor-pointer p-3 rounded-[12px]"
+            style={{ border: "1px solid rgba(60,60,67,0.12)", background: "rgba(60,60,67,0.02)" }}
+          >
+            <input
+              type="checkbox"
+              checked={emailPrefs[opt.key as keyof typeof emailPrefs]}
+              onChange={(e) => setEmailPrefs((p) => ({ ...p, [opt.key]: e.target.checked }))}
+              className="mt-0.5 w-5 h-5 accent-[#007AFF] cursor-pointer flex-shrink-0"
+            />
+            <span style={{ lineHeight: 1.4 }}>
+              <span className="text-[14px] font-medium block" style={{ color: "#1C1C1E" }}>{opt.titulo}</span>
+              <span className="text-[12px]" style={{ color: "#8E8E93" }}>{opt.desc}</span>
+            </span>
+          </label>
+        ))}
+        <p className="text-[12px]" style={{ color: "#8E8E93", lineHeight: 1.5 }}>
+          Você pode alterar ou cancelar essas comunicações a qualquer momento. E-mails essenciais
+          (conta, segurança e avisos do serviço) são enviados independentemente desta escolha.
+        </p>
+      </div>
 
       {renderNavegacao(lgpdAceito, true)}
     </div>

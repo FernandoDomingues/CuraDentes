@@ -7,8 +7,10 @@
 // Uso (Node 18+):
 //   RESEND_API_KEY=xxx node scripts/enviar_email_marketing.mjs --test voce@email.com
 //      -> envia 1 email de TESTE para o endereço indicado.
-//   RESEND_API_KEY=xxx node scripts/enviar_email_marketing.mjs --to "a@x.com,b@y.com" --send
-//      -> envia para a lista informada (sem --send é dry-run: só mostra o que faria).
+//   RESEND_API_KEY=xxx node scripts/enviar_email_marketing.mjs --to "a@x.com:TOKEN,b@y.com:TOKEN" --send
+//      -> envia para a lista (sem --send é dry-run). Cada item pode ser "email" ou
+//         "email:token" — o token vira o link de descadastro ({{UNSUB_TOKEN}}).
+//      -> no --test, use --token TOKEN para validar o link de descadastro.
 //   ...--asset-base https://curadentes.com.br/email   (reescreve as imagens relativas
 //      para URL absoluta — OBRIGATÓRIO para as imagens aparecerem na caixa de entrada).
 //
@@ -33,8 +35,11 @@ const getArg = (name) => {
   const i = args.indexOf(name);
   return i >= 0 ? args[i + 1] : undefined;
 };
-const testTo = getArg("--test");
-const toList = (getArg("--to") || "").split(",").map((s) => s.trim()).filter(Boolean);
+// Destinatários podem vir como "email" ou "email:token" (token = link de descadastro)
+const parsePar = (s) => { const i = s.indexOf(":"); return i < 0 ? { email: s, token: "" } : { email: s.slice(0, i), token: s.slice(i + 1) }; };
+const testRaw = getArg("--test");
+const testTok = getArg("--token");
+const toList = (getArg("--to") || "").split(",").map((s) => s.trim()).filter(Boolean).map(parsePar);
 const assetBase = getArg("--asset-base");
 const doSend = args.includes("--send");
 
@@ -58,11 +63,16 @@ if (assetBase) {
   }
 }
 
-async function enviar(to) {
+function htmlPara(token) {
+  if (!token) console.warn("  ⚠ sem token — o link 'Cancelar inscrição' ficará incompleto neste envio.");
+  return html.replace(/\{\{UNSUB_TOKEN\}\}/g, token || "");
+}
+
+async function enviar(to, token) {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: FROM, to, subject: SUBJECT, html }),
+    body: JSON.stringify({ from: FROM, to, subject: SUBJECT, html: htmlPara(token) }),
   });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(`HTTP ${res.status} — ${JSON.stringify(body)}`);
@@ -73,9 +83,10 @@ console.log("Assunto :", SUBJECT);
 console.log("De      :", FROM);
 console.log("HTML    :", HTML_PATH, `(${html.length} bytes)`);
 
-if (testTo) {
-  console.log(`\n→ Enviando TESTE para ${testTo} ...`);
-  const r = await enviar(testTo);
+if (testRaw) {
+  const { email, token } = parsePar(testRaw);
+  console.log(`\n→ Enviando TESTE para ${email} ...`);
+  const r = await enviar(email, token || testTok || "");
   console.log("✓ Enviado. id:", r.id);
 } else if (toList.length) {
   console.log(`\nDestinatários: ${toList.length}`);
@@ -84,9 +95,9 @@ if (testTo) {
     process.exit(0);
   }
   let ok = 0, fail = 0;
-  for (const to of toList) {
-    try { await enviar(to); ok++; console.log("  ✓", to); }
-    catch (e) { fail++; console.error("  ✖", to, e.message); }
+  for (const { email, token } of toList) {
+    try { await enviar(email, token); ok++; console.log("  ✓", email); }
+    catch (e) { fail++; console.error("  ✖", email, e.message); }
     await new Promise((r) => setTimeout(r, 120)); // respeita rate limit
   }
   console.log(`\nConcluído: ${ok} enviados, ${fail} falhas.`);

@@ -87,7 +87,7 @@ para("Política de Privacidade e Termos de Uso · LGPD", size=12, align=WD_ALIGN
 para("")
 para("Plataforma: curadentes.com.br", align=WD_ALIGN_PARAGRAPH.CENTER)
 para("Versão dos textos analisados: 3 de junho de 2026", align=WD_ALIGN_PARAGRAPH.CENTER, color=CINZA)
-para("Documento gerado em: 12 de junho de 2026", align=WD_ALIGN_PARAGRAPH.CENTER, color=CINZA)
+para("Revisão 1 (R1) · Documento gerado em: 14 de junho de 2026", align=WD_ALIGN_PARAGRAPH.CENTER, color=CINZA)
 doc.add_page_break()
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -159,6 +159,7 @@ bullets([
     ("Controle de acesso: ", "Row Level Security (RLS) por usuário no banco de dados."),
     ("Segurança: ", "criptografia em trânsito (HTTPS/TLS); senhas com hash (bcrypt); tokens JWT com expiração."),
     ("Verificação profissional: ", "processo de verificação de CRO dos dentistas."),
+    ("Consentimento de comunicações: ", "no cadastro, o dentista opta (opt-in, desmarcado por padrão) por categorias de e-mail opcionais — desempenho do perfil, novidades/dicas e ofertas de parceiros — separado do aceite dos Termos. Pode revogar a qualquer momento por link de descadastro (página pública identificada por token). E-mails essenciais (conta/segurança/serviço) independem do consentimento. As preferências e o token ficam em tabela separada protegida (não expostos pelo SELECT público de curadentespro)."),
 ])
 
 doc.add_page_break()
@@ -411,6 +412,14 @@ checkbox([
     ("Necessidade do CPF do dentista — ", "avaliar finalidade/minimização: o CPF é necessário? Em caso afirmativo, deixar a finalidade explícita."),
 ])
 
+h3("Consentimento de comunicações (e-mail marketing)")
+checkbox([
+    ("Opt-in granular — ", "validar o consentimento por categoria (desempenho, novidades, ofertas de parceiros), desmarcado por padrão e separado do aceite dos Termos."),
+    ("Base legal essenciais x opcionais — ", "confirmar: e-mails essenciais por execução de contrato; e-mails opcionais por consentimento (revogável)."),
+    ("Descadastro — ", "validar o mecanismo de cancelamento por token (link nos e-mails + página pública /descadastro) e o registro de data/hora do consentimento e da revogação."),
+    ("Ofertas de parceiros — ", "confirmar transparência sobre com quais parceiros há comunicação/compartilhamento e se exige consentimento destacado."),
+])
+
 h3("Transferência internacional e terceiros")
 checkbox([
     ("Transferência internacional de dados — ", "Supabase e Google podem armazenar/processar dados fora do Brasil. Avaliar a necessidade de cláusula de transferência internacional (arts. 33–36 da LGPD) e a localização (região) do banco."),
@@ -497,26 +506,31 @@ def _emb(img):
     doc.add_picture(bio, width=_In(6.3))
 
 
-# A.1 — Impacto na logo (wordmark)
-para("A.1. Impacto na logo — wordmark “CuraDentes Pro” (Cura Bold + Dentes Light)", bold=True)
-img = _Img.new("RGB", (1600, 540), "white")
-d = _Draw.Draw(img)
-lbl = _cd(30, True)
-d.text((50, 30), "NEXA (original):", font=lbl, fill=_MUT)
-_lockup(d, 50, 80, _nexa(100, True), _nexa(100, False), _PINK)
-d.text((50, 310), "CURADENTES (nossa):", font=lbl, fill=_PINK)
-_lockup(d, 50, 360, _cd(100, True), _cd(100, False), _PINK)
-_emb(img)
+# A.1 e A.2 — amostras visuais (dependem da Nexa, trial não versionada)
+if os.path.exists(_ZIP):
+    para("A.1. Impacto na logo — wordmark “CuraDentes Pro” (Cura Bold + Dentes Light)", bold=True)
+    img = _Img.new("RGB", (1600, 540), "white")
+    d = _Draw.Draw(img)
+    lbl = _cd(30, True)
+    d.text((50, 30), "NEXA (original):", font=lbl, fill=_MUT)
+    _lockup(d, 50, 80, _nexa(100, True), _nexa(100, False), _PINK)
+    d.text((50, 310), "CURADENTES (nossa):", font=lbl, fill=_PINK)
+    _lockup(d, 50, 360, _cd(100, True), _cd(100, False), _PINK)
+    _emb(img)
 
-# A.2 — Numerais
-para("A.2. Numerais (CuraDentes usa os da Montserrat)", bold=True)
-img2 = _Img.new("RGB", (1600, 430), "white")
-d2 = _Draw.Draw(img2)
-d2.text((50, 25), "NEXA:", font=_cd(30, True), fill=_MUT)
-d2.text((50, 70), "0 1 2 3 4 5 6 7 8 9", font=_nexa(86, True), fill=_NAVY)
-d2.text((50, 235), "CURADENTES:", font=_cd(30, True), fill=_PINK)
-d2.text((50, 280), "0 1 2 3 4 5 6 7 8 9", font=_cd(86, True), fill=_NAVY)
-_emb(img2)
+    para("A.2. Numerais (CuraDentes usa os da Montserrat)", bold=True)
+    img2 = _Img.new("RGB", (1600, 430), "white")
+    d2 = _Draw.Draw(img2)
+    d2.text((50, 25), "NEXA:", font=_cd(30, True), fill=_MUT)
+    d2.text((50, 70), "0 1 2 3 4 5 6 7 8 9", font=_nexa(86, True), fill=_NAVY)
+    d2.text((50, 235), "CURADENTES:", font=_cd(30, True), fill=_PINK)
+    d2.text((50, 280), "0 1 2 3 4 5 6 7 8 9", font=_cd(86, True), fill=_NAVY)
+    _emb(img2)
+else:
+    para("As amostras visuais comparativas (Nexa × CuraDentes) não foram embutidas neste ambiente "
+         "porque o arquivo da fonte Nexa (versão trial, não versionada) não está disponível. A "
+         "comparação visual completa permanece no arquivo “comparativo-fontes.html”.",
+         italic=True, size=10, color=CINZA)
 
 para("Versão interativa completa (alfabeto, pesos, sobreposição e texto corrido) no arquivo "
      "“comparativo-fontes.html”.", italic=True, size=10, color=CINZA)
@@ -526,6 +540,6 @@ linha()
 para("Documento preparado para fins de revisão jurídica. Os textos das seções 5 e 6 reproduzem fielmente o conteúdo publicado em curadentes.com.br/privacidade e curadentes.com.br/termos.", italic=True, size=9, color=CINZA)
 
 import os
-out = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "CuraDentes_Revisao_Juridica.docx")
+out = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "CuraDentes_Revisao_Juridica-R1.docx")
 doc.save(out)
 print("OK:", out)

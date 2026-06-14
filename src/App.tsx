@@ -46,6 +46,7 @@ const Privacidade = lazy(() => import("@/pages/Privacidade"));
 const TermosDeUso = lazy(() => import("@/pages/TermosDeUso"));
 const Sobre = lazy(() => import("@/pages/Sobre"));
 const Especialidade = lazy(() => import("@/pages/Especialidade"));
+const PreferenciasEmail = lazy(() => import("@/pages/PreferenciasEmail"));
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -87,6 +88,7 @@ export default function App() {
           <Route path="/pro/verificar-cro/:id" element={<RequireSuperuser><VerificarCroDetalhe /></RequireSuperuser>} />
           <Route path="/privacidade" element={<Privacidade />} />
           <Route path="/termos" element={<TermosDeUso />} />
+          <Route path="/descadastro" element={<PreferenciasEmail />} />
           <Route path="/sobre" element={<Sobre />} />
           <Route path="/especialidade/:slug" element={<Especialidade />} />
           <Route path="*" element={<NotFound />} />

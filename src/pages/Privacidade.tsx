@@ -202,8 +202,13 @@ export default function Privacidade() {
                     e corrigir falhas.
                   </li>
                   <li>
-                    <strong>Comunicação:</strong> enviar comunicados operacionais (confirmação de cadastro,
-                    alterações na plataforma).
+                    <strong>Comunicação:</strong> enviar <strong>e-mails essenciais</strong> ao serviço
+                    (confirmação de cadastro, segurança, recuperação de senha e avisos sobre a plataforma)
+                    e, <strong>mediante o seu consentimento (opt-in)</strong>, e-mails opcionais de
+                    desempenho do perfil, novidades/dicas e ofertas de parceiros. Você pode revogar o
+                    consentimento e cancelar os e-mails opcionais a qualquer momento pelo link de
+                    descadastro presente nesses e-mails ou na sua conta. Os e-mails essenciais não
+                    dependem desse consentimento.
                   </li>
                   <li>
                     <strong>Segurança:</strong> prevenir fraudes, garantir a integridade dos dados e
