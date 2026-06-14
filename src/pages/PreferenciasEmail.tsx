@@ -31,6 +31,8 @@ export default function PreferenciasEmail() {
   const [prefs, setPrefs] = useState<Prefs>({ desempenho: false, novidades: false, parceiros: false });
   const [salvando, setSalvando] = useState(false);
   const [salvo, setSalvo] = useState(false);
+  // Confirmação antes de aplicar (a mudança só vale após o clique "Confirmar")
+  const [pendente, setPendente] = useState<{ prefs: Prefs; tipo: "salvar" | "cancelar" } | null>(null);
 
   useEffect(() => {
     async function carregar() {
@@ -52,6 +54,12 @@ export default function PreferenciasEmail() {
     const { data, error } = await supabase.rpc("atualizar_email_prefs_por_token", { p_token: token, p_prefs: novas });
     setSalvando(false);
     if (!error && data === true) { setPrefs(novas); setSalvo(true); }
+  }
+
+  async function confirmar() {
+    if (!pendente) return;
+    await salvar(pendente.prefs);
+    setPendente(null);
   }
 
   const toggle = (key: keyof Prefs) => { setSalvo(false); setPrefs((p) => ({ ...p, [key]: !p[key] })); };
@@ -96,10 +104,10 @@ export default function PreferenciasEmail() {
               ))}
             </div>
 
-            <button onClick={() => salvar(prefs)} disabled={salvando}
+            <button onClick={() => setPendente({ prefs, tipo: "salvar" })} disabled={salvando}
               className="w-full py-3 rounded-[14px] text-[15px] font-semibold text-white transition-opacity"
               style={{ background: "#007AFF", opacity: salvando ? 0.6 : 1, cursor: salvando ? "not-allowed" : "pointer" }}>
-              {salvando ? "Salvando…" : "Salvar preferências"}
+              Salvar preferências
             </button>
 
             {salvo && (
@@ -109,7 +117,7 @@ export default function PreferenciasEmail() {
             )}
 
             <div className="mt-5 pt-4" style={{ borderTop: "1px solid rgba(60,60,67,0.10)" }}>
-              <button onClick={() => salvar({ desempenho: false, novidades: false, parceiros: false })} disabled={salvando}
+              <button onClick={() => setPendente({ prefs: { desempenho: false, novidades: false, parceiros: false }, tipo: "cancelar" })} disabled={salvando}
                 className="w-full text-[13px] font-medium" style={{ color: "#FF3B30", cursor: salvando ? "not-allowed" : "pointer" }}>
                 Cancelar todos os e-mails promocionais
               </button>
@@ -121,6 +129,34 @@ export default function PreferenciasEmail() {
           </>
         )}
       </div>
+
+      {/* Confirmação — a mudança só é aplicada aqui */}
+      {pendente && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-5" style={{ background: "rgba(11,28,48,0.45)" }}>
+          <div className="w-full max-w-[380px] bg-white rounded-[18px] p-6 text-center" style={{ boxShadow: "0 12px 40px rgba(0,0,0,0.2)" }}>
+            <h2 className="text-[18px] font-bold mb-2" style={{ color: "#0A2A66" }}>
+              {pendente.tipo === "cancelar" ? "Cancelar todos os e-mails promocionais?" : "Confirmar suas preferências?"}
+            </h2>
+            <p className="text-[13px] mb-5" style={{ color: "#8E8E93", lineHeight: 1.6 }}>
+              {pendente.tipo === "cancelar"
+                ? "Você deixará de receber e-mails de desempenho, novidades e ofertas. E-mails essenciais (conta, segurança e serviço) continuam."
+                : "Vamos atualizar quais e-mails você recebe conforme as opções marcadas."}
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setPendente(null)} disabled={salvando}
+                className="flex-1 py-2.5 rounded-[12px] text-[14px] font-semibold"
+                style={{ background: "rgba(60,60,67,0.08)", color: "#3A3A3C", cursor: salvando ? "not-allowed" : "pointer" }}>
+                Voltar
+              </button>
+              <button onClick={confirmar} disabled={salvando}
+                className="flex-1 py-2.5 rounded-[12px] text-[14px] font-semibold text-white"
+                style={{ background: pendente.tipo === "cancelar" ? "#FF3B30" : "#007AFF", opacity: salvando ? 0.6 : 1, cursor: salvando ? "not-allowed" : "pointer" }}>
+                {salvando ? "Salvando…" : "Confirmar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
