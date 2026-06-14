@@ -1,5 +1,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
+/* ── Fonte da marca: CuraDentes (derivada da Montserrat, SIL OFL 1.1) ──
+   Usada em títulos e no wordmark da marca. O corpo/UI continua em Inter. */
+@font-face { font-family:'CuraDentes'; src:url('/fonts/curadentes/CuraDentes-Light.woff2') format('woff2'),    url('/fonts/curadentes/CuraDentes-Light.woff') format('woff');    font-weight:300; font-style:normal; font-display:swap; }
+@font-face { font-family:'CuraDentes'; src:url('/fonts/curadentes/CuraDentes-Regular.woff2') format('woff2'),  url('/fonts/curadentes/CuraDentes-Regular.woff') format('woff');  font-weight:400; font-style:normal; font-display:swap; }
+@font-face { font-family:'CuraDentes'; src:url('/fonts/curadentes/CuraDentes-Medium.woff2') format('woff2'),   url('/fonts/curadentes/CuraDentes-Medium.woff') format('woff');   font-weight:500; font-style:normal; font-display:swap; }
+@font-face { font-family:'CuraDentes'; src:url('/fonts/curadentes/CuraDentes-SemiBold.woff2') format('woff2'), url('/fonts/curadentes/CuraDentes-SemiBold.woff') format('woff'); font-weight:600; font-style:normal; font-display:swap; }
+@font-face { font-family:'CuraDentes'; src:url('/fonts/curadentes/CuraDentes-Bold.woff2') format('woff2'),     url('/fonts/curadentes/CuraDentes-Bold.woff') format('woff');     font-weight:700; font-style:normal; font-display:swap; }
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -28,6 +36,7 @@
     --radius: 0.5rem;
 
     /* CuraDentes tokens */
+    --font-brand: 'CuraDentes', 'Inter', system-ui, sans-serif;
     --primary-blue: #007AFF;
     --primary-blue-hover: #1a8aff;
     --brand-navy: #0A2A66;
@@ -58,6 +67,13 @@
 
   html {
     scroll-behavior: smooth;
+  }
+
+  /* Títulos usam a fonte da marca (CuraDentes); corpo/UI permanece em Inter.
+     O !important sobrepõe os fontFamily inline "Inter" existentes nos títulos
+     (uma regra !important de stylesheet vence o estilo inline normal). */
+  h1, h2, h3 {
+    font-family: var(--font-brand) !important;
   }
 
   body {

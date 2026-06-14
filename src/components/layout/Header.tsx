@@ -486,8 +486,8 @@ export default function Header() {
               <img src={LOGO_FULL}  alt="CuraDentes" className="h-8 w-auto hidden lg:block" />
               <div className="flex items-center gap-2 lg:hidden">
                 <img src={LOGO_ICON} alt="CuraDentes" className="h-8 w-8" />
-                <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "18px", color: "#0A2A66", letterSpacing: "-0.01em" }}>
-                  CuraDentes
+                <span style={{ fontFamily: "var(--font-brand)", fontSize: "18px", color: "#0A2A66", letterSpacing: "-0.01em" }}>
+                  <span style={{ fontWeight: 700 }}>Cura</span><span style={{ fontWeight: 300 }}>Dentes</span>
                 </span>
               </div>
             </a>
