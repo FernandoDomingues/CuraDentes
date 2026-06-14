@@ -13,13 +13,9 @@
   <noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
   <![endif]-->
   <style>
-    :root{ color-scheme: only light; supported-color-schemes: only light; }
-    /* Reasserção das cores em clientes que respeitam prefers-color-scheme */
-    @media (prefers-color-scheme: dark){
-      .bg-card{ background:#ffffff !important; }
-      .bg-page{ background:#f4f6fc !important; }
-      .bg-footer{ background:#f8f9ff !important; }
-    }
+    /* Opt-out de dark mode: mantém a paleta clara (honrado por Apple Mail/iOS e Outlook). */
+    :root{ color-scheme: only light; }
+    body{ color-scheme: only light; }
     /* Reset básico seguro para e-mail */
     body,table,td,a{ -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; }
     table,td{ mso-table-lspace:0pt; mso-table-rspace:0pt; }
@@ -61,11 +57,9 @@
               <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0">
                 <tr>
                   <td width="56" valign="middle" style="width:56px;">
-                    <table role="presentation" border="0" cellspacing="0" cellpadding="0">
-                      <tr><td bgcolor="#ffffff" align="center" valign="middle" style="width:52px; height:52px; background:#ffffff; border-radius:14px;">
-                        <img src="curadentespro-004.png" alt="CuraDentes Pro" width="36" height="36" style="display:block;"/>
-                      </td></tr>
-                    </table>
+                    <!-- A caixinha branca arredondada está ASSADA na imagem (cantos transparentes),
+                         então o dark mode não a inverte para preto. -->
+                    <img src="curadentespro-004-chip.png" alt="CuraDentes Pro" width="52" height="52" style="display:block; border-radius:14px;"/>
                   </td>
                   <td valign="middle" style="padding-left:14px; font-family:Arial,Helvetica,sans-serif;">
                     <div style="font-size:19px; font-weight:bold; color:#ffffff; letter-spacing:-0.2px;">CuraDentes Pro</div>
