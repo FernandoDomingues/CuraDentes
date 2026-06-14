@@ -27,7 +27,9 @@ import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const HTML_PATH = resolve(__dirname, "..", "email marketing - informativo", "plano mensal", "index.html");
+// email.html = versão "email-safe" (tabelas + CSS inline), a que de fato é enviada.
+// index.html é só o preview de design no navegador (Tailwind/animações — não renderiza em e-mail).
+const HTML_PATH = resolve(__dirname, "..", "email marketing - informativo", "plano mensal", "email.html");
 
 // ─── Configuração do email ──────────────────────────────────────────────────
 const SUBJECT = "O CuraDentes Pro chegou — e você faz parte do começo 🦷";
