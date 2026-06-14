@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Comparativo — Nexa × CuraDentes</title>
+<style>
+  /* ── Nexa (TRIAL — somente para este comparativo/avaliação) ── */
+  @font-face{font-family:'Nexa';src:url('fonts/_nexa_comparativo/Nexa-Trial-Bold.woff2') format('woff2'),url('fonts/_nexa_comparativo/Nexa-Trial-Bold.woff') format('woff');font-weight:700;font-display:swap;}
+  @font-face{font-family:'Nexa';src:url('fonts/_nexa_comparativo/Nexa-Trial-Light.woff2') format('woff2'),url('fonts/_nexa_comparativo/Nexa-Trial-Light.woff') format('woff');font-weight:300;font-display:swap;}
+  /* ── CuraDentes (nossa fonte, derivada da Montserrat — SIL OFL 1.1) ── */
+  @font-face{font-family:'CuraDentes';src:url('fonts/CuraDentes-Bold.woff2') format('woff2'),url('fonts/CuraDentes-Bold.woff') format('woff');font-weight:700;font-display:swap;}
+  @font-face{font-family:'CuraDentes';src:url('fonts/CuraDentes-Light.woff2') format('woff2'),url('fonts/CuraDentes-Light.woff') format('woff');font-weight:300;font-display:swap;}
+
+  :root{
+    --navy:#0b1c30; --navy2:#324885; --pink:#b50048; --pink2:#e3005c;
+    --muted:#5c6b7a; --line:#dce9ff; --bg:#eef3fb; --card:#fff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Inter',-apple-system,Segoe UI,Roboto,sans-serif;background:linear-gradient(160deg,#dce9ff 0%,#eef3fb 40%,#f8f9ff 100%);color:var(--navy);padding:40px 20px;line-height:1.5;}
+  .wrap{max-width:1080px;margin:0 auto;}
+
+  header.top{text-align:center;margin-bottom:36px;}
+  header.top h1{font-size:30px;letter-spacing:-0.02em;margin-bottom:8px;}
+  header.top h1 .nx{font-family:'Nexa';font-weight:700;color:var(--muted);}
+  header.top h1 .cd{font-family:'CuraDentes';font-weight:700;color:var(--pink);}
+  header.top p{color:var(--muted);font-size:15px;max-width:620px;margin:0 auto;}
+
+  .legal{background:#fff7f9;border:1px solid #ffd9de;border-radius:14px;padding:14px 18px;margin:0 auto 36px;max-width:760px;font-size:13px;color:#7a3a48;line-height:1.6;}
+  .legal b{color:var(--pink);}
+
+  section{background:var(--card);border:1px solid rgba(60,60,67,0.08);border-radius:20px;padding:28px 30px;margin-bottom:26px;box-shadow:0 4px 20px rgba(11,28,48,0.05);}
+  .sec-label{font-size:12px;font-weight:700;letter-spacing:0.10em;text-transform:uppercase;color:var(--pink);margin-bottom:4px;}
+  .sec-title{font-size:20px;font-weight:700;letter-spacing:-0.01em;margin-bottom:4px;color:var(--navy);}
+  .sec-desc{font-size:14px;color:var(--muted);margin-bottom:22px;max-width:760px;}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  @media(max-width:720px){.grid2{grid-template-columns:1fr;}}
+  .panel{border:1px solid var(--line);border-radius:14px;padding:20px;background:#fcfdff;}
+  .panel.cd{border-color:#ffd9de;background:#fff8fa;}
+  .panel .tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:3px 10px;border-radius:999px;margin-bottom:16px;}
+  .panel .tag.nx{background:#eef1f6;color:var(--muted);}
+  .panel .tag.cd{background:linear-gradient(135deg,#b50048,#e3005c);color:#fff;}
+
+  .nx-b{font-family:'Nexa';font-weight:700;}
+  .nx-l{font-family:'Nexa';font-weight:300;}
+  .cd-b{font-family:'CuraDentes';font-weight:700;}
+  .cd-l{font-family:'CuraDentes';font-weight:300;}
+
+  /* Logo lockup */
+  .logo{font-size:52px;letter-spacing:-0.01em;line-height:1.1;white-space:nowrap;}
+  .logo .pro{color:var(--pink);}
+  .logo.onpink{background:linear-gradient(135deg,#b50048 0%,#e3005c 55%,#ff5c8e 100%);color:#fff;border-radius:12px;padding:22px 26px;text-align:center;}
+  .logo.onpink .pro{color:#ffe3ea;}
+
+  /* Overlay (sobreposição para revelar diferenças) */
+  .overlay-wrap{position:relative;height:120px;display:flex;align-items:center;justify-content:center;}
+  .overlay-wrap span{position:absolute;font-size:74px;letter-spacing:-0.01em;}
+  .ov-nexa{color:rgba(181,0,72,0.55);}      /* rosa translúcido = Nexa */
+  .ov-cd{color:rgba(11,28,48,0.55);}         /* azul translúcido = CuraDentes */
+  .ov-legend{display:flex;gap:24px;justify-content:center;margin-top:8px;font-size:12px;color:var(--muted);}
+  .ov-legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:middle;}
+
+  .specimen{font-size:34px;line-height:1.35;color:var(--navy);word-break:break-word;}
+  .specimen.small{font-size:22px;}
+  .nums{font-size:46px;letter-spacing:0.04em;color:var(--navy);}
+  .nums.hl{color:var(--pink);}
+  .para{font-size:16px;line-height:1.7;color:#3a4f68;}
+
+  .note{font-size:13px;color:var(--muted);margin-top:16px;border-top:1px dashed var(--line);padding-top:14px;}
+  .diff-list{display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;margin-top:6px;}
+  @media(max-width:720px){.diff-list{grid-template-columns:1fr;}}
+  .diff-list div{font-size:14px;color:#3a4f68;padding-left:18px;position:relative;}
+  .diff-list div::before{content:'◆';position:absolute;left:0;color:var(--pink2);font-size:10px;top:4px;}
+  footer{text-align:center;color:var(--muted);font-size:12px;margin-top:10px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <h1><span class="nx">Nexa</span> &nbsp;×&nbsp; <span class="cd">CuraDentes</span></h1>
+    <p>Comparativo visual entre a fonte original (Nexa, trial) e a nossa fonte própria CuraDentes — derivada da Montserrat (SIL OFL), com letras geométricas no mesmo estilo e números da Montserrat.</p>
+  </header>
+
+  <div class="legal">
+    ⚖️ <b>Nota legal:</b> a Nexa abaixo é exibida <b>apenas para fins de comparação/avaliação</b> (versão trial). A produção usa exclusivamente a <b>CuraDentes</b>, que é legalmente nossa: derivada da Montserrat sob a SIL Open Font License 1.1, sem qualquer arquivo da Nexa.
+  </div>
+
+  <!-- 1. IMPACTO NA LOGO -->
+  <section>
+    <div class="sec-label">Impacto na logo</div>
+    <div class="sec-title">A marca “CuraDentes Pro” (Cura Bold + Dentes Light)</div>
+    <div class="sec-desc">É aqui que a troca de fonte mais aparece. Veja o wordmark com a Nexa original e com a CuraDentes, no mesmo tamanho.</div>
+    <div class="grid2">
+      <div class="panel">
+        <span class="tag nx">Nexa (original)</span>
+        <div class="logo"><span class="nx-b">Cura</span><span class="nx-l">Dentes</span> <span class="nx-b pro">Pro</span></div>
+      </div>
+      <div class="panel cd">
+        <span class="tag cd">CuraDentes (nossa)</span>
+        <div class="logo"><span class="cd-b">Cura</span><span class="cd-l">Dentes</span> <span class="cd-b pro">Pro</span></div>
+      </div>
+    </div>
+
+    <!-- mesma logo sobre o fundo rosa do cabeçalho do email -->
+    <div class="grid2" style="margin-top:20px;">
+      <div class="panel">
+        <span class="tag nx">Nexa — sobre o fundo do cabeçalho</span>
+        <div class="logo onpink"><span class="nx-b">Cura</span><span class="nx-l">Dentes</span> <span class="nx-b pro">Pro</span></div>
+      </div>
+      <div class="panel cd">
+        <span class="tag cd">CuraDentes — sobre o fundo do cabeçalho</span>
+        <div class="logo onpink"><span class="cd-b">Cura</span><span class="cd-l">Dentes</span> <span class="cd-b pro">Pro</span></div>
+      </div>
+    </div>
+
+    <!-- sobreposição -->
+    <div style="margin-top:24px;">
+      <div class="sec-title" style="font-size:16px;">Sobreposição (revela as diferenças de desenho)</div>
+      <div class="sec-desc" style="margin-bottom:10px;">As duas palavras impressas uma sobre a outra. Onde elas coincidem, as cores se misturam; onde divergem, aparece rosa (Nexa) ou azul (CuraDentes) puros.</div>
+      <div class="overlay-wrap">
+        <span class="nx-b ov-nexa">CuraDentes</span>
+        <span class="cd-b ov-cd">CuraDentes</span>
+      </div>
+      <div class="ov-legend">
+        <span><i style="background:rgba(181,0,72,0.55);"></i>Nexa</span>
+        <span><i style="background:rgba(11,28,48,0.55);"></i>CuraDentes</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. NÚMEROS -->
+  <section>
+    <div class="sec-label">Números</div>
+    <div class="sec-title">Numerais — o ponto que você pediu</div>
+    <div class="sec-desc">Os números da CuraDentes são os da Montserrat. Compare o desenho (repare especialmente no 1, 4 e 7).</div>
+    <div class="grid2">
+      <div class="panel">
+        <span class="tag nx">Nexa</span>
+        <div class="nums nx-b">0123456789</div>
+        <div class="nums nx-l" style="margin-top:8px;">0123456789</div>
+      </div>
+      <div class="panel cd">
+        <span class="tag cd">CuraDentes</span>
+        <div class="nums hl cd-b">0123456789</div>
+        <div class="nums cd-l" style="margin-top:8px;color:var(--muted);">0123456789</div>
+      </div>
+    </div>
+    <div class="note">Exemplo no contexto do email — o preço:
+      <span class="nx-b" style="font-size:30px;">R$48/mês</span> (Nexa) &nbsp;vs&nbsp;
+      <span class="cd-b" style="font-size:30px;color:var(--pink);">R$48/mês</span> (CuraDentes)
+    </div>
+  </section>
+
+  <!-- 3. ALFABETO -->
+  <section>
+    <div class="sec-label">Alfabeto</div>
+    <div class="sec-title">Maiúsculas, minúsculas e pesos</div>
+    <div class="sec-desc">Bold (700) usado em “Cura” e Light (300) usado em “Dentes”.</div>
+    <div class="grid2">
+      <div class="panel">
+        <span class="tag nx">Nexa Bold</span>
+        <div class="specimen small nx-b">ABCDEFGHIJKLM<br/>NOPQRSTUVWXYZ</div>
+        <div class="specimen small nx-b" style="margin-top:8px;">abcdefghijklm<br/>nopqrstuvwxyz</div>
+        <div class="specimen small nx-l" style="margin-top:18px;"><span class="tag nx">Nexa Light</span><br/>ABCDEFGHIJKLM<br/>NOPQRSTUVWXYZ<br/>abcdefghijklmnopqrstuvwxyz</div>
+      </div>
+      <div class="panel cd">
+        <span class="tag cd">CuraDentes Bold</span>
+        <div class="specimen small cd-b">ABCDEFGHIJKLM<br/>NOPQRSTUVWXYZ</div>
+        <div class="specimen small cd-b" style="margin-top:8px;">abcdefghijklm<br/>nopqrstuvwxyz</div>
+        <div class="specimen small cd-l" style="margin-top:18px;"><span class="tag cd">CuraDentes Light</span><br/>ABCDEFGHIJKLM<br/>NOPQRSTUVWXYZ<br/>abcdefghijklmnopqrstuvwxyz</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. TEXTO CORRIDO -->
+  <section>
+    <div class="sec-label">Texto corrido</div>
+    <div class="sec-title">Leitura em parágrafo</div>
+    <div class="sec-desc">Como cada fonte se comporta num trecho real do email.</div>
+    <div class="grid2">
+      <div class="panel">
+        <span class="tag nx">Nexa Light</span>
+        <p class="para nx-l">Você foi um dos primeiros a acreditar no CuraDentes Pro. Desde o início do nosso Beta, sua confiança moldou cada funcionalidade. A partir de 01 de julho de 2027, o plano mensal será de R$48.</p>
+      </div>
+      <div class="panel cd">
+        <span class="tag cd">CuraDentes Light</span>
+        <p class="para cd-l">Você foi um dos primeiros a acreditar no CuraDentes Pro. Desde o início do nosso Beta, sua confiança moldou cada funcionalidade. A partir de 01 de julho de 2027, o plano mensal será de R$48.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. DIFERENÇAS -->
+  <section>
+    <div class="sec-label">Resumo</div>
+    <div class="sec-title">Principais diferenças de desenho</div>
+    <div class="sec-desc">A CuraDentes (base Montserrat) é geométrica como a Nexa, mas tem personalidade própria. Pontos onde elas mais divergem:</div>
+    <div class="diff-list">
+      <div>Proporções: a Nexa é um pouco mais estreita; a CuraDentes/Montserrat é mais larga e aberta.</div>
+      <div>Letra “a” e “t”: terminais e cortes ligeiramente diferentes.</div>
+      <div>Letra “G”: a Montserrat costuma ter esporão mais marcado.</div>
+      <div>Numerais: desenho da Montserrat (1 com base, 4 fechado), distinto da Nexa.</div>
+      <div>“R” e “Q”: a perna/cauda têm curvatura própria na Montserrat.</div>
+      <div>Peso Light: a CuraDentes Light tende a um traço um pouco mais uniforme.</div>
+    </div>
+    <div class="note">
+      <b>Veredito:</b> para identidade de marca, embalagem, web e este email, a CuraDentes entrega o mesmo “espírito” geométrico da Nexa com total segurança jurídica. Para um olhar treinado, as diferenças existem (acima), mas o resultado no wordmark é muito próximo — como você pode ver na seção “Impacto na logo”.
+    </div>
+  </section>
+
+  <footer>
+    CuraDentes · Comparativo gerado para avaliação interna · Fonte CuraDentes sob SIL OFL 1.1 (derivada da Montserrat)
+  </footer>
+
+</div>
+</body>
+</html>

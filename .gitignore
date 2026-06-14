@@ -41,3 +41,8 @@ convert_sql.cjs
 # Playwright test artifacts
 playwright-report/
 test-results/
+
+# Fontes TRIAL/comerciais da Nexa — NAO redistribuir via repositorio.
+# Usadas apenas para comparacao visual local; a producao usa a fonte CuraDentes (OFL).
+email marketing - informativo/plano mensal/Nexa-Trial-Book.zip
+email marketing - informativo/plano mensal/fonts/_nexa_comparativo/
