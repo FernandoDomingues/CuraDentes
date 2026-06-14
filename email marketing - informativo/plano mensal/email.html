@@ -4,11 +4,22 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+  <!-- Mantém a paleta clara mesmo no dark mode do dispositivo (Apple Mail/iOS,
+       novo Outlook e Outlook.com respeitam; impede a inversão automática). -->
+  <meta name="color-scheme" content="only light"/>
+  <meta name="supported-color-schemes" content="only light"/>
   <title>CuraDentes Pro</title>
   <!--[if mso]>
   <noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
   <![endif]-->
   <style>
+    :root{ color-scheme: only light; supported-color-schemes: only light; }
+    /* Reasserção das cores em clientes que respeitam prefers-color-scheme */
+    @media (prefers-color-scheme: dark){
+      .bg-card{ background:#ffffff !important; }
+      .bg-page{ background:#eef3fb !important; }
+      .bg-footer{ background:#f8f9ff !important; }
+    }
     /* Reset básico seguro para e-mail */
     body,table,td,a{ -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; }
     table,td{ mso-table-lspace:0pt; mso-table-rspace:0pt; }
@@ -28,7 +39,7 @@
     Acabamos de lançar o Beta e queremos você com a gente desde o início — CuraDentes Pro
   </div>
 
-  <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="background:#eef3fb;">
+  <table role="presentation" class="bg-page" bgcolor="#eef3fb" width="100%" border="0" cellspacing="0" cellpadding="0" style="background:#eef3fb;">
     <tr>
       <td align="center" style="padding:24px 12px;">
 
@@ -42,7 +53,7 @@
         </table>
 
         <!-- CARD -->
-        <table role="presentation" class="container" width="600" border="0" cellspacing="0" cellpadding="0" style="width:600px; max-width:600px; background:#ffffff; border-radius:20px; overflow:hidden;">
+        <table role="presentation" class="container bg-card" bgcolor="#ffffff" width="600" border="0" cellspacing="0" cellpadding="0" style="width:600px; max-width:600px; background:#ffffff; border-radius:20px; overflow:hidden;">
 
           <!-- HEADER -->
           <tr>
@@ -189,7 +200,7 @@
 
           <!-- FOOTER -->
           <tr>
-            <td bgcolor="#f8f9ff" class="px" align="center" style="background:#f8f9ff; border-top:1px solid #dce9ff; padding:28px 40px 32px; font-family:Arial,Helvetica,sans-serif;">
+            <td bgcolor="#f8f9ff" class="px bg-footer" align="center" style="background:#f8f9ff; border-top:1px solid #dce9ff; padding:28px 40px 32px; font-family:Arial,Helvetica,sans-serif;">
               <img src="curadentespro-000.png" alt="CuraDentes Pro" width="150" style="display:inline-block; margin:0 auto 14px;"/>
               <p style="margin:0 0 12px; font-size:12px; line-height:1.6; color:#906e73;">
                 Voc&ecirc; est&aacute; recebendo este e-mail porque possui uma conta Beta no CuraDentes Pro.<br/>
