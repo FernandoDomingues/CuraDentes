@@ -264,7 +264,6 @@ export default function VerificarCro() {
                         </p>
                         <div className="flex items-center gap-3 text-sm text-[#6B7280] mt-1">
                           <span className="font-mono">{v.cro}</span>
-                          <span>{v.uf}</span>
                           <CroVerificationBadge verificado={v.cro_verificado} />
                         </div>
                       </div>
