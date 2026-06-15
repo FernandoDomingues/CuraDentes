@@ -45,6 +45,7 @@ import {
   Loader2,
   Eye,
   Home,
+  CalendarClock,
 } from "lucide-react";
 import type { DentistaPro } from "@/constants/demoDentists";
 
@@ -787,6 +788,23 @@ export default function Dashboard() {
 
       <main className="container mx-auto px-4 md:px-8 py-6 max-w-4xl">
         <div className="flex flex-col gap-6">
+
+          {/* Lembrete: transição do Beta gratuito para plano pago (01/07/2027) */}
+          <div
+            className="rounded-[16px] border p-4 flex items-start gap-3"
+            style={{ background: "#FFF8E1", borderColor: "rgba(255,149,0,0.35)" }}
+          >
+            <CalendarClock size={20} className="flex-shrink-0 mt-0.5" style={{ color: "#FF9500" }} />
+            <p className="text-[13px] leading-relaxed" style={{ color: "#3A3A3C" }}>
+              <strong style={{ color: "#0A2A66" }}>Lembrete:</strong> o CuraDentes Pro está em fase{" "}
+              <strong>Beta gratuita</strong>. A partir de <strong>1º de julho de 2027</strong>, o acesso
+              passará a custar <strong>R$ 48/mês</strong> por dentista. Você será avisado por e-mail com
+              30 dias de antecedência e nada será cobrado sem o seu aceite. Detalhes na seção 5 dos{" "}
+              <a href="/termos" target="_blank" rel="noopener noreferrer" className="font-semibold underline" style={{ color: "#007AFF" }}>
+                Termos de Uso
+              </a>.
+            </p>
+          </div>
 
           {/* ── Card de boas-vindas com foto do dentista ── */}
           <div
