@@ -14,7 +14,15 @@ import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import Header from "@/components/layout/Header";
 import CroVerificationBadge from "@/components/analytics/CroVerificationBadge";
-import { Loader2, ArrowLeft, ExternalLink, RefreshCw, ShieldAlert, CheckCircle } from "lucide-react";
+import { Loader2, ArrowLeft, ExternalLink, RefreshCw, ShieldAlert, CheckCircle, Copy } from "lucide-react";
+
+const UF_MAP: Record<string, string> = {
+  AC: "Acre", AL: "Alagoas", AP: "Amapá", AM: "Amazonas", BA: "Bahia", CE: "Ceará",
+  DF: "Distrito Federal", ES: "Espírito Santo", GO: "Goiás", MA: "Maranhão", MT: "Mato Grosso",
+  MS: "Mato Grosso do Sul", MG: "Minas Gerais", PA: "Pará", PB: "Paraíba", PR: "Paraná",
+  PE: "Pernambuco", PI: "Piauí", RJ: "Rio de Janeiro", RN: "Rio Grande do Norte", RS: "Rio Grande do Sul",
+  RO: "Rondônia", RR: "Roraima", SC: "Santa Catarina", SP: "São Paulo", SE: "Sergipe", TO: "Tocantins",
+};
 
 type VerificacaoDetalhe = {
   id: string;
@@ -68,6 +76,13 @@ export default function VerificarCroDetalhe() {
   });
   const [observacao, setObservacao] = useState("");
   const [termoAceito, setTermoAceito] = useState(false);
+  const [copiado, setCopiado] = useState("");
+
+  function copiar(texto: string, qual: string) {
+    navigator.clipboard.writeText(texto);
+    setCopiado(qual);
+    setTimeout(() => setCopiado(""), 2000);
+  }
 
   useEffect(() => {
     async function carregar() {
@@ -172,6 +187,9 @@ export default function VerificarCroDetalhe() {
   const pro = verificacao.curadentespro;
   const jaVerificado = verificacao.status === "verificado";
   const numeroCRO = verificacao.cro.replace(/\D/g, "");
+  const ufSigla = (verificacao.cro.includes("-") ? verificacao.cro.split("-")[1] : verificacao.cro)
+    .replace(/[^A-Za-z]/g, "").toUpperCase().slice(0, 2);
+  const ufNome = UF_MAP[ufSigla] || verificacao.uf || ufSigla;
 
   return (
     <div className="min-h-screen bg-[#F2F2F7]">
@@ -203,11 +221,38 @@ export default function VerificarCroDetalhe() {
           <div className="space-y-6">
             {/* Instruções */}
             <section className="bg-white rounded-2xl p-6 shadow-sm">
-              <h2 className="text-lg font-semibold text-[#0A2A66] mb-2">Consultar CRO</h2>
-              <ol className="text-sm text-[#6B7280] space-y-2 list-decimal list-inside mb-4">
-                <li>Abra o site de busca do CFO em nova aba</li>
-                <li>Selecione a UF <strong>{verificacao.uf}</strong></li>
-                <li>Digite o nº de inscrição: <strong>{numeroCRO}</strong></li>
+              <h2 className="text-lg font-semibold text-[#0A2A66] mb-1">Consultar CRO</h2>
+              <p className="text-sm text-[#6B7280] mb-4">Use estes valores na busca do CFO:</p>
+
+              {/* Valores prontos (copiáveis) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                <div className="rounded-xl border border-gray-200 p-3">
+                  <p className="text-[11px] font-medium text-[#8E8E93] uppercase mb-1">CRO/UF</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-[#0A2A66] truncate">
+                      {ufNome}{ufSigla ? ` (${ufSigla})` : ""}
+                    </p>
+                    <button onClick={() => copiar(ufNome, "uf")} className="text-[#8E8E93] hover:text-[#007AFF] shrink-0" title="Copiar">
+                      <Copy size={14} />
+                    </button>
+                  </div>
+                  {copiado === "uf" && <p className="text-[11px] text-[#34C759] mt-1">Copiado!</p>}
+                </div>
+                <div className="rounded-xl border border-gray-200 p-3">
+                  <p className="text-[11px] font-medium text-[#8E8E93] uppercase mb-1">Nº inscrição</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold font-mono text-[#0A2A66] truncate">{numeroCRO || "—"}</p>
+                    <button onClick={() => copiar(numeroCRO, "num")} className="text-[#8E8E93] hover:text-[#007AFF] shrink-0" title="Copiar">
+                      <Copy size={14} />
+                    </button>
+                  </div>
+                  {copiado === "num" && <p className="text-[11px] text-[#34C759] mt-1">Copiado!</p>}
+                </div>
+              </div>
+
+              <ol className="text-sm text-[#6B7280] space-y-1.5 list-decimal list-inside mb-4">
+                <li>Abra o site do CFO (botão abaixo)</li>
+                <li>Selecione a UF e cole o nº de inscrição (valores acima)</li>
                 <li>Resolva o reCAPTCHA e clique em Pesquisar</li>
                 <li>Confira os dados e preencha o formulário ao lado</li>
               </ol>

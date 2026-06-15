@@ -6,10 +6,10 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import Header from "@/components/layout/Header";
 import CroVerificationBadge from "@/components/analytics/CroVerificationBadge";
-import VerificarCroModal from "@/components/analytics/VerificarCroModal";
 import { Loader2, ExternalLink, Search, ShieldCheck, ShieldAlert, Clock, CheckCircle, XCircle, Eye } from "lucide-react";
 
 type VerificacaoRow = {
@@ -29,13 +29,11 @@ type VerificacaoRow = {
 };
 
 export default function VerificarCro() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [verificacoes, setVerificacoes] = useState<VerificacaoRow[]>([]);
   const [filtro, setFiltro] = useState<string>("todas");
   const [busca, setBusca] = useState("");
-  const [modalAberta, setModalAberta] = useState(false);
-  const [modalDados, setModalDados] = useState<{ dentista_id: string; nome: string; cro: string; verificacao_id: string | null } | null>(null);
-  const [recarregar, setRecarregar] = useState(0);
 
   useEffect(() => {
     async function carregar() {
@@ -113,7 +111,7 @@ export default function VerificarCro() {
       }
     }
     carregar();
-  }, [recarregar]);
+  }, []);
 
   const filtradas = verificacoes.filter((v) => {
     if (filtro === "pendentes" && v.status !== "pendente") return false;
@@ -281,17 +279,9 @@ export default function VerificarCro() {
                         </p>
                       </div>
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setModalDados({
-                            dentista_id: v.dentista_id,
-                            nome: v.nome || "Sem nome",
-                            cro: v.cro,
-                            verificacao_id: v.id,
-                          });
-                          setModalAberta(true);
-                        }}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-[#007AFF] text-white hover:bg-[#0056CC] transition-colors"
+                        onClick={() => { if (v.id) navigate(`/pro/verificar-cro/${v.id}`); }}
+                        disabled={!v.id}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-[#007AFF] text-white hover:bg-[#0056CC] transition-colors disabled:opacity-50"
                       >
                         <Eye size={13} />
                         Verificar
@@ -306,22 +296,6 @@ export default function VerificarCro() {
             })
           )}
         </div>
-
-        {/* Modal de verificação */}
-        {modalDados && (
-          <VerificarCroModal
-            isOpen={modalAberta}
-            onClose={() => {
-              setModalAberta(false);
-              setModalDados(null);
-            }}
-            dentistaId={modalDados.dentista_id}
-            nome={modalDados.nome}
-            cro={modalDados.cro}
-            verificacaoId={modalDados.verificacao_id}
-            onSaved={() => setRecarregar((n) => n + 1)}
-          />
-        )}
       </main>
     </div>
   );
