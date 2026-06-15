@@ -45,13 +45,15 @@ export default function DashboardAnalytics() {
   const [enderecos, setEnderecos] = useState<DentistaEndereco[]>([]);
   const [totalDentistas, setTotalDentistas] = useState(0);
   const [periodo, setPeriodo] = useState<"7" | "30" | "90">("30");
+  // Taxa de sucesso: usuários que buscaram e depois clicaram em WhatsApp/ligação
+  const [sucesso, setSucesso] = useState({ buscaram: 0, sucesso: 0, whatsapp: 0, telefone: 0 });
 
   useEffect(() => {
     async function carregar() {
       try {
         const dias = parseInt(periodo);
 
-        const [logRes, endRes, countRes] = await Promise.all([
+        const [logRes, endRes, countRes, sucRes] = await Promise.all([
           supabase
             .from("logs_busca")
             .select("query, cidade, estado, bairro, resultados_count, criado_em")
@@ -67,11 +69,19 @@ export default function DashboardAnalytics() {
             .select("id", { count: "exact", head: true })
             .eq("lgpd_aceito", true)
             .is("deleted_at", null),
+          supabase.rpc("taxa_sucesso_contato", { p_dias: dias }),
         ]);
 
         if (logRes.data) setLogs(logRes.data);
         if (endRes.data) setEnderecos(endRes.data as DentistaEndereco[]);
         if (countRes.count !== null) setTotalDentistas(countRes.count);
+        const sr = Array.isArray(sucRes.data) ? sucRes.data[0] : sucRes.data;
+        if (sr) setSucesso({
+          buscaram: Number(sr.buscaram) || 0,
+          sucesso: Number(sr.sucesso) || 0,
+          whatsapp: Number(sr.sucesso_whatsapp) || 0,
+          telefone: Number(sr.sucesso_telefone) || 0,
+        });
       } catch (err) {
         console.error("[DashboardAnalytics] Erro ao carregar dados:", err);
       } finally {
@@ -85,13 +95,13 @@ export default function DashboardAnalytics() {
 
   const metricas = useMemo(() => {
     const totalBuscas = logs.length;
-    const buscasComResultado = logs.filter((l) => l.resultados_count > 0).length;
-    const taxaSucesso = totalBuscas > 0 ? (buscasComResultado / totalBuscas) * 100 : 0;
     const cidadesUnicas = [...new Set(logs.map((l) => l.cidade).filter(Boolean))];
     const bairrosUnicos = [...new Set(logs.map((l) => l.bairro).filter(Boolean))];
 
-    return { totalBuscas, taxaSucesso, cidadesUnicas: cidadesUnicas.length, bairrosUnicos: bairrosUnicos.length };
+    return { totalBuscas, cidadesUnicas: cidadesUnicas.length, bairrosUnicos: bairrosUnicos.length };
   }, [logs]);
+
+  const taxaSucesso = sucesso.buscaram > 0 ? (sucesso.sucesso / sucesso.buscaram) * 100 : 0;
 
   // ─── Top Cidades ─────────────────────────────────────────────────────────────
 
@@ -188,7 +198,12 @@ export default function DashboardAnalytics() {
           <KpiCard icon={Building2} label="Dentistas" value={totalDentistas} />
           <KpiCard icon={MapPin} label="Cidades" value={metricas.cidadesUnicas} />
           <KpiCard icon={Activity} label="Bairros" value={metricas.bairrosUnicos} />
-          <KpiCard icon={TrendingUp} label="Taxa sucesso" value={`${metricas.taxaSucesso.toFixed(1)}%`} />
+          <KpiCard
+            icon={TrendingUp}
+            label="Taxa de sucesso"
+            value={`${taxaSucesso.toFixed(1)}%`}
+            sub={`${sucesso.sucesso}/${sucesso.buscaram} contataram · ${sucesso.whatsapp} WhatsApp · ${sucesso.telefone} ligação`}
+          />
         </div>
 
         {/* ─── Seletor de período ─────────────────────────────────────────── */}
@@ -296,10 +311,12 @@ function KpiCard({
   icon: Icon,
   label,
   value,
+  sub,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: string | number;
+  sub?: string;
 }) {
   return (
     <div className="bg-white rounded-2xl p-5 shadow-sm">
@@ -307,9 +324,10 @@ function KpiCard({
         <div className="p-2 bg-[#007AFF]/10 rounded-xl">
           <Icon className="h-5 w-5 text-[#007AFF]" />
         </div>
-        <div>
+        <div className="min-w-0">
           <p className="text-xs text-[#6B7280]">{label}</p>
           <p className="text-2xl font-bold text-[#0A2A66]">{value}</p>
+          {sub && <p className="text-[11px] text-[#8E8E93] mt-0.5 leading-tight">{sub}</p>}
         </div>
       </div>
     </div>
