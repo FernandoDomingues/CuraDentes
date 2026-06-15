@@ -165,16 +165,17 @@ export default function VerificarCroDetalhe() {
       <Header />
       <main className="max-w-4xl mx-auto px-4 py-8 space-y-6">
         {/* ─── Cabeçalho ─────────────────────────────────────────────────── */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-start gap-3 flex-wrap">
           <button
             onClick={() => navigate("/pro/verificar-cro")}
-            className="p-2 rounded-xl bg-white hover:bg-gray-50 transition-colors"
+            className="p-2 rounded-xl bg-white hover:bg-gray-50 transition-colors shrink-0"
           >
             <ArrowLeft size={20} style={{ color: "#007AFF" }} />
           </button>
-          <div>
-            <h1 className="text-2xl font-bold text-[#0A2A66]">Verificar CRO</h1>
-            <p className="text-sm text-[#6B7280]">{pro?.nome} — {verificacao.cro}</p>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold text-[#0A2A66] whitespace-nowrap">Verificar CRO</h1>
+            <p className="text-sm text-[#6B7280] break-words">{pro?.nome}</p>
+            <p className="text-sm font-mono text-[#6B7280] whitespace-nowrap">{verificacao.cro}</p>
           </div>
           {jaVerificado && (
             <span className="flex items-center gap-1 text-sm font-medium text-[#34C759]">
