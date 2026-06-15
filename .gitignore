@@ -16,6 +16,8 @@ dist-ssr
 .vscode/*
 !.vscode/extensions.json
 .idea
+# Config local do Claude Code (sessao/agentes) — nao pertence ao repositorio
+.claude/
 .DS_Store
 *.suo
 *.ntvs*
