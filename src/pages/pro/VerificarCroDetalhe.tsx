@@ -212,8 +212,9 @@ export default function VerificarCroDetalhe() {
             </p>
           )}
 
-          {/* Formulário do CFO embutido — SEM sandbox (necessário para o site renderizar) */}
-          <div className="rounded-xl overflow-hidden border border-gray-200 bg-white" style={{ height: "720px" }}>
+          {/* Formulário do CFO embutido em LARGURA DE CELULAR (força o layout mobile,
+              coluna única — o CFO é responsivo e empilha abaixo de ~576px). SEM sandbox. */}
+          <div className="rounded-xl overflow-hidden border border-gray-200 bg-white mx-auto" style={{ maxWidth: "420px", height: "820px" }}>
             <iframe
               src="https://busca-profissionais.cfo.org.br/"
               title="Busca de profissionais CFO"
