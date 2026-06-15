@@ -26,7 +26,7 @@ import { geocodeEnderecoComFallback } from "@/lib/geocoding";
 import { formatarInstagram, extrairUserInstagram, INSTAGRAM_BASE } from "@/utils/instagram";
 import {
   User, Building2, Save, ArrowLeft, Loader2,
-  Camera, Plus, Trash2, ShieldCheck, Mail, KeyRound, AlertTriangle
+  Camera, Plus, Trash2, ShieldCheck, Mail, KeyRound, AlertTriangle, CalendarClock
 } from "lucide-react";
 import logoProUrl from "@/assets/logos/logo-pro.png";
 import { CepInputComBusca } from "@/components/ui/CepInputComBusca";
@@ -453,7 +453,24 @@ export default function MeuPerfil() {
       </header>
 
       <main className="container mx-auto px-4 md:px-8 mt-8 max-w-5xl flex flex-col gap-8">
-        
+
+        {/* Lembrete: transição do Beta gratuito para plano pago (01/07/2027) */}
+        <div
+          className="rounded-[16px] border p-4 flex items-start gap-3"
+          style={{ background: "#FFF8E1", borderColor: "rgba(255,149,0,0.35)" }}
+        >
+          <CalendarClock size={20} className="flex-shrink-0 mt-0.5" style={{ color: "#FF9500" }} />
+          <p className="text-[13px] leading-relaxed" style={{ color: "#3A3A3C" }}>
+            <strong style={{ color: "#0A2A66" }}>Lembrete:</strong> o CuraDentes Pro está em fase{" "}
+            <strong>Beta gratuita</strong>. A partir de <strong>1º de julho de 2027</strong>, o acesso
+            passará a custar <strong>R$ 48/mês</strong> por dentista. Você será avisado por e-mail com
+            30 dias de antecedência e nada será cobrado sem o seu aceite. Detalhes na seção 5 dos{" "}
+            <a href="/termos" target="_blank" rel="noopener noreferrer" className="font-semibold underline" style={{ color: "#007AFF" }}>
+              Termos de Uso
+            </a>.
+          </p>
+        </div>
+
         {/* Seção 1: Dados Pessoais e Foto */}
         <div className="bg-white p-6 rounded-[24px] shadow-sm border border-gray-100 flex flex-col gap-6">
           <h2 className="text-[20px] font-bold text-[#0A2A66]">Dados Pessoais e Profissionais</h2>

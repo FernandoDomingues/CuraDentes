@@ -209,7 +209,7 @@ export default function NovoCadastro() {
         const { data: pro } = await supabase
           .from('curadentespro')
           // cpf é lido à parte via RPC meu_cpf() (coluna protegida — LGPD)
-          .select('id, nome, tratamento, nome_completo, email, telefone, cro, ano_formacao, foto_url, bio, instagram, lgpd_aceito')
+          .select('id, nome, tratamento, nome_completo, email, telefone, cro, ano_formacao, foto_url, bio, instagram, lgpd_aceito, cobranca_aviso_aceita')
           .eq('id', user.id)
           .is('deleted_at', null)
           .maybeSingle();
@@ -229,6 +229,7 @@ export default function NovoCadastro() {
           if (pro.bio) setBio(pro.bio);
           if (pro.instagram) setInstagram(extrairUserInstagram(pro.instagram));
           if (pro.lgpd_aceito) setLgpdAceito(pro.lgpd_aceito);
+          if (pro.cobranca_aviso_aceita) setCobrancaAceita(pro.cobranca_aviso_aceita);
           // Preferências de e-mail ficam em tabela separada (token protegido)
           const { data: prefRow } = await supabase
             .from('curadentespro_email').select('prefs').eq('curadentespro_id', user.id).maybeSingle();
@@ -318,6 +319,7 @@ export default function NovoCadastro() {
           if (dados.bio) setBio(dados.bio);
           if (dados.instagram) setInstagram(extrairUserInstagram(dados.instagram));
           if (dados.lgpdAceito) setLgpdAceito(dados.lgpdAceito);
+          if (dados.cobrancaAceita) setCobrancaAceita(dados.cobrancaAceita);
           if (dados.emailPrefs) setEmailPrefs(dados.emailPrefs);
           if (dados.senhaSincronizada) setSenhaSincronizada(dados.senhaSincronizada);
         } catch (e) {
@@ -368,6 +370,8 @@ export default function NovoCadastro() {
 
   // ─ Etapa 6: LGPD ──────────────────────────────────────────────────────────
   const [lgpdAceito, setLgpdAceito] = useState(false);
+  // Ciência (obrigatória) de que o Pro passa a ser pago a partir de 01/07/2027
+  const [cobrancaAceita, setCobrancaAceita] = useState(false);
   // Preferências de e-mail (opt-in, desmarcado por padrão — LGPD). Categorias
   // opcionais; e-mails essenciais (conta/segurança/serviço) independem disto.
   const [emailPrefs, setEmailPrefs] = useState({ desempenho: false, novidades: false, parceiros: false });
@@ -405,6 +409,7 @@ export default function NovoCadastro() {
       bio,
       instagram,
       lgpdAceito,
+      cobrancaAceita,
       emailPrefs,
       senhaSincronizada,
     };
@@ -413,7 +418,7 @@ export default function NovoCadastro() {
     etapa, nome, tratamento, nomeCompleto, email, emailVerificado,
     telefone, telefoneVerificado,
     cpf, cro, anoFormacao, fotoUrl,
-    enderecos, bio, instagram, lgpdAceito, emailPrefs,
+    enderecos, bio, instagram, lgpdAceito, cobrancaAceita, emailPrefs,
     senhaSincronizada,
   ]);
 
@@ -432,6 +437,7 @@ export default function NovoCadastro() {
     if (!validarCpf(cpf)) faltando.push("CPF");
     if (!validarCro(cro)) faltando.push("CRO");
     if (!lgpdAceito) faltando.push("Aceite da LGPD");
+    if (!cobrancaAceita) faltando.push("Ciência da cobrança a partir de 01/07/2027");
     const { valido: endOk, erros: endErros } = validarEnderecos(enderecos);
     if (!endOk) faltando.push(...endErros);
     return faltando;
@@ -816,7 +822,9 @@ export default function NovoCadastro() {
             foto_url: fotoUrl || null,
             bio: bio,
             instagram: instagramUrl,
-            lgpd_aceito: lgpdAceito
+            lgpd_aceito: lgpdAceito,
+            cobranca_aviso_aceita: cobrancaAceita,
+            cobranca_aviso_aceita_em: cobrancaAceita ? new Date().toISOString() : null
           }, { onConflict: 'id' });
 
           if (errorPro) throw errorPro;
@@ -2332,6 +2340,32 @@ export default function NovoCadastro() {
             Termos de Uso
           </a>{" "}
           do CuraDentes Pro, incluindo o tratamento dos meus dados conforme a LGPD (Lei nº 13.709/2018).{" "}
+          <span className="font-semibold" style={{ color: "#E6004C" }}>*</span>
+        </span>
+      </label>
+
+      {/* Checkbox: ciência da cobrança futura (obrigatória) */}
+      <label
+        className="flex items-start gap-3 cursor-pointer p-4 rounded-[14px] transition-colors"
+        style={{
+          border: cobrancaAceita ? "1px solid rgba(52,199,89,0.30)" : "1px solid rgba(255,149,0,0.40)",
+          background: cobrancaAceita ? "rgba(52,199,89,0.04)" : "rgba(255,149,0,0.06)",
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={cobrancaAceita}
+          onChange={(e) => setCobrancaAceita(e.target.checked)}
+          className="mt-0.5 w-5 h-5 accent-[#34C759] cursor-pointer flex-shrink-0"
+        />
+        <span className="text-[14px]" style={{ color: "#3A3A3C", lineHeight: 1.7 }}>
+          Estou ciente de que o CuraDentes Pro é gratuito durante o Beta e que, a partir de{" "}
+          <strong>1º de julho de 2027</strong>, passará a ter um plano mensal de{" "}
+          <strong>R$ 48,00 por mês</strong> por dentista. Serei avisado por e-mail com antecedência
+          e nenhum valor será cobrado sem o meu aceite expresso, conforme a seção 5 dos{" "}
+          <a href="/termos" target="_blank" rel="noopener noreferrer" className="font-semibold underline" style={{ color: "#007AFF" }}>
+            Termos de Uso
+          </a>.{" "}
           <span className="font-semibold" style={{ color: "#E6004C" }}>*</span>
         </span>
       </label>
