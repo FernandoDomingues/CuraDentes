@@ -216,57 +216,51 @@ export default function VerificarCroDetalhe() {
           )}
         </div>
 
+        {/* ─── Consulta no CFO (largura total, embutido) ────────────────── */}
+        <section className="bg-white rounded-2xl p-6 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+            <div>
+              <h2 className="text-lg font-semibold text-[#0A2A66]">Consultar no CFO</h2>
+              <p className="text-sm text-[#6B7280]">Selecione a UF, cole o nº abaixo, resolva o captcha e clique em Pesquisar.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button onClick={() => copiar(ufNome, "uf")} className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 text-sm hover:bg-gray-50 transition-colors">
+                <span className="text-[#8E8E93]">CRO/UF:</span>
+                <span className="font-semibold text-[#0A2A66]">{ufNome}{ufSigla ? ` (${ufSigla})` : ""}</span>
+                <Copy size={13} className="text-[#8E8E93]" />
+              </button>
+              <button onClick={() => copiar(numeroCRO, "num")} className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 text-sm hover:bg-gray-50 transition-colors">
+                <span className="text-[#8E8E93]">Nº:</span>
+                <span className="font-semibold font-mono text-[#0A2A66]">{numeroCRO || "—"}</span>
+                <Copy size={13} className="text-[#8E8E93]" />
+              </button>
+            </div>
+          </div>
+          {copiado && (
+            <p className="text-[12px] text-[#34C759] mb-2">
+              {copiado === "uf" ? "CRO/UF copiado!" : "Nº inscrição copiado!"}
+            </p>
+          )}
+
+          {/* Formulário do CFO embutido — SEM sandbox (necessário para o site renderizar) */}
+          <div className="rounded-xl overflow-hidden border border-gray-200 bg-white" style={{ height: "720px" }}>
+            <iframe
+              src="https://busca-profissionais.cfo.org.br/"
+              title="Busca de profissionais CFO"
+              className="w-full h-full border-0"
+            />
+          </div>
+
+          <a href="https://busca-profissionais.cfo.org.br/" target="_blank" rel="noopener noreferrer"
+             className="inline-flex items-center gap-2 mt-3 text-sm font-medium text-[#007AFF] hover:underline">
+            <ExternalLink size={15} />
+            Abrir em nova aba (se não carregar acima)
+          </a>
+        </section>
+
         <div className="grid md:grid-cols-2 gap-6">
-          {/* ─── Coluna 1: Instruções + dados dentista ──────────────────── */}
+          {/* ─── Coluna 1: dados do dentista ──────────────────────────────── */}
           <div className="space-y-6">
-            {/* Instruções */}
-            <section className="bg-white rounded-2xl p-6 shadow-sm">
-              <h2 className="text-lg font-semibold text-[#0A2A66] mb-1">Consultar CRO</h2>
-              <p className="text-sm text-[#6B7280] mb-4">Use estes valores na busca do CFO:</p>
-
-              {/* Valores prontos (copiáveis) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                <div className="rounded-xl border border-gray-200 p-3">
-                  <p className="text-[11px] font-medium text-[#8E8E93] uppercase mb-1">CRO/UF</p>
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-[#0A2A66] truncate">
-                      {ufNome}{ufSigla ? ` (${ufSigla})` : ""}
-                    </p>
-                    <button onClick={() => copiar(ufNome, "uf")} className="text-[#8E8E93] hover:text-[#007AFF] shrink-0" title="Copiar">
-                      <Copy size={14} />
-                    </button>
-                  </div>
-                  {copiado === "uf" && <p className="text-[11px] text-[#34C759] mt-1">Copiado!</p>}
-                </div>
-                <div className="rounded-xl border border-gray-200 p-3">
-                  <p className="text-[11px] font-medium text-[#8E8E93] uppercase mb-1">Nº inscrição</p>
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-semibold font-mono text-[#0A2A66] truncate">{numeroCRO || "—"}</p>
-                    <button onClick={() => copiar(numeroCRO, "num")} className="text-[#8E8E93] hover:text-[#007AFF] shrink-0" title="Copiar">
-                      <Copy size={14} />
-                    </button>
-                  </div>
-                  {copiado === "num" && <p className="text-[11px] text-[#34C759] mt-1">Copiado!</p>}
-                </div>
-              </div>
-
-              <ol className="text-sm text-[#6B7280] space-y-1.5 list-decimal list-inside mb-4">
-                <li>Abra o site do CFO (botão abaixo)</li>
-                <li>Selecione a UF e cole o nº de inscrição (valores acima)</li>
-                <li>Resolva o reCAPTCHA e clique em Pesquisar</li>
-                <li>Confira os dados e preencha o formulário ao lado</li>
-              </ol>
-              <a
-                href="https://busca-profissionais.cfo.org.br/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold text-white bg-[#007AFF] hover:bg-[#007AFF]/90 transition-colors w-fit"
-              >
-                <ExternalLink size={16} />
-                Abrir busca do CFO
-              </a>
-            </section>
-
             {/* Dados do dentista */}
             <section className="bg-white rounded-2xl p-6 shadow-sm">
               <h2 className="text-lg font-semibold text-[#0A2A66] mb-4">Dados do Dentista</h2>
