@@ -44,36 +44,12 @@ type VerificacaoDetalhe = {
   };
 };
 
-type DadosExtraidos = {
-  nome: string;
-  situacao: string;
-  data_inscricao: string;
-  validade: string;
-  especialidades: string;
-  endereco: string;
-  pendencias: string;
-};
-
-const camposChecklist: { chave: keyof DadosExtraidos; rotulo: string; dica: string }[] = [
-  { chave: "nome", rotulo: "Nome do Profissional", dica: "Confere com o cadastrado?" },
-  { chave: "situacao", rotulo: "Situação do Registro", dica: "Deve constar como 'Ativo' ou 'Regular'." },
-  { chave: "data_inscricao", rotulo: "Data de Inscrição", dica: "Data em que o CRO foi emitido." },
-  { chave: "validade", rotulo: "Validade", dica: "Se houver, conferir se está vigente." },
-  { chave: "especialidades", rotulo: "Especialidades Registradas", dica: "Conferem com o cadastro?" },
-  { chave: "endereco", rotulo: "Endereço Profissional", dica: "Endereço cadastrado no CFO." },
-  { chave: "pendencias", rotulo: "Pendências Éticas/Disciplinares", dica: "Se houver, sinalizar." },
-];
-
 export default function VerificarCroDetalhe() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [verificacao, setVerificacao] = useState<VerificacaoDetalhe | null>(null);
   const [salvando, setSalvando] = useState(false);
-  const [dadosExtraidos, setDadosExtraidos] = useState<DadosExtraidos>({
-    nome: "", situacao: "", data_inscricao: "", validade: "",
-    especialidades: "", endereco: "", pendencias: "",
-  });
   const [observacao, setObservacao] = useState("");
   const [termoAceito, setTermoAceito] = useState(false);
   const [copiado, setCopiado] = useState("");
@@ -98,14 +74,9 @@ export default function VerificarCroDetalhe() {
           .single();
 
         if (error) throw error;
-        const row = data as { observacao?: string | null; dados_consultados?: DadosExtraidos | null };
+        const row = data as { observacao?: string | null };
         setVerificacao(data as unknown as VerificacaoDetalhe);
         setObservacao(row.observacao || "");
-
-        const consultados = (row.dados_consultados ?? null) as DadosExtraidos | null;
-        if (consultados) {
-          setDadosExtraidos(consultados);
-        }
       } catch (err) {
         console.error("[VerificarCroDetalhe] Erro:", err);
       } finally {
@@ -258,148 +229,74 @@ export default function VerificarCroDetalhe() {
           </a>
         </section>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* ─── Coluna 1: dados do dentista ──────────────────────────────── */}
-          <div className="space-y-6">
-            {/* Dados do dentista */}
-            <section className="bg-white rounded-2xl p-6 shadow-sm">
-              <h2 className="text-lg font-semibold text-[#0A2A66] mb-4">Dados do Dentista</h2>
-              <div className="space-y-3 text-sm">
-                <div>
-                  <p className="text-[#6B7280]">Nome</p>
-                  <p className="font-medium text-[#0A2A66]">{pro?.nome}</p>
-                </div>
-                <div>
-                  <p className="text-[#6B7280]">E-mail</p>
-                  <p className="font-medium text-[#0A2A66]">{pro?.email}</p>
-                </div>
-                <div>
-                  <p className="text-[#6B7280]">CRO</p>
-                  <p className="font-mono font-medium text-[#0A2A66]">{pro?.cro}</p>
-                </div>
+        {/* ─── Verificação ──────────────────────────────────────────────── */}
+        <section className="bg-white rounded-2xl p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-[#0A2A66] mb-4">Verificação</h2>
+
+          {jaVerificado ? (
+            <div className="p-4 rounded-xl bg-[#34C759]/5 border border-[#34C759]/20">
+              <div className="flex items-center gap-2 text-[#34C759] font-medium">
+                <CheckCircle size={20} />
+                CRO já verificado
               </div>
-            </section>
-          </div>
+              <p className="text-sm text-[#6B7280] mt-2">Este CRO foi verificado e aprovado.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={termoAceito}
+                  onChange={(e) => setTermoAceito(e.target.checked)}
+                  className="mt-1"
+                />
+                <span className="text-xs text-[#6B7280]">
+                  Atesto que conferi os dados no site do CFO e que conferem com o cadastro.
+                  Sou responsável pela veracidade desta verificação.
+                </span>
+              </label>
 
-          {/* ─── Coluna 2: Formulário + Ações ──────────────────────────── */}
-          <div className="space-y-6">
-            {/* Formulário */}
-            <section className="bg-white rounded-2xl p-6 shadow-sm">
-              <h2 className="text-lg font-semibold text-[#0A2A66] mb-4">
-                Dados encontrados no CFO
-              </h2>
-              <p className="text-sm text-[#6B7280] mb-4">
-                Preencha com os dados exibidos no site do CFO após a consulta.
-              </p>
+              <button
+                onClick={handleMarcarVerificado}
+                disabled={salvando || !termoAceito}
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-200 text-white"
+                style={{
+                  background: termoAceito && !salvando ? "#34C759" : "rgba(52,199,89,0.35)",
+                  cursor: termoAceito && !salvando ? "pointer" : "not-allowed",
+                }}
+              >
+                {salvando ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+                {salvando ? "Salvando..." : "Marcar como Verificado"}
+              </button>
 
-              <div className="space-y-4">
-                {camposChecklist.map((campo) => (
-                  <div key={campo.chave}>
-                    <label className="block text-sm font-medium text-[#0A2A66] mb-1">
-                      {campo.rotulo}
-                    </label>
-                    <p className="text-xs text-[#8E8E93] mb-1">{campo.dica}</p>
-                    <input
-                      type="text"
-                      value={dadosExtraidos[campo.chave]}
-                      onChange={(e) => setDadosExtraidos({ ...dadosExtraidos, [campo.chave]: e.target.value })}
-                      placeholder="Digite o valor encontrado..."
-                      className="w-full px-4 py-2 rounded-xl text-sm border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20"
-                      disabled={jaVerificado}
-                    />
-                  </div>
-                ))}
+              <button
+                onClick={handleMarcarFalhou}
+                disabled={salvando}
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-200"
+                style={{
+                  color: "#FF3B30",
+                  background: "rgba(255,59,48,0.06)",
+                  border: "0.5px solid rgba(255,59,48,0.18)",
+                  opacity: salvando ? 0.5 : 1,
+                  cursor: salvando ? "not-allowed" : "pointer",
+                }}
+              >
+                <ShieldAlert size={16} />
+                Marcar como Não Verificado (falhou)
+              </button>
 
-                <div>
-                  <label className="block text-sm font-medium text-[#0A2A66] mb-1">
-                    Observação (opcional)
-                  </label>
-                  <textarea
-                    value={observacao}
-                    onChange={(e) => setObservacao(e.target.value)}
-                    placeholder="Anotações sobre a verificação..."
-                    rows={3}
-                    className="w-full px-4 py-2 rounded-xl text-sm border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 resize-none"
-                    disabled={jaVerificado}
-                  />
-                </div>
-
-                {!jaVerificado && (
-                  <label className="flex items-start gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={termoAceito}
-                      onChange={(e) => setTermoAceito(e.target.checked)}
-                      className="mt-1"
-                    />
-                    <span className="text-xs text-[#6B7280]">
-                      Atesto que os dados acima conferem com os exibidos no site do CFO.
-                      Sou responsável pela veracidade desta verificação.
-                    </span>
-                  </label>
-                )}
-              </div>
-            </section>
-
-            {/* Ações */}
-            <section className="bg-white rounded-2xl p-6 shadow-sm">
-              <h2 className="text-lg font-semibold text-[#0A2A66] mb-4">Ações</h2>
-
-              {jaVerificado ? (
-                <div className="p-4 rounded-xl bg-[#34C759]/5 border border-[#34C759]/20">
-                  <div className="flex items-center gap-2 text-[#34C759] font-medium">
-                    <CheckCircle size={20} />
-                    CRO já verificado
-                  </div>
-                  <p className="text-sm text-[#6B7280] mt-2">
-                    Este CRO foi verificado e aprovado.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <button
-                    onClick={handleMarcarVerificado}
-                    disabled={salvando || !termoAceito}
-                    className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-200 text-white"
-                    style={{
-                      background: termoAceito && !salvando ? "#34C759" : "rgba(52,199,89,0.35)",
-                      cursor: termoAceito && !salvando ? "pointer" : "not-allowed",
-                    }}
-                  >
-                    {salvando ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
-                    {salvando ? "Salvando..." : "Marcar como Verificado"}
-                  </button>
-
-                  <button
-                    onClick={handleMarcarFalhou}
-                    disabled={salvando}
-                    className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-200"
-                    style={{
-                      color: "#FF3B30",
-                      background: "rgba(255,59,48,0.06)",
-                      border: "0.5px solid rgba(255,59,48,0.18)",
-                      opacity: salvando ? 0.5 : 1,
-                      cursor: salvando ? "not-allowed" : "pointer",
-                    }}
-                  >
-                    <ShieldAlert size={16} />
-                    Marcar como Não Verificado (falhou)
-                  </button>
-
-                  {verificacao.status === "falhou" && (
-                    <button
-                      onClick={handleReabrir}
-                      className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm text-[#007AFF] bg-[#007AFF]/5 hover:bg-[#007AFF]/10 transition-colors"
-                    >
-                      <RefreshCw size={16} />
-                      Reabrir verificação
-                    </button>
-                  )}
-                </div>
+              {verificacao.status === "falhou" && (
+                <button
+                  onClick={handleReabrir}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm text-[#007AFF] bg-[#007AFF]/5 hover:bg-[#007AFF]/10 transition-colors"
+                >
+                  <RefreshCw size={16} />
+                  Reabrir verificação
+                </button>
               )}
-            </section>
-          </div>
-        </div>
+            </div>
+          )}
+        </section>
       </main>
     </div>
   );
