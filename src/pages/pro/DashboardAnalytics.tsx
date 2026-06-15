@@ -38,6 +38,18 @@ type DentistaEndereco = {
   longitude: number | null;
 };
 
+// Tooltip dos gráficos "Buscas × Dentistas": as barras exibem proporção (% do
+// maior valor exibido), mas o tooltip mostra os números reais de cada local.
+function pctTooltip(
+  _value: number | string,
+  name: string,
+  item: { payload?: { buscas?: number; dentistas?: number } },
+): [string, string] {
+  const p = item?.payload || {};
+  const real = name === "Buscas" ? p.buscas ?? 0 : p.dentistas ?? 0;
+  return [`${real}`, name];
+}
+
 export default function DashboardAnalytics() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -123,10 +135,13 @@ export default function DashboardAnalytics() {
         dentistas.set(k, (dentistas.get(k) || 0) + 1);
       }
     });
-    return Array.from(buscas.entries())
+    const arr = Array.from(buscas.entries())
       .map(([k, v]) => ({ name: v.name, buscas: v.buscas, dentistas: dentistas.get(k) || 0 }))
       .sort((a, b) => b.buscas - a.buscas)
       .slice(0, 10);
+    const maxB = Math.max(1, ...arr.map((d) => d.buscas));
+    const maxD = Math.max(1, ...arr.map((d) => d.dentistas));
+    return arr.map((d) => ({ ...d, buscasPct: (d.buscas / maxB) * 100, dentistasPct: (d.dentistas / maxD) * 100 }));
   }, [logs, enderecos]);
 
   // ─── Top Bairros ─────────────────────────────────────────────────────────────
@@ -149,10 +164,13 @@ export default function DashboardAnalytics() {
         dentistas.set(k, (dentistas.get(k) || 0) + 1);
       }
     });
-    return Array.from(buscas.entries())
+    const arr = Array.from(buscas.entries())
       .map(([k, v]) => ({ name: v.name, buscas: v.buscas, dentistas: dentistas.get(k) || 0 }))
       .sort((a, b) => b.buscas - a.buscas)
       .slice(0, 10);
+    const maxB = Math.max(1, ...arr.map((d) => d.buscas));
+    const maxD = Math.max(1, ...arr.map((d) => d.dentistas));
+    return arr.map((d) => ({ ...d, buscasPct: (d.buscas / maxB) * 100, dentistasPct: (d.dentistas / maxD) * 100 }));
   }, [logs, enderecos]);
 
   // ─── Buscas ao longo do tempo ────────────────────────────────────────────────
@@ -267,32 +285,32 @@ export default function DashboardAnalytics() {
         <div className="grid md:grid-cols-2 gap-6">
           <section className="bg-white rounded-2xl p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-[#0A2A66] mb-1">Buscas × Dentistas — Cidades</h2>
-            <p className="text-xs text-[#6B7280] mb-4">Demanda (buscas) vs. oferta (dentistas cadastrados), nas cidades mais buscadas.</p>
+            <p className="text-xs text-[#6B7280] mb-4">Demanda (buscas) vs. oferta (dentistas cadastrados), em % do maior valor exibido. Passe o mouse para ver os números reais.</p>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={topCidades} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                <XAxis type="number" allowDecimals={false} />
+                <XAxis type="number" domain={[0, 100]} tickFormatter={(v) => `${Math.round(Number(v))}%`} />
                 <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={120} />
-                <Tooltip />
+                <Tooltip formatter={pctTooltip} />
                 <Legend />
-                <Bar dataKey="buscas" name="Buscas" fill="#007AFF" radius={[0, 6, 6, 0]} />
-                <Bar dataKey="dentistas" name="Dentistas" fill="#34C759" radius={[0, 6, 6, 0]} />
+                <Bar dataKey="buscasPct" name="Buscas" fill="#007AFF" radius={[0, 6, 6, 0]} />
+                <Bar dataKey="dentistasPct" name="Dentistas cadastrados" fill="#34C759" radius={[0, 6, 6, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </section>
 
           <section className="bg-white rounded-2xl p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-[#0A2A66] mb-1">Buscas × Dentistas — Bairros</h2>
-            <p className="text-xs text-[#6B7280] mb-4">Demanda (buscas) vs. oferta (dentistas cadastrados), nos bairros mais buscados.</p>
+            <p className="text-xs text-[#6B7280] mb-4">Demanda (buscas) vs. oferta (dentistas cadastrados), em % do maior valor exibido. Passe o mouse para ver os números reais.</p>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={topBairros} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                <XAxis type="number" allowDecimals={false} />
+                <XAxis type="number" domain={[0, 100]} tickFormatter={(v) => `${Math.round(Number(v))}%`} />
                 <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={120} />
-                <Tooltip />
+                <Tooltip formatter={pctTooltip} />
                 <Legend />
-                <Bar dataKey="buscas" name="Buscas" fill="#007AFF" radius={[0, 6, 6, 0]} />
-                <Bar dataKey="dentistas" name="Dentistas" fill="#34C759" radius={[0, 6, 6, 0]} />
+                <Bar dataKey="buscasPct" name="Buscas" fill="#007AFF" radius={[0, 6, 6, 0]} />
+                <Bar dataKey="dentistasPct" name="Dentistas cadastrados" fill="#34C759" radius={[0, 6, 6, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </section>
