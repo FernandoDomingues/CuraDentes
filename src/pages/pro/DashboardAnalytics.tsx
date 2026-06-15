@@ -50,13 +50,51 @@ function pctTooltip(
   return [`${real}`, name];
 }
 
+// Períodos de filtro (em dias) compartilhados por todos os gráficos do painel.
+const PERIODOS = [
+  { v: "7", label: "1 semana" },
+  { v: "30", label: "1 mês" },
+  { v: "180", label: "6 meses" },
+  { v: "365", label: "1 ano" },
+] as const;
+
+function FiltroPeriodo({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="flex gap-2 flex-wrap">
+      {PERIODOS.map((p) => (
+        <button
+          key={p.v}
+          onClick={() => onChange(p.v)}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            value === p.v ? "bg-[#007AFF] text-white" : "bg-white text-[#0A2A66] hover:bg-gray-100"
+          }`}
+        >
+          {p.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+const chaveDia = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+const chaveMes = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
+
+// Filtra os logs já carregados para a janela de `dias` (filtro client-side).
+function logsNoPeriodo<T extends { criado_em: string }>(logs: T[], dias: number): T[] {
+  const limite = Date.now() - dias * 86400000;
+  return logs.filter((l) => new Date(l.criado_em).getTime() >= limite);
+}
+
 export default function DashboardAnalytics() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [logs, setLogs] = useState<LogRow[]>([]);
   const [enderecos, setEnderecos] = useState<DentistaEndereco[]>([]);
   const [totalDentistas, setTotalDentistas] = useState(0);
-  const [periodo, setPeriodo] = useState<"7" | "30" | "90">("30");
+  const [periodo, setPeriodo] = useState<string>("30"); // KPIs (indicadores)
+  const [periodoTempo, setPeriodoTempo] = useState<string>("30"); // gráfico "Buscas ao longo do tempo"
+  const [periodoComp, setPeriodoComp] = useState<string>("30"); // gráficos "Buscas × Dentistas"
   // Taxa de sucesso: usuários que buscaram e depois clicaram em WhatsApp/ligação
   const [sucesso, setSucesso] = useState({ buscaram: 0, sucesso: 0, whatsapp: 0, telefone: 0 });
 
@@ -66,10 +104,12 @@ export default function DashboardAnalytics() {
         const dias = parseInt(periodo);
 
         const [logRes, endRes, countRes, sucRes] = await Promise.all([
+          // Buscamos sempre até 1 ano de logs e filtramos por período no cliente,
+          // assim cada gráfico tem seu próprio filtro sem precisar refazer a query.
           supabase
             .from("logs_busca")
             .select("query, cidade, estado, bairro, resultados_count, criado_em")
-            .gte("criado_em", new Date(Date.now() - dias * 86400000).toISOString())
+            .gte("criado_em", new Date(Date.now() - 365 * 86400000).toISOString())
             .order("criado_em", { ascending: false }),
           supabase
             .from("curadentespro_enderecos")
@@ -106,12 +146,13 @@ export default function DashboardAnalytics() {
   // ─── Métricas calculadas ─────────────────────────────────────────────────────
 
   const metricas = useMemo(() => {
-    const totalBuscas = logs.length;
-    const cidadesUnicas = [...new Set(logs.map((l) => l.cidade).filter(Boolean))];
-    const bairrosUnicos = [...new Set(logs.map((l) => l.bairro).filter(Boolean))];
+    const ls = logsNoPeriodo(logs, parseInt(periodo));
+    const totalBuscas = ls.length;
+    const cidadesUnicas = [...new Set(ls.map((l) => l.cidade).filter(Boolean))];
+    const bairrosUnicos = [...new Set(ls.map((l) => l.bairro).filter(Boolean))];
 
     return { totalBuscas, cidadesUnicas: cidadesUnicas.length, bairrosUnicos: bairrosUnicos.length };
-  }, [logs]);
+  }, [logs, periodo]);
 
   const taxaSucesso = sucesso.buscaram > 0 ? (sucesso.sucesso / sucesso.buscaram) * 100 : 0;
 
@@ -120,7 +161,7 @@ export default function DashboardAnalytics() {
   const topCidades = useMemo(() => {
     const norm = (s: string) => s.trim().toLowerCase();
     const buscas = new Map<string, { name: string; buscas: number }>();
-    logs.forEach((l) => {
+    logsNoPeriodo(logs, parseInt(periodoComp)).forEach((l) => {
       if (l.cidade) {
         const k = norm(l.cidade);
         const e = buscas.get(k) || { name: l.cidade, buscas: 0 };
@@ -142,14 +183,14 @@ export default function DashboardAnalytics() {
     const maxB = Math.max(1, ...arr.map((d) => d.buscas));
     const maxD = Math.max(1, ...arr.map((d) => d.dentistas));
     return arr.map((d) => ({ ...d, buscasPct: (d.buscas / maxB) * 100, dentistasPct: (d.dentistas / maxD) * 100 }));
-  }, [logs, enderecos]);
+  }, [logs, enderecos, periodoComp]);
 
   // ─── Top Bairros ─────────────────────────────────────────────────────────────
 
   const topBairros = useMemo(() => {
     const norm = (s: string) => s.trim().toLowerCase();
     const buscas = new Map<string, { name: string; buscas: number }>();
-    logs.forEach((l) => {
+    logsNoPeriodo(logs, parseInt(periodoComp)).forEach((l) => {
       if (l.bairro) {
         const k = norm(l.bairro);
         const e = buscas.get(k) || { name: l.bairro, buscas: 0 };
@@ -171,25 +212,54 @@ export default function DashboardAnalytics() {
     const maxB = Math.max(1, ...arr.map((d) => d.buscas));
     const maxD = Math.max(1, ...arr.map((d) => d.dentistas));
     return arr.map((d) => ({ ...d, buscasPct: (d.buscas / maxB) * 100, dentistasPct: (d.dentistas / maxD) * 100 }));
-  }, [logs, enderecos]);
+  }, [logs, enderecos, periodoComp]);
 
   // ─── Buscas ao longo do tempo ────────────────────────────────────────────────
 
   const buscasPorDia = useMemo(() => {
-    const map = new Map<string, number>();
+    const dias = parseInt(periodoTempo);
+    const mensal = dias > 31; // 6 meses / 1 ano agrupam por mês; 1 semana / 1 mês por dia
+    const agora = new Date();
+    const inicio = new Date(agora);
+    inicio.setHours(0, 0, 0, 0);
+    inicio.setDate(inicio.getDate() - (dias - 1));
+
+    // Conta as buscas por dia/mês dentro da janela.
+    const cont = new Map<string, number>();
     logs.forEach((l) => {
-      const dia = l.criado_em.slice(0, 10);
-      map.set(dia, (map.get(dia) || 0) + 1);
+      const d = new Date(l.criado_em);
+      if (d.getTime() < inicio.getTime()) return;
+      const k = mensal ? chaveMes(d) : chaveDia(d);
+      cont.set(k, (cont.get(k) || 0) + 1);
     });
-    return Array.from(map.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([dia, total]) => ({ dia, total }));
-  }, [logs]);
+
+    // Gera TODOS os pontos do período (inclusive os zerados) para a linha não "pular" dias.
+    const pts: { dia: string; label: string; total: number }[] = [];
+    if (mensal) {
+      const cursor = new Date(inicio.getFullYear(), inicio.getMonth(), 1);
+      const fim = new Date(agora.getFullYear(), agora.getMonth(), 1);
+      while (cursor.getTime() <= fim.getTime()) {
+        const k = chaveMes(cursor);
+        pts.push({ dia: k, label: `${pad2(cursor.getMonth() + 1)}/${String(cursor.getFullYear()).slice(2)}`, total: cont.get(k) || 0 });
+        cursor.setMonth(cursor.getMonth() + 1);
+      }
+    } else {
+      for (let i = 0; i < dias; i++) {
+        const d = new Date(inicio);
+        d.setDate(d.getDate() + i);
+        const k = chaveDia(d);
+        pts.push({ dia: k, label: `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}`, total: cont.get(k) || 0 });
+      }
+    }
+    return pts;
+  }, [logs, periodoTempo]);
 
   // ─── Projeção linear simples ─────────────────────────────────────────────────
 
   const projecao = useMemo(() => {
-    if (buscasPorDia.length < 3) return null;
+    // Só projetamos "buscas/dia" quando a série é diária (1 semana / 1 mês).
+    // Em 6 meses / 1 ano a série é mensal e a projeção diária não faria sentido.
+    if (parseInt(periodoTempo) > 31 || buscasPorDia.length < 3) return null;
     const dias = buscasPorDia.map((_, i) => i);
     const valores = buscasPorDia.map((b) => b.total);
     const n = dias.length;
@@ -203,7 +273,7 @@ export default function DashboardAnalytics() {
     const proj30 = Math.max(0, Math.round(intercept + slope * (n + 30)));
     const crescimento = ((proj30 - ultimoValor) / ultimoValor) * 100;
     return { atual: ultimoValor, projetado: proj30, crescimento: crescimento.toFixed(1) };
-  }, [buscasPorDia]);
+  }, [buscasPorDia, periodoTempo]);
 
   // ─── Pontos para o mapa de calor ─────────────────────────────────────────────
 
@@ -250,31 +320,26 @@ export default function DashboardAnalytics() {
           />
         </div>
 
-        {/* ─── Seletor de período ─────────────────────────────────────────── */}
-        <div className="flex gap-2">
-          {(["7", "30", "90"] as const).map((p) => (
-            <button
-              key={p}
-              onClick={() => setPeriodo(p)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                periodo === p
-                  ? "bg-[#007AFF] text-white"
-                  : "bg-white text-[#0A2A66] hover:bg-gray-100"
-              }`}
-            >
-              {p} dias
-            </button>
-          ))}
+        {/* ─── Seletor de período dos indicadores (KPIs) ──────────────────── */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-xs font-medium text-[#8E8E93]">Indicadores acima:</span>
+          <FiltroPeriodo value={periodo} onChange={setPeriodo} />
         </div>
 
         {/* ─── Gráfico: buscas ao longo do tempo ──────────────────────────── */}
         <section className="bg-white rounded-2xl p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-[#0A2A66] mb-4">Buscas ao longo do tempo</h2>
+          <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
+            <div>
+              <h2 className="text-lg font-semibold text-[#0A2A66]">Buscas ao longo do tempo</h2>
+              <p className="text-xs text-[#6B7280]">Inclui os períodos sem buscas (mostrados em 0). Acima de 1 mês, agrupado por mês.</p>
+            </div>
+            <FiltroPeriodo value={periodoTempo} onChange={setPeriodoTempo} />
+          </div>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={buscasPorDia}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-              <XAxis dataKey="dia" tick={{ fontSize: 12 }} />
-              <YAxis allowDecimals={false} />
+              <XAxis dataKey="label" tick={{ fontSize: 12 }} interval="preserveStartEnd" minTickGap={20} />
+              <YAxis allowDecimals={false} domain={[0, "auto"]} />
               <Tooltip />
               <Line type="monotone" dataKey="total" stroke="#007AFF" strokeWidth={2} dot={false} />
             </LineChart>
@@ -282,6 +347,11 @@ export default function DashboardAnalytics() {
         </section>
 
         {/* ─── Top Cidades + Top Bairros ──────────────────────────────────── */}
+        <div className="space-y-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-xs font-medium text-[#8E8E93]">Buscas × Dentistas:</span>
+          <FiltroPeriodo value={periodoComp} onChange={setPeriodoComp} />
+        </div>
         <div className="grid md:grid-cols-2 gap-6">
           <section className="bg-white rounded-2xl p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-[#0A2A66] mb-1">Buscas × Dentistas — Cidades</h2>
@@ -315,6 +385,7 @@ export default function DashboardAnalytics() {
             </ResponsiveContainer>
           </section>
         </div>
+        </div>
 
         {/* ─── Mapa de calor ───────────────────────────────────────────── ──*/}
         <section className="bg-white rounded-2xl p-6 shadow-sm">
@@ -334,7 +405,7 @@ export default function DashboardAnalytics() {
               <div>
                 <h2 className="text-lg font-semibold text-[#0A2A66]">Projeção de Crescimento</h2>
                 <p className="text-[#6B7280] mt-1">
-                  Com base nos últimos {periodo} dias, a projeção para os próximos 30 dias é de
+                  Com base nos últimos {periodoTempo} dias, a projeção para os próximos 30 dias é de
                   <strong className="text-[#0A2A66]"> {projecao.projetado} buscas/dia</strong>
                   {" "}(<strong className={parseFloat(projecao.crescimento) >= 0 ? "text-green-600" : "text-red-600"}>
                     {projecao.crescimento}%
