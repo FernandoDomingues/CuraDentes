@@ -228,19 +228,10 @@ export default function VerificarCroDetalhe() {
           </a>
         </section>
 
-        {/* ─── Verificação ──────────────────────────────────────────────── */}
-        <section className="bg-white rounded-2xl p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-[#0A2A66] mb-4">Verificação</h2>
-
-          {jaVerificado ? (
-            <div className="p-4 rounded-xl bg-[#34C759]/5 border border-[#34C759]/20">
-              <div className="flex items-center gap-2 text-[#34C759] font-medium">
-                <CheckCircle size={20} />
-                CRO já verificado
-              </div>
-              <p className="text-sm text-[#6B7280] mt-2">Este CRO foi verificado e aprovado.</p>
-            </div>
-          ) : (
+        {/* ─── Verificação (só quando ainda NÃO verificado; o cabeçalho já mostra o status) ── */}
+        {!jaVerificado && (
+          <section className="bg-white rounded-2xl p-6 shadow-sm">
+            <h2 className="text-lg font-semibold text-[#0A2A66] mb-4">Verificação</h2>
             <div className="space-y-3">
               <button
                 onClick={handleMarcarVerificado}
@@ -281,8 +272,8 @@ export default function VerificarCroDetalhe() {
                 </button>
               )}
             </div>
-          )}
-        </section>
+          </section>
+        )}
       </main>
     </div>
   );
