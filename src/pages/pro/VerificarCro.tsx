@@ -10,7 +10,6 @@ import { supabase } from "@/lib/supabase";
 import Header from "@/components/layout/Header";
 import CroVerificationBadge from "@/components/analytics/CroVerificationBadge";
 import VerificarCroModal from "@/components/analytics/VerificarCroModal";
-import { useNavigate } from "react-router-dom";
 import { Loader2, ExternalLink, Search, ShieldCheck, ShieldAlert, Clock, CheckCircle, XCircle, Eye } from "lucide-react";
 
 type VerificacaoRow = {
@@ -30,7 +29,6 @@ type VerificacaoRow = {
 };
 
 export default function VerificarCro() {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [verificacoes, setVerificacoes] = useState<VerificacaoRow[]>([]);
   const [filtro, setFiltro] = useState<string>("todas");
@@ -255,24 +253,7 @@ export default function VerificarCro() {
                   className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow"
                 >
                   <div className="flex items-center justify-between">
-                    <div
-                      className="flex items-center gap-4 flex-1 min-w-0 cursor-pointer"
-                      onClick={async () => {
-                        if (v.id) {
-                          navigate(`/pro/verificar-cro/${v.id}`);
-                        } else {
-                          const { data } = await supabase.rpc("marcar_verificacao_cro", {
-                            p_dentista_id: v.dentista_id,
-                            p_verificado: false,
-                            p_observacao: null,
-                          });
-                          if (data?.success) {
-                            // Refaz a busca para obter o ID da verificação (sem reload da página)
-                            setRecarregar((n) => n + 1);
-                          }
-                        }
-                      }}
-                    >
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
                       {statusIcon(v.status)}
                       <div>
                         <p className="font-semibold text-[#0A2A66]">
