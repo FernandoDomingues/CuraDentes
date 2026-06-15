@@ -51,7 +51,6 @@ export default function VerificarCroDetalhe() {
   const [verificacao, setVerificacao] = useState<VerificacaoDetalhe | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [observacao, setObservacao] = useState("");
-  const [termoAceito, setTermoAceito] = useState(false);
   const [copiado, setCopiado] = useState("");
 
   function copiar(texto: string, qual: string) {
@@ -243,26 +242,13 @@ export default function VerificarCroDetalhe() {
             </div>
           ) : (
             <div className="space-y-3">
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={termoAceito}
-                  onChange={(e) => setTermoAceito(e.target.checked)}
-                  className="mt-1"
-                />
-                <span className="text-xs text-[#6B7280]">
-                  Atesto que conferi os dados no site do CFO e que conferem com o cadastro.
-                  Sou responsável pela veracidade desta verificação.
-                </span>
-              </label>
-
               <button
                 onClick={handleMarcarVerificado}
-                disabled={salvando || !termoAceito}
+                disabled={salvando}
                 className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-200 text-white"
                 style={{
-                  background: termoAceito && !salvando ? "#34C759" : "rgba(52,199,89,0.35)",
-                  cursor: termoAceito && !salvando ? "pointer" : "not-allowed",
+                  background: salvando ? "rgba(52,199,89,0.35)" : "#34C759",
+                  cursor: salvando ? "not-allowed" : "pointer",
                 }}
               >
                 {salvando ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
