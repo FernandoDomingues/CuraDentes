@@ -15,6 +15,7 @@ const SECOES = [
   { id: "definicoes", label: "Definições" },
   { id: "cadastro-paciente", label: "Cadastro do paciente" },
   { id: "cadastro-dentista", label: "Cadastro do dentista" },
+  { id: "planos", label: "Planos e pagamento" },
   { id: "uso-plataforma", label: "Uso da plataforma" },
   { id: "obrigacoes", label: "Obrigações" },
   { id: "responsabilidade", label: "Responsabilidade" },
@@ -63,7 +64,7 @@ export default function TermosDeUso() {
           </div>
           <div>
             <h1 className="text-[24px] md:text-[28px] font-bold text-[#0A2A66]">Termos de Uso</h1>
-            <p className="text-[13px]" style={{ color: "#8E8E93" }}>Última atualização: 3 de junho de 2026</p>
+            <p className="text-[13px]" style={{ color: "#8E8E93" }}>Última atualização: 15 de junho de 2026</p>
           </div>
         </div>
 
@@ -190,12 +191,59 @@ export default function TermosDeUso() {
                 </Topico>
               </Secao>
 
-              <Secao id="uso-plataforma" titulo="5. Uso da plataforma">
+              <Secao id="planos" titulo="5. Planos, gratuidade e pagamento">
+                <p>
+                  O acesso ao <strong>CuraDentes Pro</strong> encontra-se atualmente em fase
+                  <strong> Beta gratuita</strong>. Durante esse período, o dentista utiliza a
+                  plataforma sem qualquer cobrança.
+                </p>
+
+                <Topico label="5.1. Transição para plano pago">
+                  <p>
+                    A partir de <strong>1º de julho de 2027</strong>, o acesso ao CuraDentes Pro
+                    passará a ser um serviço pago, mediante <strong>plano mensal no valor de
+                    R$ 48,00 (quarenta e oito reais) por mês</strong>, por dentista. A continuidade
+                    do uso da plataforma a partir dessa data ficará condicionada à contratação e ao
+                    pagamento do plano.
+                  </p>
+                </Topico>
+
+                <Topico label="5.2. Aviso prévio e direito de não contratar">
+                  <p>
+                    O dentista será notificado por e-mail, com antecedência mínima de 30 (trinta)
+                    dias do início da cobrança, sobre as condições do plano, a forma de pagamento e
+                    os meios de contratação. Caso não deseje contratar, o dentista poderá deixar de
+                    utilizar a plataforma e/ou solicitar a exclusão da sua conta, sem qualquer ônus,
+                    antes do início da vigência da cobrança. <strong>Nenhum valor será cobrado sem o
+                    aceite expresso do dentista ao plano.</strong>
+                  </p>
+                </Topico>
+
+                <Topico label="5.3. Reajustes e alterações de preço">
+                  <p>
+                    O valor do plano poderá ser reajustado no máximo uma vez a cada 12 (doze) meses,
+                    com base na variação de índice oficial de inflação (IPCA/IBGE) ou índice que o
+                    substitua. Eventuais alterações de preço serão comunicadas com antecedência
+                    mínima de 30 (trinta) dias, facultando ao dentista o cancelamento sem multa
+                    antes da entrada em vigor do novo valor.
+                  </p>
+                </Topico>
+
+                <Topico label="5.4. Gratuidade para pacientes">
+                  <p>
+                    O uso da plataforma pelos <strong>pacientes</strong> é e permanecerá gratuito.
+                    A cobrança prevista nesta seção aplica-se exclusivamente ao plano profissional
+                    (CuraDentes Pro).
+                  </p>
+                </Topico>
+              </Secao>
+
+              <Secao id="uso-plataforma" titulo="6. Uso da plataforma">
                 <p>A plataforma CuraDentes conecta pacientes a dentistas. Não realizamos agendamentos,
                 não intermediamos consultas e não somos responsáveis pela qualidade do serviço
                 prestado pelos profissionais cadastrados.</p>
 
-                <Topico label="5.1. Papel do CuraDentes">
+                <Topico label="6.1. Papel do CuraDentes">
                   <p>
                     O CuraDentes atua exclusivamente como um diretório e motor de busca de
                     profissionais de odontologia. Não somos uma clínica odontológica, não prestamos
@@ -203,7 +251,7 @@ export default function TermosDeUso() {
                   </p>
                 </Topico>
 
-                <Topico label="5.2. Avaliações">
+                <Topico label="6.2. Avaliações">
                   <p>
                     Pacientes podem avaliar dentistas com base em suas experiências. As avaliações
                     refletem a opinião pessoal do paciente e não representam a posição do CuraDentes.
@@ -213,7 +261,7 @@ export default function TermosDeUso() {
                 </Topico>
               </Secao>
 
-              <Secao id="obrigacoes" titulo="6. Obrigações dos usuários">
+              <Secao id="obrigacoes" titulo="7. Obrigações dos usuários">
                 <p>Ao utilizar a plataforma, você concorda em:</p>
                 <Lista itens={[
                   "Não fornecer informações falsas ou fraudulentas",
@@ -226,8 +274,8 @@ export default function TermosDeUso() {
                 ]} />
               </Secao>
 
-              <Secao id="responsabilidade" titulo="7. Responsabilidade">
-                <Topico label="7.1. Limitação de responsabilidade">
+              <Secao id="responsabilidade" titulo="8. Responsabilidade">
+                <Topico label="8.1. Limitação de responsabilidade">
                   <p>
                     O CuraDentes não se responsabiliza por danos diretos ou indiretos decorrentes de:
                   </p>
@@ -240,7 +288,7 @@ export default function TermosDeUso() {
                   ]} />
                 </Topico>
 
-                <Topico label="7.2. Responsabilidade do dentista">
+                <Topico label="8.2. Responsabilidade do dentista">
                   <p>
                     O dentista é civil e criminalmente responsável pelos serviços odontológicos que
                     presta. O CuraDentes não exerce qualquer controle ou supervisão sobre a atividade
@@ -248,7 +296,7 @@ export default function TermosDeUso() {
                   </p>
                 </Topico>
 
-                <Topico label="7.3. Indenização">
+                <Topico label="8.3. Indenização">
                   <p>
                     O usuário concorda em indenizar o CuraDentes por quaisquer perdas, danos ou
                     custos decorrentes do uso inadequado da plataforma ou da violação destes termos.
@@ -256,7 +304,7 @@ export default function TermosDeUso() {
                 </Topico>
               </Secao>
 
-              <Secao id="propriedade-intelectual" titulo="8. Propriedade intelectual">
+              <Secao id="propriedade-intelectual" titulo="9. Propriedade intelectual">
                 <p>
                   Todos os direitos de propriedade intelectual sobre a plataforma CuraDentes,
                   incluindo código-fonte, design, logotipos, marcas e conteúdo editorial, são
@@ -269,8 +317,8 @@ export default function TermosDeUso() {
                 </p>
               </Secao>
 
-              <Secao id="cancelamento" titulo="9. Cancelamento e suspensão">
-                <Topico label="9.1. Pelo usuário">
+              <Secao id="cancelamento" titulo="10. Cancelamento e suspensão">
+                <Topico label="10.1. Pelo usuário">
                   <p>
                     O dentista pode solicitar a exclusão de sua conta a qualquer momento, entrando
                     em contato conosco. Os dados serão anonimizados ou eliminados conforme a Política
@@ -278,7 +326,7 @@ export default function TermosDeUso() {
                   </p>
                 </Topico>
 
-                <Topico label="9.2. Pela plataforma">
+                <Topico label="10.2. Pela plataforma">
                   <p>
                     O CuraDentes se reserva o direito de suspender ou encerrar contas que violem
                     estes Termos de Uso, sem prejuízo das demais medidas legais cabíveis.
@@ -286,8 +334,8 @@ export default function TermosDeUso() {
                 </Topico>
               </Secao>
 
-              <Secao id="disposicoes" titulo="10. Disposições gerais">
-                <Topico label="10.1. Legislação aplicável">
+              <Secao id="disposicoes" titulo="11. Disposições gerais">
+                <Topico label="11.1. Legislação aplicável">
                   <p>
                     Estes Termos de Uso são regidos pela legislação brasileira, em especial pelo
                     Código Civil (Lei nº 10.406/2002) e pelo Marco Civil da Internet (Lei nº
@@ -295,7 +343,7 @@ export default function TermosDeUso() {
                   </p>
                 </Topico>
 
-                <Topico label="10.2. Foro">
+                <Topico label="11.2. Foro">
                   <p>
                     Fica eleito o foro da comarca de [cidade/estado] para dirimir quaisquer
                     controvérsias decorrentes destes Termos, com renúncia a qualquer outro foro,
@@ -303,7 +351,7 @@ export default function TermosDeUso() {
                   </p>
                 </Topico>
 
-                <Topico label="10.3. Alterações">
+                <Topico label="11.3. Alterações">
                   <p>
                     Estes Termos podem ser alterados a qualquer momento. Dentistas cadastrados serão
                     notificados por e-mail sobre alterações significativas. O uso continuado da
@@ -311,7 +359,7 @@ export default function TermosDeUso() {
                   </p>
                 </Topico>
 
-                <Topico label="10.4. Nulidade parcial">
+                <Topico label="11.4. Nulidade parcial">
                   <p>
                     Se qualquer cláusula destes Termos for considerada inválida ou inexequível, as
                     demais cláusulas permanecerão em pleno vigor.
@@ -319,7 +367,7 @@ export default function TermosDeUso() {
                 </Topico>
               </Secao>
 
-              <Secao id="contato" titulo="11. Contato">
+              <Secao id="contato" titulo="12. Contato">
                 <div className="p-4 rounded-[14px]" style={{ background: "rgba(230,0,76,0.04)", border: "0.5px solid rgba(230,0,76,0.12)" }}>
                   <p className="text-[14px]">
                     Para dúvidas, reclamações ou notificações relacionadas a estes Termos de Uso:
