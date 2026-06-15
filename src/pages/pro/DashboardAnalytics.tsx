@@ -17,7 +17,7 @@ import { supabase } from "@/lib/supabase";
 import Header from "@/components/layout/Header";
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, CartesianGrid,
+  ResponsiveContainer, CartesianGrid, Legend,
 } from "recharts";
 import { Loader2, Search, MapPin, Building2, Activity, TrendingUp, AlertTriangle, ShieldCheck } from "lucide-react";
 import HeatMapLayer from "@/components/analytics/HeatMapLayer";
@@ -106,28 +106,54 @@ export default function DashboardAnalytics() {
   // ─── Top Cidades ─────────────────────────────────────────────────────────────
 
   const topCidades = useMemo(() => {
-    const map = new Map<string, number>();
+    const norm = (s: string) => s.trim().toLowerCase();
+    const buscas = new Map<string, { name: string; buscas: number }>();
     logs.forEach((l) => {
-      if (l.cidade) map.set(l.cidade, (map.get(l.cidade) || 0) + 1);
+      if (l.cidade) {
+        const k = norm(l.cidade);
+        const e = buscas.get(k) || { name: l.cidade, buscas: 0 };
+        e.buscas++;
+        buscas.set(k, e);
+      }
     });
-    return Array.from(map.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .map(([name, value]) => ({ name, value }));
-  }, [logs]);
+    const dentistas = new Map<string, number>();
+    enderecos.forEach((e) => {
+      if (e.cidade) {
+        const k = norm(e.cidade);
+        dentistas.set(k, (dentistas.get(k) || 0) + 1);
+      }
+    });
+    return Array.from(buscas.entries())
+      .map(([k, v]) => ({ name: v.name, buscas: v.buscas, dentistas: dentistas.get(k) || 0 }))
+      .sort((a, b) => b.buscas - a.buscas)
+      .slice(0, 10);
+  }, [logs, enderecos]);
 
   // ─── Top Bairros ─────────────────────────────────────────────────────────────
 
   const topBairros = useMemo(() => {
-    const map = new Map<string, number>();
+    const norm = (s: string) => s.trim().toLowerCase();
+    const buscas = new Map<string, { name: string; buscas: number }>();
     logs.forEach((l) => {
-      if (l.bairro) map.set(l.bairro, (map.get(l.bairro) || 0) + 1);
+      if (l.bairro) {
+        const k = norm(l.bairro);
+        const e = buscas.get(k) || { name: l.bairro, buscas: 0 };
+        e.buscas++;
+        buscas.set(k, e);
+      }
     });
-    return Array.from(map.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .map(([name, value]) => ({ name, value }));
-  }, [logs]);
+    const dentistas = new Map<string, number>();
+    enderecos.forEach((e) => {
+      if (e.bairro) {
+        const k = norm(e.bairro);
+        dentistas.set(k, (dentistas.get(k) || 0) + 1);
+      }
+    });
+    return Array.from(buscas.entries())
+      .map(([k, v]) => ({ name: v.name, buscas: v.buscas, dentistas: dentistas.get(k) || 0 }))
+      .sort((a, b) => b.buscas - a.buscas)
+      .slice(0, 10);
+  }, [logs, enderecos]);
 
   // ─── Buscas ao longo do tempo ────────────────────────────────────────────────
 
@@ -240,27 +266,33 @@ export default function DashboardAnalytics() {
         {/* ─── Top Cidades + Top Bairros ──────────────────────────────────── */}
         <div className="grid md:grid-cols-2 gap-6">
           <section className="bg-white rounded-2xl p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-[#0A2A66] mb-4">Top Cidades</h2>
-            <ResponsiveContainer width="100%" height={250}>
+            <h2 className="text-lg font-semibold text-[#0A2A66] mb-1">Buscas × Dentistas — Cidades</h2>
+            <p className="text-xs text-[#6B7280] mb-4">Demanda (buscas) vs. oferta (dentistas cadastrados), nas cidades mais buscadas.</p>
+            <ResponsiveContainer width="100%" height={300}>
               <BarChart data={topCidades} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                <XAxis type="number" />
+                <XAxis type="number" allowDecimals={false} />
                 <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={120} />
                 <Tooltip />
-                <Bar dataKey="value" fill="#007AFF" radius={[0, 6, 6, 0]} />
+                <Legend />
+                <Bar dataKey="buscas" name="Buscas" fill="#007AFF" radius={[0, 6, 6, 0]} />
+                <Bar dataKey="dentistas" name="Dentistas" fill="#34C759" radius={[0, 6, 6, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </section>
 
           <section className="bg-white rounded-2xl p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-[#0A2A66] mb-4">Top Bairros</h2>
-            <ResponsiveContainer width="100%" height={250}>
+            <h2 className="text-lg font-semibold text-[#0A2A66] mb-1">Buscas × Dentistas — Bairros</h2>
+            <p className="text-xs text-[#6B7280] mb-4">Demanda (buscas) vs. oferta (dentistas cadastrados), nos bairros mais buscados.</p>
+            <ResponsiveContainer width="100%" height={300}>
               <BarChart data={topBairros} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                <XAxis type="number" />
+                <XAxis type="number" allowDecimals={false} />
                 <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={120} />
                 <Tooltip />
-                <Bar dataKey="value" fill="#34C759" radius={[0, 6, 6, 0]} />
+                <Legend />
+                <Bar dataKey="buscas" name="Buscas" fill="#007AFF" radius={[0, 6, 6, 0]} />
+                <Bar dataKey="dentistas" name="Dentistas" fill="#34C759" radius={[0, 6, 6, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </section>
