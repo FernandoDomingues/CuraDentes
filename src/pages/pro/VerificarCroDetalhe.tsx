@@ -13,7 +13,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import Header from "@/components/layout/Header";
-import CroVerificationBadge from "@/components/analytics/CroVerificationBadge";
 import { Loader2, ArrowLeft, ExternalLink, RefreshCw, ShieldAlert, CheckCircle, Copy } from "lucide-react";
 
 const UF_MAP: Record<string, string> = {
@@ -177,7 +176,6 @@ export default function VerificarCroDetalhe() {
             <h1 className="text-2xl font-bold text-[#0A2A66]">Verificar CRO</h1>
             <p className="text-sm text-[#6B7280]">{pro?.nome} — {verificacao.cro}</p>
           </div>
-          {pro && <CroVerificationBadge verificado={!!pro.cro_verificado} size="md" />}
           {jaVerificado && (
             <span className="flex items-center gap-1 text-sm font-medium text-[#34C759]">
               <CheckCircle size={16} />
