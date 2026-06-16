@@ -798,7 +798,7 @@ export default function Dashboard() {
             <p className="text-[13px] leading-relaxed" style={{ color: "#3A3A3C" }}>
               <strong style={{ color: "#0A2A66" }}>Lembrete:</strong> o CuraDentes Pro está em fase{" "}
               <strong>Beta gratuita</strong>. A partir de <strong>1º de julho de 2027</strong>, o acesso
-              passará a custar <strong>R$ 48/mês</strong> por dentista. Você será avisado por e-mail com
+              passará a custar <strong>R$ 49,99/mês</strong> por dentista. Você será avisado por e-mail com
               30 dias de antecedência e nada será cobrado sem o seu aceite. Detalhes na seção 5 dos{" "}
               <a href="/termos" target="_blank" rel="noopener noreferrer" className="font-semibold underline" style={{ color: "#007AFF" }}>
                 Termos de Uso

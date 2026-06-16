@@ -202,7 +202,7 @@ export default function TermosDeUso() {
                   <p>
                     A partir de <strong>1º de julho de 2027</strong>, o acesso ao CuraDentes Pro
                     passará a ser um serviço pago, mediante <strong>plano mensal no valor de
-                    R$ 48,00 (quarenta e oito reais) por mês</strong>, por dentista. A continuidade
+                    R$ 49,99 (quarenta e nove reais e noventa e nove centavos) por mês</strong>, por dentista. A continuidade
                     do uso da plataforma a partir dessa data ficará condicionada à contratação e ao
                     pagamento do plano.
                   </p>

@@ -2361,7 +2361,7 @@ export default function NovoCadastro() {
         <span className="text-[14px]" style={{ color: "#3A3A3C", lineHeight: 1.7 }}>
           Estou ciente de que o CuraDentes Pro é gratuito durante o Beta e que, a partir de{" "}
           <strong>1º de julho de 2027</strong>, passará a ter um plano mensal de{" "}
-          <strong>R$ 48,00 por mês</strong> por dentista. Serei avisado por e-mail com antecedência
+          <strong>R$ 49,99 por mês</strong> por dentista. Serei avisado por e-mail com antecedência
           e nenhum valor será cobrado sem o meu aceite expresso, conforme a seção 5 dos{" "}
           <a href="/termos" target="_blank" rel="noopener noreferrer" className="font-semibold underline" style={{ color: "#007AFF" }}>
             Termos de Uso
