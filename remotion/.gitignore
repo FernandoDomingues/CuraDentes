@@ -12,3 +12,9 @@ materiais/referencia/
 # Renders intermediários do processo (descartáveis — a regra é "só o último reel";
 # o valor está no código/composições e nos assets de public/, não nesses mp4)
 materiais/processo*
+
+# Artes conceituais dos personagens (imagens e clipes gerados p/ os vídeos/reels) —
+# ficam LOCAIS, não versionar. No git mantemos só as "bíblias" (.md) e os áudios
+# (música/voz). Os reels finais já saem por 'out/' acima.
+public/chars/**/*.png
+public/chars/**/*.mp4
