@@ -12,6 +12,7 @@ import { Sparkles, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import logoProAltUrl from "@/assets/logos/logo-pro-alt.png";
 import { saveToSearchCache } from "@/lib/dentistCache";
 import CroVerificationBadge from "@/components/analytics/CroVerificationBadge";
+import { nomeAmigavel } from "@/constants/data";
 
 interface DentistaRecente {
   id: string;
@@ -226,9 +227,11 @@ export default function LatestDentists() {
                 </div>
               </div>
 
-              <p className="text-[13px] text-gray-500 mb-4 line-clamp-2 min-h-[38px]">
-                {dentista.bio || "Dentista clínico geral focado em oferecer o melhor atendimento para o seu sorriso."}
-              </p>
+              {dentista.bio && (
+                <p className="text-[13px] text-gray-500 mb-4 line-clamp-2">
+                  {dentista.bio}
+                </p>
+              )}
 
               {dentista.especialidades && dentista.especialidades.length > 0 && (
                 <div className="mt-auto pt-3 border-t border-gray-100 flex flex-wrap gap-1.5">
@@ -237,7 +240,7 @@ export default function LatestDentists() {
                       key={index}
                       className="bg-blue-50 text-[#007AFF] text-[11px] font-semibold px-2 py-0.5 rounded-full"
                     >
-                      {esp}
+                      {nomeAmigavel(esp)}
                     </span>
                   ))}
                 </div>

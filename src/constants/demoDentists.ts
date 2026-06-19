@@ -91,7 +91,7 @@ const DEMO_USER_1: DentistaPro = {
         "Clareamento dental",
         "Lentes de contato dental",
         "Facetas de porcelana",
-        "Limpeza e profilaxia",
+        "Limpeza",
       ],
       agenda: [
         { dia_semana: "Segunda-feira", horario_inicio: "08:00", horario_fim: "18:00" },
@@ -128,7 +128,7 @@ const DEMO_USER_1: DentistaPro = {
       whatsapp: "5511999001002",
       maps_url: "https://maps.google.com",
       atividades: [
-        "Botox odontológico",
+        "Harmonização orofacial",
         "Preenchimento labial",
       ],
       agenda: [
@@ -149,7 +149,7 @@ const DEMO_USER_1: DentistaPro = {
       { nome_atividade: "Lentes de contato dental", media_nota: 5.0, total_avaliacoes: 98 },
       { nome_atividade: "Clareamento dental",       media_nota: 5.0, total_avaliacoes: 87 },
       { nome_atividade: "Facetas de porcelana",     media_nota: 4.9, total_avaliacoes: 76 },
-      { nome_atividade: "Limpeza e profilaxia",     media_nota: 5.0, total_avaliacoes: 51 },
+      { nome_atividade: "Limpeza",     media_nota: 5.0, total_avaliacoes: 51 },
     ],
   },
 };

@@ -19,7 +19,7 @@ import {
   ChevronDown, ChevronUp, Filter,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { DENTISTS } from "@/constants/data";
+import { DENTISTS, nomeAmigavel } from "@/constants/data";
 import DentistCard from "./DentistCard";
 import type { TipoFiltroRanking } from "@/types/dentist";
 
@@ -134,7 +134,7 @@ export default function FeaturedDentists() {
               {filtroAtivo === "avaliacao_geral"
                 ? "Avaliação Geral"
                 : filtroAtivo === "especialidade"
-                  ? especialidadeSelecionada
+                  ? nomeAmigavel(especialidadeSelecionada)
                   : convenioSelecionado}
             </div>
             {expandido ? (
@@ -223,7 +223,7 @@ export default function FeaturedDentists() {
                   }}
                 >
                   {ESPECIALIDADES_DISPONIVEIS.map((esp) => (
-                    <option key={esp} value={esp}>{esp}</option>
+                    <option key={esp} value={esp}>{nomeAmigavel(esp)}</option>
                   ))}
                 </select>
               </div>
@@ -326,7 +326,7 @@ export default function FeaturedDentists() {
                       </button>*/}
                     </div>
                     <p className="text-[12px] font-semibold mt-0.5" style={{ color: "#E6004C" }}>
-                      {dentista.specialty}
+                      {nomeAmigavel(dentista.specialty)}
                     </p>
                     <div className="flex items-center gap-1 mt-0.5">
                       <MapPin size={11} style={{ color: "#8E8E93" }} />
@@ -503,7 +503,7 @@ export default function FeaturedDentists() {
                       }}
                     >
                       {ESPECIALIDADES_DISPONIVEIS.map((esp) => (
-                        <option key={esp} value={esp}>{esp}</option>
+                        <option key={esp} value={esp}>{nomeAmigavel(esp)}</option>
                       ))}
                     </select>
                   )}
@@ -637,7 +637,7 @@ export default function FeaturedDentists() {
                             {dentista.name}
                           </p>
                           <p className="text-[13px] font-medium" style={{ color: "#E6004C" }}>
-                            {dentista.specialty}
+                            {nomeAmigavel(dentista.specialty)}
                           </p>
                         </div>
 

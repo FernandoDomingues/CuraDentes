@@ -42,7 +42,7 @@ export const DENTIST_PROFILES: DentistProfile[] = [
         telefone: "(11) 3456-7890",
         whatsapp: "5511999001001",
         maps_url: "https://maps.google.com",
-        atividades: ["Clareamento dental", "Lentes de contato dental", "Facetas de porcelana", "Limpeza e profilaxia"],
+        atividades: ["Clareamento dental", "Lentes de contato dental", "Facetas de porcelana", "Limpeza"],
         agenda: [
           { dia_semana: "Segunda-feira", horario_inicio: "08:00", horario_fim: "18:00" },
           { dia_semana: "Terça-feira",   horario_inicio: "08:00", horario_fim: "18:00" },
@@ -79,7 +79,7 @@ export const DENTIST_PROFILES: DentistProfile[] = [
         telefone: "(11) 3321-9900",
         whatsapp: "5511999001002",
         maps_url: "https://maps.google.com",
-        atividades: ["Botox odontológico",         "Preenchimento labial"],
+        atividades: ["Harmonização orofacial",     "Preenchimento labial"],
         agenda: [
           { dia_semana: "Sábado", horario_inicio: "09:00", horario_fim: "14:00" },
         ],
@@ -106,7 +106,7 @@ export const DENTIST_PROFILES: DentistProfile[] = [
         { nome_atividade: "Lentes de contato dental", media_nota: 5.0, total_avaliacoes: 98,  posicao_ranking: 1 },
         { nome_atividade: "Clareamento dental",       media_nota: 5.0, total_avaliacoes: 87,  posicao_ranking: 1 },
         { nome_atividade: "Facetas de porcelana",     media_nota: 4.9, total_avaliacoes: 76,  posicao_ranking: 2 },
-        { nome_atividade: "Limpeza e profilaxia",     media_nota: 5.0, total_avaliacoes: 51,  posicao_ranking: 3 },
+        { nome_atividade: "Limpeza",     media_nota: 5.0, total_avaliacoes: 51,  posicao_ranking: 3 },
       ],
     },
   },
@@ -135,7 +135,7 @@ export const DENTIST_PROFILES: DentistProfile[] = [
         telefone: "(11) 3567-8901",
         whatsapp: "5511999002001",
         maps_url: "https://maps.google.com",
-        atividades: ["Consulta infantil", "Selante de fissura", "Limpeza e profilaxia", "Restauração de dente de leite"],
+        atividades: ["Consulta infantil", "Selante de fissura", "Limpeza", "Restauração de dente de leite"],
         agenda: [
           { dia_semana: "Segunda-feira", horario_inicio: "08:00", horario_fim: "17:00" },
           { dia_semana: "Quarta-feira",  horario_inicio: "08:00", horario_fim: "17:00" },

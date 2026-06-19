@@ -6,14 +6,12 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import { useNavigate } from "react-router-dom";
-import { ESPECIALIDADES } from "@/constants/data";
+import { ESPECIALIDADES, nomeAmigavel } from "@/constants/data";
 import { ESPECIALIDADES_SEO } from "@/constants/especialidadesSEO";
 import {
-  Stethoscope,
   Sparkles,
   Star,
   Baby,
-  Zap,
   type LucideIcon,
 } from "lucide-react";
 
@@ -90,15 +88,20 @@ const FaceSmileIcon = ({ size = 22, color = "currentColor" }: { size?: number; c
   </svg>
 );
 
+// Ícone próprio de "Clínico Geral" (heart-pulse no rosa da marca) — arquivo em public/icons/.
+// É um SVG já colorido (#d70050), então ignora a prop `color` (diferente dos ícones de traço acima).
+const ClinicoGeralIcon = ({ size = 22 }: { size?: number; color?: string }) => (
+  <img src="/icons/clinico-geral.svg" width={size} height={size} alt="" aria-hidden="true" />
+);
+
 type IconComponent = ({ size, color }: { size?: number; color?: string }) => JSX.Element;
 type AnyIcon = LucideIcon | IconComponent;
 
 const ICON_MAP: Record<string, AnyIcon> = {
-  "Clínico Geral": Stethoscope,
+  "Clínico Geral": ClinicoGeralIcon,
   "Clareamento dental": Sparkles,
   "Lentes de contato dental": Sparkles,
-  "Facetas de porcelana": Star,
-  "Limpeza e profilaxia": ToothbrushIcon,
+  "Limpeza": ToothbrushIcon,
   "Ortodontia (aparelho)": BracesIcon,
   "Implante dentário": SmileImplantIcon,
   "Tratamento de canal": DrillToothIcon,
@@ -106,16 +109,14 @@ const ICON_MAP: Record<string, AnyIcon> = {
   "Cirurgia oral": DoctorMaskIcon,
   "Periodontia": ToothbrushIcon,
   "Odontopediatria": Baby,
-  "Botox odontológico": Zap,
   "Harmonização orofacial": FaceSmileIcon,
 };
 
 const COLOR_MAP: Record<string, string> = {
-  "Clínico Geral": "#007AFF",
+  "Clínico Geral": "#d70050",
   "Clareamento dental": "#007AFF",
   "Lentes de contato dental": "#FF9500",
-  "Facetas de porcelana": "#E6004C",
-  "Limpeza e profilaxia": "#34C759",
+  "Limpeza": "#34C759",
   "Ortodontia (aparelho)": "#007AFF",
   "Implante dentário": "#0A2A66",
   "Tratamento de canal": "#FF3B30",
@@ -123,7 +124,6 @@ const COLOR_MAP: Record<string, string> = {
   "Cirurgia oral": "#FF9500",
   "Periodontia": "#34C759",
   "Odontopediatria": "#34C759",
-  "Botox odontológico": "#E6004C",
   "Harmonização orofacial": "#E6004C",
 };
 
@@ -201,7 +201,7 @@ export default function Specialties() {
                     className="font-semibold text-[15px] leading-tight mb-1"
                     style={{ color: "#0A2A66" }}
                   >
-                    {label}
+                    {nomeAmigavel(label)}
                   </div>
                 </div>
               </button>

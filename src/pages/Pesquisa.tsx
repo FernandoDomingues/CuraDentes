@@ -20,7 +20,7 @@ import logoProAltUrl from "@/assets/logos/logo-pro-alt.png";
 import CroVerificationBadge from "@/components/analytics/CroVerificationBadge";
 import { useAuth } from "@/hooks/useAuth";
 import { saveToSearchCache, saveQueryCache, loadQueryCache, buildQueryCacheKey } from "@/lib/dentistCache";
-import { ESPECIALIDADES } from "@/constants/data";
+import { ESPECIALIDADES, nomeAmigavel } from "@/constants/data";
 import { useAddressSuggestions } from "@/hooks/useAddressSuggestions";
 import { useLogSearch } from "@/hooks/useLogSearch";
 import type { AddressSuggestion } from "@/hooks/useAddressSuggestions";
@@ -961,7 +961,7 @@ export default function Pesquisa() {
                       className="w-4 h-4 accent-[#007AFF] rounded"
                     />
                     <span className="text-[13px] text-gray-600 group-hover:text-gray-900 transition-colors">
-                      {esp}
+                      {nomeAmigavel(esp)}
                     </span>
                   </label>
                 ))}
@@ -1202,9 +1202,11 @@ export default function Pesquisa() {
                           <span className="text-[12px] font-bold text-yellow-700">{dentista.dentista_avaliacao}</span>
                         </div>
                       </div>
-                      <p className="text-[13px] text-gray-500 mt-1 line-clamp-2 min-h-[38px]">
-                        {dentista.dentista_bio || "Dentista focado em oferecer o melhor atendimento para o seu sorriso."}
-                      </p>
+                      {dentista.dentista_bio && (
+                        <p className="text-[13px] text-gray-500 mt-1 line-clamp-2">
+                          {dentista.dentista_bio}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -1227,7 +1229,7 @@ export default function Pesquisa() {
                             <div className="flex flex-wrap gap-1">
                               {end.atividades.map((at, idx) => (
                                 <span key={idx} className="bg-blue-100/50 text-[#007AFF] text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                                  {at}
+                                  {nomeAmigavel(at)}
                                 </span>
                               ))}
                             </div>

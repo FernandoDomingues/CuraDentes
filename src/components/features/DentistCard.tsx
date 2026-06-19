@@ -9,6 +9,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import type { Dentist } from "@/types/dentist";
+import { nomeAmigavel } from "@/constants/data";
 import CroVerificationBadge from "@/components/analytics/CroVerificationBadge";
 import { MapPin, Star, DollarSign, Heart, Clock, CheckCircle } from "lucide-react";
 
@@ -165,7 +166,7 @@ export default function DentistCard({ dentist }: DentistCardProps) {
               <CroVerificationBadge verificado={dentist.cro_verificado} size="sm" />
             )}
           </div>
-          <p className="text-[13px] font-semibold mb-4" style={{ color: "var(--brand-magenta)" }}>{dentist.specialty}</p>
+          <p className="text-[13px] font-semibold mb-4" style={{ color: "var(--brand-magenta)" }}>{nomeAmigavel(dentist.specialty)}</p>
 
           <div className="flex flex-wrap gap-3 mb-5 text-[13px] font-medium" style={{ color: "var(--text-muted)" }}>
             <span className="inline-flex items-center gap-1"><MapPin size={13} />{dentist.distance}</span>

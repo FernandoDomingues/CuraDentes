@@ -211,8 +211,7 @@ export const ESPECIALIDADES: string[] = [
   "Clínico Geral",
   "Clareamento dental",
   "Lentes de contato dental",
-  "Facetas de porcelana",
-  "Limpeza e profilaxia",
+  "Limpeza",
   "Ortodontia (aparelho)",
   "Implante dentário",
   "Tratamento de canal",
@@ -220,7 +219,21 @@ export const ESPECIALIDADES: string[] = [
   "Cirurgia oral",
   "Periodontia",
   "Odontopediatria",
-  "Botox odontológico",
   "Harmonização orofacial",
 ];
+
+// ─── Apelidos: nomes amigáveis exibidos ao PACIENTE ─────────────────────────
+// Camada de EXIBIÇÃO apenas. O dentista se cadastra e o banco armazenam o nome
+// canônico (a chave deste mapa); o paciente vê o apelido na busca/navegação.
+// A lógica de match (filtro, RPC, slug) continua usando o nome canônico — NÃO
+// use estes apelidos para buscar/salvar nada. Sem apelido = mostra o canônico.
+export const APELIDOS_ESPECIALIDADE: Record<string, string> = {
+  "Periodontia": "Tratamento de gengiva",
+  "Odontopediatria": "Dentista infantil",
+};
+
+/** Nome amigável (para o paciente) de uma especialidade, ou o próprio nome canônico se não houver apelido. */
+export function nomeAmigavel(nomeCanonico: string): string {
+  return APELIDOS_ESPECIALIDADE[nomeCanonico] ?? nomeCanonico;
+}
 

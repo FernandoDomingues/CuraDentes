@@ -12,17 +12,28 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { ESPECIALIDADES_SEO } from "@/constants/especialidadesSEO";
-import { ESPECIALIDADES } from "@/constants/data";
+import { ESPECIALIDADES, nomeAmigavel } from "@/constants/data";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { toast } from "sonner";
 import { Star, MapPin, ChevronRight, CheckCircle, ExternalLink, Search, Navigation } from "lucide-react";
 
+// Especialidades unificadas: slug antigo redireciona para o canônico.
+// "Facetas de porcelana" foi unificada em "Lentes de contato dental".
+// "Botox odontológico" foi unificado em "Harmonização orofacial".
+const SLUG_REDIRECTS: Record<string, string> = {
+  "facetas-de-porcelana": "lentes-de-contato-dental",
+  "limpeza-e-profilaxia": "limpeza",
+  "botox-odontologico": "harmonizacao-orofacial",
+};
+
 export default function Especialidade() {
   const { slug } = useParams<{ slug: string }>();
 
-  const especialidade = Object.values(ESPECIALIDADES_SEO).find(e => e.slug === slug);
-  const nome = especialidade?.nome || "";
+  const canonicalSlug = (slug && SLUG_REDIRECTS[slug]) || slug;
+  const especialidade = Object.values(ESPECIALIDADES_SEO).find(e => e.slug === canonicalSlug);
+  const nome = especialidade?.nome || "";        // nome canônico (SEO, RPC, match, navegação)
+  const nomeExibicao = nomeAmigavel(nome);        // nome amigável exibido ao paciente
   const notFound = !especialidade;
 
   useEffect(() => {
@@ -39,6 +50,14 @@ export default function Especialidade() {
   }, [especialidade]);
 
   const navigate = useNavigate();
+
+  // Redireciona slugs unificados para o canônico (mantém uma única URL).
+  useEffect(() => {
+    if (slug && SLUG_REDIRECTS[slug]) {
+      navigate(`/especialidade/${SLUG_REDIRECTS[slug]}`, { replace: true });
+    }
+  }, [slug, navigate]);
+
   const { user, signInWithGoogle } = useAuth();
   const [showLoginModal, setShowLoginModal] = useState(false);
 
@@ -284,7 +303,7 @@ export default function Especialidade() {
             <ChevronRight size={12} />
             <li><Link to="/#especialidades" className="hover:text-[#007AFF] transition-colors">Especialidades</Link></li>
             <ChevronRight size={12} />
-            <li aria-current="page" style={{ color: "#0A2A66", fontWeight: 600 }}>{especialidade.nome}</li>
+            <li aria-current="page" style={{ color: "#0A2A66", fontWeight: 600 }}>{nomeExibicao}</li>
           </ol>
         </nav>
 
@@ -302,7 +321,7 @@ export default function Especialidade() {
                   Especialidade
                 </div>
                 <h1 className="text-3xl lg:text-4xl font-bold mb-4 leading-tight" style={{ color: "#fff", fontFamily: "Inter, sans-serif", letterSpacing: "-0.02em" }}>
-                  {especialidade.nome}
+                  {nomeExibicao}
                 </h1>
                 <p className="text-[16px] lg:text-[17px] leading-relaxed mb-6" style={{ color: "rgba(255,255,255,0.80)" }}>
                   {especialidade.introducao}
@@ -314,14 +333,14 @@ export default function Especialidade() {
                     style={{ background: "#fff", color: "#0A2A66" }}
                   >
                     <Search size={18} />
-                    Encontrar {especialidade.nome.toLowerCase()}
+                    Encontrar {nomeExibicao.toLowerCase()}
                   </button>
                 </div>
               </div>
               <div className="flex-shrink-0 w-full max-w-[400px] lg:max-w-[360px]">
                 <img
                   src={especialidade.heroImage}
-                  alt={especialidade.nome}
+                  alt={nomeExibicao}
                   className="w-full aspect-[2/1] object-cover rounded-2xl shadow-2xl"
                   loading="lazy"
                 />
@@ -353,7 +372,7 @@ export default function Especialidade() {
                 {/* FAQ com Schema */}
                 <section className="bg-white rounded-2xl p-6 lg:p-8 shadow-sm border border-gray-100">
                   <h2 className="text-xl lg:text-2xl font-bold mb-6" style={{ color: "#0A2A66", fontFamily: "Inter, sans-serif" }}>
-                    Perguntas frequentes sobre {especialidade.nome.toLowerCase()}
+                    Perguntas frequentes sobre {nomeExibicao.toLowerCase()}
                   </h2>
                   <div className="flex flex-col gap-4" itemScope itemType="https://schema.org/FAQPage">
                     {especialidade.faq.map((item, i) => (
@@ -440,7 +459,7 @@ export default function Especialidade() {
                   {!topLoading && topDentistas.length > 0 && (
                     <div className="flex flex-col gap-2">
                       <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.5)" }}>
-                        Top {topDentistas.length} em {nome.toLowerCase()}
+                        Top {topDentistas.length} em {nomeExibicao.toLowerCase()}
                       </p>
                       {topDentistas.map((d) => (
                         <Link
@@ -494,7 +513,7 @@ export default function Especialidade() {
                     style={{ background: "rgba(60,60,67,0.04)", color: "#3A3A3C" }}
                   >
                     <ChevronRight size={14} style={{ color: "#007AFF" }} />
-                    {label}
+                    {nomeAmigavel(label)}
                   </Link>
                 );
               })}

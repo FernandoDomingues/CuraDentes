@@ -146,11 +146,11 @@ export const ESPECIALIDADES_SEO: Record<string, EspecialidadeSEO> = {
     ],
   },
 
-  "Limpeza e profilaxia": {
-    slug: "limpeza-e-profilaxia",
-    nome: "Limpeza e profilaxia",
+  "Limpeza": {
+    slug: "limpeza",
+    nome: "Limpeza",
     title: "Limpeza Dental | Profilaxia e Prevenção | CuraDentes",
-    description: "Faça limpeza dental定期 com profissionais. Remoção de tártaro, placa bacteriana e polimento. Agende sua consulta de profilaxia.",
+    description: "Faça limpeza dental regular com profissionais. Remoção de tártaro, placa bacteriana e polimento. Agende sua consulta de profilaxia.",
     keywords: ["limpeza dental", "profilaxia", "limpeza nos dentes", "remoção de tártaro", "raspagem dental"],
     heroImage: "https://dsnzgxjuqlalysyfiion.supabase.co/storage/v1/object/public/especialidades/clinico-geral.webp",
     introducao: "A limpeza dental profissional, também chamada de profilaxia, é um procedimento essencial para manter a saúde bucal. Remove placas bacterianas, tártaro e manchas superficiais que a escovação diária não elimina.",
@@ -386,46 +386,17 @@ export const ESPECIALIDADES_SEO: Record<string, EspecialidadeSEO> = {
     ],
   },
 
-  "Botox odontológico": {
-    slug: "botox-odontologico",
-    nome: "Botox odontológico",
-    title: "Botox Odontológico | Preços e Especialistas | CuraDentes",
-    description: "Botox odontológico para bruxismo, sorriso gengival e harmonização facial. Encontre dentistas habilitados perto de você.",
-    keywords: ["botox odontológico", "botox para bruxismo", "toxina botulínica odontologia", "sorriso gengival", "harmonização facial"],
-    heroImage: "https://dsnzgxjuqlalysyfiion.supabase.co/storage/v1/object/public/especialidades/harmonizacao-orofacial.webp",
-    introducao: "O botox (toxina botulínica) é utilizado na odontologia para fins terapêuticos e estéticos. Trata bruxismo, sorriso gengival, dores na ATM e também complementa procedimentos de harmonização facial.",
-    topicos: [
-      { titulo: "Aplicações odontológicas", texto: "Tratamento de bruxismo (reduz a força do apertamento), sorriso gengival (relaxa o lábio para expor menos a gengiva), dores na ATM, e assimetrias faciais." },
-      { titulo: "Como é aplicado?", texto: "Pequenas injeções do produto são aplicadas em pontos específicos dos músculos alvo. O procedimento é rápido (cerca de 15 minutos) e não requer anestesia." },
-      { titulo: "Duração dos resultados", texto: "Os efeitos do botox duram de 4 a 6 meses, quando o tratamento precisa ser repetido. A aplicação regular pode prolongar o intervalo entre as sessões." },
-    ],
-    beneficios: [
-      "Redução do bruxismo e dores na ATM",
-      "Correção do sorriso gengival sem cirurgia",
-      "Procedimento rápido e minimamente invasivo",
-      "Resultados visíveis em 3 a 7 dias",
-      "Prevenção de desgaste dental por apertamento",
-    ],
-    faq: [
-      { pergunta: "Botox odontológico dói?", resposta: "O desconforto é mínimo — agulhas muito finas são usadas. Alguns comparam a picadas de formiga." },
-      { pergunta: "Qual a diferença do botox odontológico para o estético?", resposta: "O odontológico foca em funções da boca e mandíbula (bruxismo, ATM, sorriso gengival), enquanto o estético trata rugas faciais." },
-      { pergunta: "Quanto custa botox odontológico?", resposta: "Os valores variam de R$ 300 a R$ 1.200 por sessão, dependendo da quantidade de unidades aplicadas." },
-    ],
-    linksExternos: [
-      { label: "CFO - Parecer sobre toxina botulínica na odontologia", url: "https://website.cfo.org.br/" },
-    ],
-  },
-
   "Harmonização orofacial": {
     slug: "harmonizacao-orofacial",
     nome: "Harmonização orofacial",
     title: "Harmonização Orofacial | Preços e Especialistas | CuraDentes",
     description: "Harmonização orofacial com dentistas especializados. Preenchimento labial, botox, bioestimuladores e mais. Transforme sua face.",
-    keywords: ["harmonização orofacial", "preenchimento labial", "harmonização facial", "bioestimuladores", "ácido hialurônico", "dentista estética"],
+    keywords: ["harmonização orofacial", "preenchimento labial", "harmonização facial", "bioestimuladores", "ácido hialurônico", "dentista estética", "botox", "botox odontológico", "botox para bruxismo", "toxina botulínica", "sorriso gengival"],
     heroImage: "https://dsnzgxjuqlalysyfiion.supabase.co/storage/v1/object/public/especialidades/harmonizacao-orofacial.webp",
-    introducao: "A harmonização orofacial (HOF) é uma área da odontologia que integra procedimentos estéticos e funcionais para equilibrar a face, valorizar o sorriso e rejuvenescer a aparência de forma natural.",
+    introducao: "A harmonização orofacial (HOF) é uma área da odontologia que integra procedimentos estéticos e funcionais para equilibrar a face, valorizar o sorriso e rejuvenescer a aparência de forma natural. Inclui o botox (toxina botulínica), tanto para fins estéticos quanto terapêuticos.",
     topicos: [
       { titulo: "Principais procedimentos", texto: "Preenchimento com ácido hialurônico (lábios, bigode chinês, olheiras), aplicação de botox, bioestimuladores de colágeno (Sculptra, Radiesse), fios de sustentação e lipo de papada." },
+      { titulo: "Botox (toxina botulínica)", texto: "O botox faz parte da harmonização orofacial. Além de suavizar rugas de expressão, tem uso terapêutico: relaxa a musculatura no bruxismo, corrige o sorriso gengival, alivia dores na ATM e equilibra assimetrias faciais. A aplicação é rápida (cerca de 15 minutos), praticamente indolor, e os efeitos duram de 4 a 6 meses." },
       { titulo: "Resultados naturais", texto: "A filosofia da HOF é realçar a beleza natural sem artificialismo. O profissional avalia a face como um todo para criar equilíbrio e harmonia." },
       { titulo: "Quem pode realizar", texto: "Apenas cirurgiões-dentistas com pós-graduação em HOF podem realizar estes procedimentos. Verifique sempre a formação do profissional." },
     ],
@@ -433,10 +404,12 @@ export const ESPECIALIDADES_SEO: Record<string, EspecialidadeSEO> = {
       "Rejuvenescimento facial natural",
       "Equilíbrio e simetria da face",
       "Valorização do sorriso",
+      "Botox para bruxismo, sorriso gengival e rugas",
       "Resultados progressivos e duradouros",
       "Autoestima elevada",
     ],
     faq: [
+      { pergunta: "O botox faz parte da harmonização orofacial?", resposta: "Sim. O botox (toxina botulínica) é um dos procedimentos da harmonização orofacial, com uso estético (rugas de expressão) e também funcional: bruxismo, sorriso gengival e dores na ATM." },
       { pergunta: "Harmonização orofacial dói?", resposta: "O desconforto é leve. Cremes anestésicos e anestesia local são usados para garantir o conforto durante o procedimento." },
       { pergunta: "Quanto tempo dura cada procedimento?", resposta: "Botox: 4-6 meses. Preenchimento: 6-18 meses. Bioestimuladores: 18-24 meses. Fios de sustentação: 12-18 meses." },
       { pergunta: "Qual o valor da harmonização orofacial?", resposta: "Cada procedimento tem valor específico: preenchimento labial R$ 500-R$ 1.500, botox R$ 300-R$ 1.200, bioestimuladores R$ 1.500-R$ 4.000 por sessão." },

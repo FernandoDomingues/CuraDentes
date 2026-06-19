@@ -53,6 +53,7 @@ import Header from "@/components/layout/Header";
 import logoProAltUrl from "@/assets/logos/logo-pro-alt.png";
 import CroVerificationBadge from "@/components/analytics/CroVerificationBadge";
 import { ESPECIALIDADES_SEO } from "@/constants/especialidadesSEO";
+import { nomeAmigavel } from "@/constants/data";
 
 /** Retorna o slug da especialidade a partir do nome */
 function slugifyEspecialidade(nome: string): string {
@@ -204,7 +205,7 @@ function BarraAvaliacao({ atividade, onVerAvaliacoes }: {
             className="text-[13px] font-medium hover:underline"
             style={{ color: "#3A3A3C" }}
           >
-            {atividade.nome_atividade}
+            {nomeAmigavel(atividade.nome_atividade)}
           </Link>
           {/* Badge de pódio por atividade — visível apenas quando Top 1, 2 ou 3 */}
           {atividade.posicao_ranking != null && atividade.posicao_ranking <= 3 && (
@@ -367,7 +368,7 @@ function EnderecoCard({ endereco, index, nomeDentista, onContactRequest }: {
                 border: "0.5px solid rgba(10,42,102,0.12)",
               }}
             >
-              {atividade}
+              {nomeAmigavel(atividade)}
             </Link>
           ))}
         </div>
@@ -1076,7 +1077,7 @@ export default function DentistProfilePage() {
                 className="inline-block text-[14px] font-semibold mb-1 hover:underline"
                 style={{ color: "#E6004C" }}
               >
-                {perfil.especialidade_principal}
+                {nomeAmigavel(perfil.especialidade_principal)}
               </Link>
 
               {/* CRO com badge de verificação à direita */}
@@ -1261,7 +1262,7 @@ export default function DentistProfilePage() {
                   >
                     <option value="">Selecione o procedimento...</option>
                     {todasAtividades.length > 0 ? (
-                      todasAtividades.map(atv => <option key={atv} value={atv}>{atv}</option>)
+                      todasAtividades.map(atv => <option key={atv} value={atv}>{nomeAmigavel(atv)}</option>)
                     ) : (
                       <option value="Consulta Geral">Consulta Geral</option>
                     )}
@@ -1369,7 +1370,7 @@ export default function DentistProfilePage() {
           >
             <div className="flex items-center justify-between sticky top-0 bg-white pb-2" style={{ zIndex: 1 }}>
               <h2 className="text-[16px] font-bold" style={{ color: "#0A2A66", fontFamily: "Inter, sans-serif" }}>
-                {avaliacoesIndividuais.atividade}
+                {nomeAmigavel(avaliacoesIndividuais.atividade)}
               </h2>
               <button
                 onClick={() => setAvaliacoesIndividuais(null)}

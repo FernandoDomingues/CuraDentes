@@ -15,7 +15,7 @@ import {
   MapPin,
   Building2,
 } from "lucide-react";
-import { ESPECIALIDADES } from "@/constants/data";
+import { ESPECIALIDADES, nomeAmigavel } from "@/constants/data";
 // ============================================================================
 // IMPORTAÇÕES PARA A AUTENTICAÇÃO COM O GOOGLE
 // ============================================================================
@@ -509,7 +509,7 @@ export default function HeroSection() {
                         }
                   }
                 >
-                  {label}
+                  {nomeAmigavel(label)}
                 </button>
               );
             })}
@@ -659,7 +659,7 @@ export default function HeroSection() {
                       ? { background: "#007AFF", color: "#fff", border: "0.5px solid transparent", boxShadow: "0 0 12px rgba(0,122,255,0.4)" }
                       : { background: "rgba(255,255,255,0.60)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", border: "0.5px solid rgba(255,255,255,0.45)", color: "#3A3A3C", boxShadow: "0 2px 6px rgba(16,24,64,0.05)" }}
                   >
-                    {label}
+                    {nomeAmigavel(label)}
                   </button>
                 );
               })}
