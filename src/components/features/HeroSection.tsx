@@ -306,6 +306,27 @@ export default function HeroSection() {
     setActiveChip(activeChip === label ? null : label);
   };
 
+  // URGENCIA: pede a localizacao (opt-in, so no clique) e vai direto pra /urgencia.
+  // Nao exige login (atrito minimo) — fica fora do overlay de bloqueio da busca.
+  const handleUrgencia = () => {
+    if (!navigator.geolocation) {
+      navigate("/urgencia");
+      return;
+    }
+    const toastId = toast.loading("Localizando você…");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        toast.dismiss(toastId);
+        navigate("/urgencia", { state: { lat: pos.coords.latitude, lng: pos.coords.longitude } });
+      },
+      () => {
+        toast.dismiss(toastId);
+        navigate("/urgencia"); // sem coords -> a propria pagina pede a localizacao
+      },
+      { timeout: 8000, enableHighAccuracy: true },
+    );
+  };
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setShowSuggestions(false);
@@ -477,6 +498,20 @@ export default function HeroSection() {
             </button>
           </div>
 
+          {/* Botao URGENCIA (mobile) — fora do overlay, nao exige login */}
+          <div className="px-4 pb-3">
+            <button
+              type="button"
+              onClick={handleUrgencia}
+              aria-label="Buscar dentistas de urgência perto de você"
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-white text-[15px] font-extrabold min-h-[48px] transition-all duration-200 active:scale-[0.98]"
+              style={{ background: "#E6004C", boxShadow: "0 6px 16px rgba(230,0,76,0.32)", letterSpacing: "0.02em" }}
+            >
+              <img src="/icons/emergencia.svg" width={20} height={20} alt="" aria-hidden="true" />
+              URGÊNCIA!
+            </button>
+          </div>
+
           <p
             className="px-4 pb-2 text-[12px] font-semibold uppercase tracking-widest"
             style={{ color: "#8E8E93" }}
@@ -556,8 +591,9 @@ export default function HeroSection() {
               Busque por especialidade, veja avaliações reais, compare preços e agende sua consulta em minutos — sem complicação.
             </p>
 
-            {/* Search Bar */}
-            <div ref={searchContainerRef} className="max-w-[720px] mx-auto mb-4 relative">
+            {/* Search Bar + botao URGENCIA (ao lado do Buscar, fora do overlay de login) */}
+            <div className="max-w-[860px] mx-auto mb-4 flex items-stretch gap-2.5">
+              <div ref={searchContainerRef} className="flex-1 relative">
               {/* BLOQUEIO DE BUSCA (DESKTOP) */}
               {!user && (
                 <div
@@ -643,6 +679,17 @@ export default function HeroSection() {
                   ))}
                 </div>
               )}
+              </div>
+              <button
+                type="button"
+                onClick={handleUrgencia}
+                aria-label="Buscar dentistas de urgência perto de você"
+                className="flex flex-col items-center justify-center gap-1.5 px-4 rounded-[16px] text-white font-extrabold flex-shrink-0 transition-all duration-200 hover:brightness-110"
+                style={{ background: "#E6004C", minHeight: "56px", boxShadow: "0 8px 20px rgba(230,0,76,0.35)", letterSpacing: "0.02em" }}
+              >
+                <img src="/icons/emergencia.svg" width={22} height={22} alt="" aria-hidden="true" />
+                <span className="text-[12px] leading-none">URGÊNCIA!</span>
+              </button>
             </div>
 
             {/* Specialty Chips */}

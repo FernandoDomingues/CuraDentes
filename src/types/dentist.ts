@@ -145,6 +145,12 @@ export interface EnderecoClinica {
    * tabela: convenios_endereco (N-N via endereco_convenio)
    */
   convenios: Convenio[];
+  /** Marcado pelo dentista: este endereço atende urgências (destaque no perfil) */
+  atende_urgencias?: boolean;
+  /** Marcado pelo dentista: este endereço tem estacionamento */
+  estacionamento?: boolean;
+  /** Informações livres sobre o endereço (máx. 300 caracteres) */
+  observacoes?: string;
 }
 
 /** Forma de pagamento aceita pelo dentista */

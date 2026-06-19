@@ -285,11 +285,21 @@ function EnderecoCard({ endereco, index, nomeDentista, onContactRequest }: {
       style={{
         background: "#fff",
         borderRadius: "20px",
-        border: "0.5px solid rgba(60,60,67,0.10)",
-        boxShadow: "0 2px 8px rgba(16,24,64,0.06)",
+        border: endereco.atende_urgencias ? "1.5px solid #E6004C" : "0.5px solid rgba(60,60,67,0.10)",
+        boxShadow: endereco.atende_urgencias ? "0 4px 14px rgba(230,0,76,0.18)" : "0 2px 8px rgba(16,24,64,0.06)",
         overflow: "hidden",
       }}
     >
+      {/* Faixa de urgência — só nos endereços marcados como "atende urgências" */}
+      {endereco.atende_urgencias && (
+        <div
+          className="flex items-center gap-1.5"
+          style={{ background: "#E6004C", color: "#fff", padding: "6px 16px", fontSize: "12px", fontWeight: 700, letterSpacing: "0.02em" }}
+        >
+          <img src="/icons/emergencia.svg" width={14} height={14} alt="" aria-hidden="true" />
+          Atende urgências
+        </div>
+      )}
       {/* Cabeçalho: ícone + nome da clínica + endereço + botão mapa */}
       <div style={{ padding: "20px 20px 0" }}>
         <div className="flex items-start gap-3">
@@ -373,6 +383,41 @@ function EnderecoCard({ endereco, index, nomeDentista, onContactRequest }: {
           ))}
         </div>
       </div>
+
+      {/* Estacionamento + informações do endereço (exibidos antes da agenda) */}
+      {(endereco.estacionamento || (endereco.observacoes && endereco.observacoes.trim())) && (
+        <div style={{ padding: "0 20px 16px" }} className="flex flex-col gap-2.5">
+          {endereco.estacionamento && (
+            <div className="flex items-center gap-2 text-[13px]">
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "22px",
+                  height: "22px",
+                  borderRadius: "6px",
+                  background: "rgba(52,199,89,0.12)",
+                  color: "#34C759",
+                  fontWeight: 800,
+                  fontSize: "13px",
+                  flexShrink: 0,
+                }}
+              >
+                P
+              </span>
+              <span className="font-medium" style={{ color: "#0A2A66" }}>
+                Estacionamento no local
+              </span>
+            </div>
+          )}
+          {endereco.observacoes && endereco.observacoes.trim() && (
+            <p className="text-[13px]" style={{ color: "#3A3A3C", lineHeight: 1.55, margin: 0 }}>
+              {endereco.observacoes}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Accordion de horários */}
       <div style={{ borderTop: "0.5px solid rgba(60,60,67,0.10)" }}>
@@ -849,6 +894,9 @@ export default function DentistProfilePage() {
           agenda?: unknown;
           formas_pagamento?: string[];
           convenios?: string[];
+          atende_urgencias?: boolean;
+          estacionamento?: boolean;
+          observacoes?: string;
         }) => ({
           id: e.id,
           nome_clinica: e.nome_clinica,
@@ -865,6 +913,9 @@ export default function DentistProfilePage() {
           agenda: normalizarAgenda(e.agenda),
           formas_pagamento: e.formas_pagamento ? e.formas_pagamento.map((fp: string, i: number) => ({ id: `${i}`, nome: fp, tipo: "dinheiro" as const })) : [],
           convenios: e.convenios ? e.convenios.map((c: string, i: number) => ({ id: `${i}`, nome: c })) : [],
+          atende_urgencias: e.atende_urgencias,
+          estacionamento: e.estacionamento,
+          observacoes: e.observacoes,
         }));
 
         const perfilMontado: DentistProfile = {

@@ -67,6 +67,7 @@ interface EnderecoForm {
   whatsapp: string;
   atende_urgencias: boolean;
   aceita_urgencia_termo: boolean;
+  estacionamento: boolean;
   atividades: string[];
   convenios: string[];
   formas_pagamento: string[];
@@ -91,6 +92,7 @@ function novoEndereco(): EnderecoForm {
     whatsapp: "",
     atende_urgencias: false,
     aceita_urgencia_termo: false,
+    estacionamento: false,
     atividades: [],
     convenios: [],
     formas_pagamento: [],
@@ -197,6 +199,7 @@ export default function MeuPerfil() {
             whatsapp: e.whatsapp || "",
             atende_urgencias: e.atende_urgencias || false,
             aceita_urgencia_termo: e.aceita_urgencia_termo || false,
+            estacionamento: e.estacionamento || false,
             atividades: e.atividades || [],
             convenios: e.convenios || [],
             formas_pagamento: e.formas_pagamento || [],
@@ -294,6 +297,7 @@ export default function MeuPerfil() {
           whatsapp: end.whatsapp,
           atende_urgencias: end.atende_urgencias,
           aceita_urgencia_termo: end.aceita_urgencia_termo,
+          estacionamento: end.estacionamento,
           atividades: end.atividades,
           convenios: end.convenios,
           formas_pagamento: end.formas_pagamento,
@@ -688,6 +692,29 @@ export default function MeuPerfil() {
                       <span className="text-[12px] text-gray-600">Estou ciente e concordo em realizar encaixes de pacientes em urgência no meu horário de atendimento.</span>
                     </label>
                   )}
+                </div>
+
+                {/* Estacionamento */}
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input type="checkbox" checked={end.estacionamento} onChange={(e) => atualizarEndereco(idx, "estacionamento", e.target.checked)} className="w-5 h-5 accent-[#007AFF]" />
+                  <span className="font-semibold text-[14px] text-gray-700">Este endereço tem estacionamento</span>
+                </label>
+
+                {/* Informações do endereço */}
+                <div>
+                  <label style={labelStyle}>
+                    Informações do endereço
+                    <span className="ml-1 text-[11px] font-normal text-gray-400">(opcional · máx. 300 caracteres)</span>
+                  </label>
+                  <textarea
+                    value={end.observacoes}
+                    maxLength={300}
+                    onChange={(e) => { if (e.target.value.length <= 300) atualizarEndereco(idx, "observacoes", e.target.value); }}
+                    rows={2}
+                    placeholder="Ex.: referências de como chegar, andar/sala, acessibilidade, ponto de táxi..."
+                    style={{ ...inputStyle, resize: "vertical", lineHeight: 1.6 }}
+                  />
+                  <p className="text-[11px] mt-1 text-right text-gray-400">{end.observacoes.length}/300</p>
                 </div>
 
                 {/* Agenda */}
