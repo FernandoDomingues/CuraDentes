@@ -2027,10 +2027,10 @@ export default function NovoCadastro() {
               </label>
             </div>
 
-            {/* Informações do endereço */}
+            {/* Informações sobre estacionamento ao cliente */}
             <div>
               <label style={labelStyle}>
-                Informações do endereço
+                Informações sobre estacionamento ao cliente
                 <span className="ml-1 text-[11px] font-normal" style={{ color: "#8E8E93" }}>
                   (opcional · máx. 300 caracteres)
                 </span>
@@ -2042,7 +2042,7 @@ export default function NovoCadastro() {
                   if (e.target.value.length <= 300) atualizarEndereco(idx, "observacoes", e.target.value);
                 }}
                 rows={2}
-                placeholder="Ex.: referências de como chegar, andar/sala, acessibilidade, ponto de táxi..."
+                placeholder="Ex.: estacionamento gratuito para pacientes, conveniado, valet, vagas na rua..."
                 style={{ ...inputStyle, resize: "vertical", lineHeight: 1.6 }}
               />
               <p className="text-[11px] mt-1 text-right" style={{ color: "#8E8E93" }}>

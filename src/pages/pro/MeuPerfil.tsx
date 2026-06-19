@@ -700,10 +700,10 @@ export default function MeuPerfil() {
                   <span className="font-semibold text-[14px] text-gray-700">Este endereço tem estacionamento</span>
                 </label>
 
-                {/* Informações do endereço */}
+                {/* Informações sobre estacionamento ao cliente */}
                 <div>
                   <label style={labelStyle}>
-                    Informações do endereço
+                    Informações sobre estacionamento ao cliente
                     <span className="ml-1 text-[11px] font-normal text-gray-400">(opcional · máx. 300 caracteres)</span>
                   </label>
                   <textarea
@@ -711,7 +711,7 @@ export default function MeuPerfil() {
                     maxLength={300}
                     onChange={(e) => { if (e.target.value.length <= 300) atualizarEndereco(idx, "observacoes", e.target.value); }}
                     rows={2}
-                    placeholder="Ex.: referências de como chegar, andar/sala, acessibilidade, ponto de táxi..."
+                    placeholder="Ex.: estacionamento gratuito para pacientes, conveniado, valet, vagas na rua..."
                     style={{ ...inputStyle, resize: "vertical", lineHeight: 1.6 }}
                   />
                   <p className="text-[11px] mt-1 text-right text-gray-400">{end.observacoes.length}/300</p>
