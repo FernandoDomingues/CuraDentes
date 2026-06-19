@@ -5,7 +5,7 @@
 // no CuraDentes Pro. Mostra benefícios como número de pacientes, alcance, etc.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-import { TrendingUp, Users, Clock, CheckCircle } from "lucide-react";
+import { TrendingUp, Users, CheckCircle } from "lucide-react";
 import { useState } from "react";
 import { Eye, EyeOff, ChevronRight, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -29,7 +29,6 @@ function GoogleIcon() {
 const BENEFITS = [
   { icon: Users, text: "Acesso a milhares de pacientes próximos" },
   { icon: TrendingUp, text: "Aumente sua visibilidade online" },
-  { icon: Clock, text: "Agenda online integrada, 24 horas" },
   { icon: CheckCircle, text: "Perfil verificado com CRO" },
 ];
 

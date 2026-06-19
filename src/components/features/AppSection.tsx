@@ -34,12 +34,20 @@ export default function AppSection() {
 
           {/* ── Coluna de conteúdo (texto + botões) ── */}
           <div className="text-center md:text-left order-2 md:order-1">
-            <span
-              className="text-[13px] font-semibold uppercase tracking-widest block mb-3"
-              style={{ color: "var(--primary-blue)" }}
-            >
-              App Mobile
-            </span>
+            <div className="flex items-center justify-center md:justify-start gap-2 mb-3">
+              <span
+                className="text-[13px] font-semibold uppercase tracking-widest"
+                style={{ color: "var(--primary-blue)" }}
+              >
+                App Mobile
+              </span>
+              <span
+                className="text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full"
+                style={{ background: "rgba(0,122,255,0.12)", color: "var(--primary-blue)" }}
+              >
+                Em breve
+              </span>
+            </div>
 
             <h2
               className="mb-4"
