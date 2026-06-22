@@ -3,7 +3,8 @@
 //
 // Responsabilidades:
 //   1. Validar tamanho (max 2MB) e tipo (JPEG, PNG, WebP) antes do upload
-//   2. Fazer upload para o bucket "fotos-dentistas" no path {user_id}/{timestamp}_foto.{ext}
+//   2. Fazer upload para o bucket "fotos-dentistas" no path FIXO {user_id}/foto.webp
+//      (sobrescreve a cada troca — sem acúmulo de versões; cache tratado via ?v na URL)
 //   3. Retornar a URL pública da foto após o upload
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -32,22 +33,10 @@ export async function uploadFotoDentista(file: File | Blob, dentistaId: string):
   }
 
   try {
-    // 3. Criar um nome único para o arquivo para evitar cache ou sobreposição acidental
-    // Sempre salva como .webp se o tipo for image/webp, ou detecta do nome/tipo
-    let fileExt = "webp";
-    if (file instanceof File && file.name) {
-      fileExt = file.name.split('.').pop() || "webp";
-    } else if (file.type) {
-      fileExt = file.type.split('/').pop() || "webp";
-    }
-
-    // Forçar extensão webp se o tipo for image/webp
-    if (file.type === "image/webp") {
-      fileExt = "webp";
-    }
-
-    const fileName = `${dentistaId}/${Date.now()}_foto.${fileExt}`;
-    const filePath = `${fileName}`;
+    // 3. Caminho FIXO por dentista: cada troca de foto SOBRESCREVE o mesmo arquivo,
+    //    evitando acúmulo de versões órfãs no Storage. A foto vem sempre em WebP
+    //    (o editor exporta image/webp). O cache é tratado pela URL salva (passo 6).
+    const filePath = `${dentistaId}/foto.webp`;
 
     // 4. Enviar a imagem para o bucket "fotos-dentistas"
     const { error: uploadError } = await supabase.storage
@@ -68,7 +57,9 @@ export async function uploadFotoDentista(file: File | Blob, dentistaId: string):
       .from('fotos-dentistas')
       .getPublicUrl(filePath);
 
-    const publicUrl = data.publicUrl;
+    // Cache-busting: o caminho é fixo, então variamos a URL salva no banco
+    // (?v=timestamp) para o navegador/CDN buscar a imagem nova após cada troca.
+    const publicUrl = `${data.publicUrl}?v=${Date.now()}`;
 
     // 6. Atualizar a coluna foto_url na tabela curadentespro
     const { error: updateError } = await supabase
