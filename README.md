@@ -1,36 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CuraDentes — site-R0 (reconstrução em Next.js)
 
-## Getting Started
+> **Status:** 🚧 em construção (Fase 0 concluída). O site atual continua sendo o
+> `site-k11` (Vite/SPA), que fica **intacto e no ar** até esta versão atingir
+> paridade total e fazermos o "cutover" (a troca).
 
-First, run the development server:
+## Por que este projeto existe
+O `site-k11` é uma **SPA** (renderizada no navegador). Isso significa que, para
+buscadores e IAs que **não executam JavaScript**, todas as páginas chegam vazias
+— o conteúdo (dentistas, especialidades, avaliações) só aparece depois que o
+React roda. Resultado: péssima descoberta orgânica (Google e IAs como ChatGPT,
+Gemini, Perplexity quase não conseguem indexar/citar o site).
+
+O **site-R0** recria tudo em **Next.js**, que entrega **HTML real já pronto no
+servidor** (SSR/SSG). Assim as páginas públicas (perfis de dentista,
+especialidades, localidades) ficam de fato indexáveis — o objetivo é ser a
+**melhor entrega orgânica possível**. Veja o porquê em [docs/DECISOES.md](docs/DECISOES.md).
+
+## Stack
+- **Next.js 16** (App Router) + **React 19** + **TypeScript**
+- **Tailwind CSS** (estilos)
+- **Supabase** (back-end: banco, autenticação, storage) — **o mesmo do site-k11**
+- **Vitest + Testing Library** (testes — usamos **TDD**)
+
+## Como rodar (passo a passo, para iniciantes)
+Pré-requisito: ter o **Node.js 20+** instalado.
 
 ```bash
+# 1. instalar as dependências (só na primeira vez)
+npm install
+
+# 2. configurar as variáveis de ambiente
+#    copie o arquivo de exemplo e preencha com as chaves do Supabase
+cp .env.example .env.local   # depois edite .env.local
+
+# 3. rodar o site em modo desenvolvimento (abre em http://localhost:3000)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
+# 4. gerar a versão de produção e rodá-la
+npm run build
+npm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Testes (TDD)
+Neste projeto, **toda função nasce com um teste** (escrito antes — Test-Driven).
+O fluxo: escreve o teste → vê falhar (vermelho) → implementa o mínimo → vê passar
+(verde) → refatora com segurança.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm test           # roda todos os testes uma vez
+npm run test:watch # fica observando e re-roda ao salvar (bom durante o dev)
+```
+Os testes ficam ao lado do código, no arquivo `<nome>.test.ts(x)`.
+Exemplo: [src/lib/slug.ts](src/lib/slug.ts) + [src/lib/slug.test.ts](src/lib/slug.test.ts).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Estrutura de pastas
+```
+site-R0/
+├── src/
+│   ├── app/        # rotas e páginas (App Router do Next.js)
+│   ├── lib/        # utilitários e clientes (ex.: slug, cliente Supabase)
+│   ├── components/ # componentes de UI reutilizáveis  (a criar)
+│   └── ...
+├── docs/           # documentação do projeto (PT-BR)
+│   ├── DECISOES.md # por que cada escolha de arquitetura
+│   └── backend/    # manuais de uso do back-end (Supabase)  (a criar)
+├── public/         # arquivos estáticos (imagens, robots.txt, etc.)
+└── ...
+```
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Documentação
+Tudo em PT-BR, na pasta [docs/](docs/). Comece por [docs/DECISOES.md](docs/DECISOES.md).
