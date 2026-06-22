@@ -246,24 +246,53 @@ export default function DashboardAnalytics() {
     };
   }, [logs, perfilViews, perfilContatos, periodoFunil]);
 
-  // ─── Buscas sem resultado (demanda não atendida), por localidade ─────────────
+  // ─── Buscas sem resultado (demanda não atendida) ao longo do tempo ───────────
   const buscasSemResultado = useMemo(() => {
     const ls = logsNoPeriodo(logs, periodoSemResultado);
     const sem = ls.filter((l) => (l.resultados_count ?? 0) === 0);
-    const porLocal = new Map<string, { name: string; total: number }>();
+
+    // Série por dia/mês (mesma lógica dos demais gráficos temporais).
+    const ytd = periodoSemResultado === "ytd";
+    const agora = new Date();
+    const inicio = ytd ? inicioYTD() : new Date(agora);
+    inicio.setHours(0, 0, 0, 0);
+    if (!ytd) inicio.setDate(inicio.getDate() - (parseInt(periodoSemResultado) - 1));
+    const hoje0 = new Date(agora);
+    hoje0.setHours(0, 0, 0, 0);
+    const dias = Math.round((hoje0.getTime() - inicio.getTime()) / 86400000) + 1;
+    const mensal = dias > 31;
+
+    const cont = new Map<string, number>();
     sem.forEach((l) => {
-      const nome = l.cidade || l.bairro || "Sem localidade";
-      const k = nome.trim().toLowerCase();
-      const e = porLocal.get(k) || { name: nome, total: 0 };
-      e.total++;
-      porLocal.set(k, e);
+      const d = new Date(l.criado_em);
+      if (d.getTime() < inicio.getTime()) return;
+      const k = mensal ? chaveMes(d) : chaveDia(d);
+      cont.set(k, (cont.get(k) || 0) + 1);
     });
-    const topLocais = Array.from(porLocal.values()).sort((a, b) => b.total - a.total).slice(0, 10);
+
+    const serie: { label: string; total: number }[] = [];
+    if (mensal) {
+      const cursor = new Date(inicio.getFullYear(), inicio.getMonth(), 1);
+      const fim = new Date(agora.getFullYear(), agora.getMonth(), 1);
+      while (cursor.getTime() <= fim.getTime()) {
+        const k = chaveMes(cursor);
+        serie.push({ label: `${pad2(cursor.getMonth() + 1)}/${String(cursor.getFullYear()).slice(2)}`, total: cont.get(k) || 0 });
+        cursor.setMonth(cursor.getMonth() + 1);
+      }
+    } else {
+      for (let i = 0; i < dias; i++) {
+        const d = new Date(inicio);
+        d.setDate(d.getDate() + i);
+        const k = chaveDia(d);
+        serie.push({ label: `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}`, total: cont.get(k) || 0 });
+      }
+    }
+
     return {
       total: ls.length,
       qtdSemResultado: sem.length,
       pct: ls.length > 0 ? (sem.length / ls.length) * 100 : 0,
-      topLocais,
+      serie,
     };
   }, [logs, periodoSemResultado]);
 
@@ -665,19 +694,19 @@ export default function DashboardAnalytics() {
             </div>
             <FiltroPeriodo value={periodoSemResultado} onChange={setPeriodoSemResultado} />
           </div>
-          {buscasSemResultado.topLocais.length === 0 ? (
+          {buscasSemResultado.qtdSemResultado === 0 ? (
             <div className="h-[240px] flex items-center justify-center text-sm text-[#8E8E93]">
               Nenhuma busca sem resultado neste período.
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={buscasSemResultado.topLocais} layout="vertical">
+              <LineChart data={buscasSemResultado.serie}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                <XAxis type="number" allowDecimals={false} domain={[0, "auto"]} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={120} />
+                <XAxis dataKey="label" tick={{ fontSize: 12 }} interval="preserveStartEnd" minTickGap={20} />
+                <YAxis allowDecimals={false} domain={[0, "auto"]} />
                 <Tooltip />
-                <Bar dataKey="total" name="Buscas sem resultado" fill="#FF3B30" radius={[0, 6, 6, 0]} />
-              </BarChart>
+                <Line type="monotone" dataKey="total" name="Buscas sem resultado" stroke="#FF3B30" strokeWidth={2} dot={false} />
+              </LineChart>
             </ResponsiveContainer>
           )}
         </section>
