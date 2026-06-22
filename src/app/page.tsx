@@ -1,65 +1,130 @@
-import Image from "next/image";
+// ═══════════════════════════════════════════════════════════════════════════════
+// HOME (/) — Server Component, renderizada no servidor (HTML pronto e indexável).
+//
+// Seções: herói com busca, grade de especialidades, "como funciona" e chamada
+// para dentistas. A busca é um <form> GET para /busca: funciona sem JavaScript e
+// é rastreável. Inclui JSON-LD de Organization e WebSite (com SearchAction).
+// ═══════════════════════════════════════════════════════════════════════════════
+
+import Link from "next/link";
+import Container from "@/components/Container";
+import JsonLd from "@/components/JsonLd";
+import { ESPECIALIDADES, nomeAmigavel, slugDaEspecialidade } from "@/lib/especialidades";
+import { jsonLdOrganizacao, jsonLdWebSite } from "@/lib/jsonld";
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <>
+      <JsonLd data={[jsonLdOrganizacao(), jsonLdWebSite()]} />
+
+      {/* ── Herói ── */}
+      <section className="bg-gradient-to-b from-brand-soft to-white">
+        <Container className="py-20 md:py-28">
+          <div className="mx-auto max-w-3xl text-center">
+            <h1 className="text-4xl font-bold leading-tight text-brand-navy md:text-5xl">
+              Encontre o dentista certo perto de você
+            </h1>
+            <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-ink-soft">
+              Compare por especialidade, convênio e avaliações reais. Perfis verificados
+              por CRO e contato direto com o profissional.
+            </p>
+
+            {/* Busca — form GET, sem JavaScript necessário */}
+            <form
+              action="/busca"
+              method="get"
+              className="mx-auto mt-8 flex max-w-xl items-center gap-2 rounded-2xl border border-black/10 bg-white p-2 shadow-[0_8px_20px_rgba(16,24,64,0.08)]"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+              <input
+                type="text"
+                name="q"
+                placeholder="Especialidade, procedimento ou nome do dentista"
+                aria-label="O que você procura?"
+                className="min-h-[44px] flex-1 rounded-xl px-4 text-[15px] text-ink outline-none placeholder:text-ink-muted"
+              />
+              <button
+                type="submit"
+                className="min-h-[44px] rounded-xl bg-brand-blue px-6 font-semibold text-white transition-colors hover:bg-brand-blue-600"
+              >
+                Buscar
+              </button>
+            </form>
+
+            <p className="mt-4 text-sm text-ink-muted">
+              Com dor agora?{" "}
+              <Link href="/urgencia" className="font-semibold text-brand-magenta hover:underline">
+                Ver dentistas de urgência
+              </Link>
+            </p>
+          </div>
+        </Container>
+      </section>
+
+      {/* ── Especialidades ── */}
+      <section id="especialidades" className="scroll-mt-20">
+        <Container className="py-16 md:py-20">
+          <div className="mb-10 text-center">
+            <h2 className="text-3xl font-bold text-brand-navy">Especialidades</h2>
+            <p className="mt-3 text-ink-soft">Escolha o tratamento e veja os melhores profissionais.</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {ESPECIALIDADES.map((esp) => (
+              <Link
+                key={esp}
+                href={`/especialidade/${slugDaEspecialidade(esp)}`}
+                className="group flex flex-col rounded-2xl border border-black/8 bg-white p-5 transition-all hover:border-brand-blue/40 hover:shadow-[0_8px_20px_rgba(0,122,255,0.12)]"
+              >
+                <span className="text-[15px] font-semibold text-ink transition-colors group-hover:text-brand-blue">
+                  {nomeAmigavel(esp)}
+                </span>
+                <span className="mt-1 text-sm text-ink-muted">Ver dentistas →</span>
+              </Link>
+            ))}
+          </div>
+        </Container>
+      </section>
+
+      {/* ── Como funciona ── */}
+      <section id="como-funciona" className="scroll-mt-20 bg-brand-soft/50">
+        <Container className="py-16 md:py-20">
+          <h2 className="mb-10 text-center text-3xl font-bold text-brand-navy">Como funciona</h2>
+          <div className="grid gap-8 md:grid-cols-3">
+            {[
+              { n: "1", t: "Busque", d: "Pesquise por especialidade, procedimento ou pela sua localização." },
+              { n: "2", t: "Compare", d: "Veja avaliações reais, convênios aceitos e endereços de atendimento." },
+              { n: "3", t: "Fale direto", d: "Entre em contato com o dentista escolhido, sem intermediários." },
+            ].map((p) => (
+              <div key={p.n} className="rounded-2xl bg-white p-6 shadow-[0_2px_6px_rgba(16,24,64,0.05)]">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-blue text-lg font-bold text-white">
+                  {p.n}
+                </div>
+                <h3 className="mt-4 text-lg font-semibold text-brand-navy">{p.t}</h3>
+                <p className="mt-2 text-ink-soft">{p.d}</p>
+              </div>
+            ))}
+          </div>
+        </Container>
+      </section>
+
+      {/* ── CTA para dentistas ── */}
+      <section id="para-dentistas">
+        <Container className="py-16 md:py-20">
+          <div className="overflow-hidden rounded-3xl bg-brand-navy px-8 py-12 text-center text-white md:py-16">
+            <h2 className="text-3xl font-bold text-white">É dentista? Seja encontrado.</h2>
+            <p className="mx-auto mt-4 max-w-xl text-white/80">
+              Crie seu perfil verificado por CRO, mostre suas especialidades e receba
+              pacientes da sua região.
+            </p>
+            <Link
+              href="/cadastro"
+              className="mt-8 inline-flex min-h-[48px] items-center rounded-[14px] bg-brand-magenta px-7 py-3 font-semibold text-white shadow-[0_8px_24px_rgba(230,0,76,0.38)] transition-colors hover:bg-brand-magenta-700"
             >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+              Cadastrar meu consultório
+            </Link>
+          </div>
+        </Container>
+      </section>
+    </>
   );
 }

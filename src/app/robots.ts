@@ -16,7 +16,8 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/pro/"], // dashboard, cadastro, perfil, analytics — privado
+        // Áreas privadas/de fluxo, sem valor de indexação.
+        disallow: ["/pro/", "/entrar", "/cadastro", "/redefinir-senha", "/auth/"],
       },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,

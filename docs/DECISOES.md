@@ -46,10 +46,39 @@ troca ("cutover"), e o site-k11 é guardado num backup.
   documentação inicial e cliente Supabase. ✅
 - **Fase 1** — páginas públicas (home, busca, perfil do dentista, especialidade,
   urgência, sobre, termos, privacidade) com SSR/SSG + dados estruturados
-  (JSON-LD por dentista) + `sitemap.xml` + `robots.txt`. *(o coração do orgânico)*
+  (JSON-LD por dentista) + `sitemap.xml` + `robots.txt`. *(o coração do orgânico)* ✅
+  - Perfil `/dentista/[id]`: SSR (revalidate 1h) + `generateMetadata` + JSON-LD
+    `Dentist`/`PostalAddress`/`AggregateRating` + Breadcrumb.
+  - Especialidade `/especialidade/[slug]`: SSG (generateStaticParams) + FAQ JSON-LD.
+  - Home: JSON-LD `Organization` + `WebSite` (SearchAction). Busca é `<form>` GET.
+  - `/busca` e `/urgencia`: casca SSR (indexável) + parte interativa em componente
+    cliente (geolocalização/consulta), pois dependem do navegador.
+  - Lógica de negócio coberta por TDD (especialidades, avaliações, perfil, JSON-LD,
+    contato): 52 testes.
 - **Fase 2** — autenticação e área logada (login/entrar, cadastro, dashboard,
-  meu perfil, editor de fotos).
+  meu perfil, editor de fotos). ✅
+  - **Cadastro fica FORA de /pro** (`/cadastro`): o dentista começa anônimo; a
+    verificação de e-mail por código (OTP) é o que cria a sessão. /pro é guardado.
+  - **Editor de endereços compartilhado** (`components/pro/EnderecosEditor.tsx`)
+    entre o cadastro e o "Meu perfil" (DRY).
+  - **Auth com cookies (@supabase/ssr), não localStorage:** a sessão vive em
+    cookies para o SERVIDOR (middleware/proxy, Server Components, guards) também
+    enxergar o login — base de uma área logada com SSR. `proxy.ts` renova a sessão.
+  - **Papel derivado no servidor** (`lib/auth.ts`): superuser → dentista → paciente.
+    Guard em `app/pro/layout.tsx`. Proteção real dos dados = RLS no banco.
+  - Pronto: `/entrar` (Google + dentista) + `/auth/callback`, `/redefinir-senha`,
+    `/pro/dashboard`, `/pro/editor-de-fotos`, `/pro/perfil`, `/cadastro`, header
+    reativo. Reviews de segurança e de correção (multiagente) aplicados.
 - **Fase 3** — analytics, painel DBA, verificação de CRO e app mobile (Capacitor).
+  *(em andamento)*
+  - **Área do superuser** gated por `requireSuperuser()` no servidor; superuser cai
+    em `/pro/dashboard-analytics` (hub). A proteção real é `is_superuser()` (RLS).
+  - Pronto: **verificação de CRO** (`/pro/verificar-cro` + `[id]`) com a busca do
+    CFO embutida e marcação via RPC `marcar_verificacao_cro`; **Análise do negócio**
+    (`/pro/dashboard-analytics`, recharts + mapa de calor Leaflet) e **painel DBA**
+    (`/pro/dashboard-analytics/dba`). O shaping de datas roda no cliente (fuso local)
+    e o mapa Leaflet é carregado com `next/dynamic { ssr: false }`. Falta só o app
+    mobile (Capacitor).
 - **Fase 4** — paridade total, manuais de back-end e cutover.
 
 ## 5. O que precisa ser replicado do site-k11

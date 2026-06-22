@@ -41,6 +41,23 @@ banco) + RLS (regras de quem pode ler/escrever cada linha) + Edge Functions.
 Para cada tabela/RPC: **o que é**, **colunas/parâmetros**, **RLS/quem acessa**,
 **exemplos de query** (via `@supabase/supabase-js`) e **cuidados (LGPD)**.
 
+## Pendências de segurança do back-end (review da Fase 2)
+
+> Itens que dependem de **RLS/SQL no Supabase** (compartilhado com o site-k11) e,
+> por isso, NÃO foram alterados pelo front do site-R0 — registrar aqui para tratar
+> no banco antes do cutover.
+
+1. **`logs_login` aceita `user_id` do cliente.** O insert da origem do login roda
+   no navegador (anon key), então `user_id`/origem/dispositivo são forjáveis (risco
+   de poluir o analytics, não de vazar dado). Endurecer a policy de INSERT com
+   `WITH CHECK (user_id = auth.uid() OR user_id IS NULL)` e, idealmente, `DEFAULT
+   auth.uid()` na coluna; derivar origem/dispositivo server-side (trigger/Edge) no futuro.
+2. **`is_superuser()` deve ler só o email TOP-LEVEL do JWT** (`auth.jwt()->>'email'`),
+   NUNCA `user_metadata`/`raw_user_meta_data` (que o próprio usuário edita via
+   `updateUser` → escalonamento de privilégio). No site-k11 isso já foi corrigido
+   (migration `20260622020000_dba_review_fixes.sql`). Ao portar os RPCs de
+   analytics/DBA (Fase 3) para o site-R0, copiar a versão endurecida + teste de regressão.
+
 ## Manuais (a criar)
 - `tabelas.md` — esquema + RLS de cada tabela.
 - `rpcs.md` — assinatura e uso de cada RPC.

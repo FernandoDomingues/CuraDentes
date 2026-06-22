@@ -1,8 +1,27 @@
 # CuraDentes — site-R0 (reconstrução em Next.js)
 
-> **Status:** 🚧 em construção (Fase 0 concluída). O site atual continua sendo o
-> `site-k11` (Vite/SPA), que fica **intacto e no ar** até esta versão atingir
-> paridade total e fazermos o "cutover" (a troca).
+> **Status:** 🚧 em construção (Fases 0 e 1 concluídas). O site atual continua
+> sendo o `site-k11` (Vite/SPA), que fica **intacto e no ar** até esta versão
+> atingir paridade total e fazermos o "cutover" (a troca).
+>
+> **Fase 1 (páginas públicas) — pronto:** home, perfil do dentista
+> (`/dentista/[id]`, SSR + JSON-LD `Dentist`), especialidades
+> (`/especialidade/[slug]`, SSG + FAQ JSON-LD), `/sobre`, `/termos`,
+> `/privacidade`, `/urgencia` e `/busca`, além de `robots.txt` e `sitemap.xml`
+> dinâmico (uma URL por dentista e por especialidade).
+>
+> **Fase 2 (autenticação + área logada) — pronto.** Login `/entrar` (Google +
+> dentista) com sessão em cookies (`@supabase/ssr`), `/auth/callback`,
+> `/redefinir-senha`, painel `/pro/dashboard` (guard no servidor),
+> `/pro/editor-de-fotos` (crop + WebP), `/pro/perfil` (editar perfil + CRUD de
+> endereços) e `/cadastro` (wizard de 6 etapas com verificação de e-mail por
+> código). Review de segurança multiagente aplicado.
+>
+> **Fase 3 (área do superuser) — quase completa.** Pronto: gate de superuser,
+> **verificação de CRO** (`/pro/verificar-cro` + detalhe), **Análise do negócio**
+> (`/pro/dashboard-analytics` — gráficos recharts + mapa de calor Leaflet) e o
+> **painel DBA** (`/pro/dashboard-analytics/dba`). Falta só o app mobile
+> (Capacitor). **104 testes passando.**
 
 ## Por que este projeto existe
 O `site-k11` é uma **SPA** (renderizada no navegador). Isso significa que, para

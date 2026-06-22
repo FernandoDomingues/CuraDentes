@@ -1,16 +1,17 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import { SITE_URL, SITE_NOME, SITE_DESCRICAO } from "@/lib/site";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import AuthListener from "@/components/AuthListener";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Inter é a fonte do corpo/UI (mesma do site-k11). Exposta como variável CSS
+// (--font-inter), consumida em globals.css pelos tokens --font-sans/--font-brand.
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  display: "swap",
 });
 
 // Metadados padrão do site (Next Metadata API). Cada página pode sobrescrever
@@ -23,6 +24,7 @@ export const metadata: Metadata = {
   },
   description: SITE_DESCRICAO,
   applicationName: SITE_NOME,
+  icons: { icon: "/icon.png", apple: "/icon.png" },
   openGraph: {
     type: "website",
     locale: "pt_BR",
@@ -30,11 +32,13 @@ export const metadata: Metadata = {
     siteName: SITE_NOME,
     title: `${SITE_NOME} — Encontre Dentistas Perto de Você`,
     description: SITE_DESCRICAO,
+    images: ["/og-image.png"],
   },
   twitter: {
     card: "summary_large_image",
     title: `${SITE_NOME} — Encontre Dentistas Perto de Você`,
     description: SITE_DESCRICAO,
+    images: ["/og-image.png"],
   },
 };
 
@@ -44,11 +48,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="pt-BR"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="pt-BR" className={`${inter.variable} h-full`}>
+      <body className="min-h-full flex flex-col bg-white text-ink">
+        <AuthListener />
+        <Header />
+        <main className="flex-1">{children}</main>
+        <Footer />
+      </body>
     </html>
   );
 }

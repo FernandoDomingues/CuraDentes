@@ -1,26 +1,59 @@
+/* ═══════════════════════════════════════════════════════════════════════════════
+   ESTILOS GLOBAIS — CuraDentes (site-R0)
+   Tailwind CSS v4. As cores e fontes da marca viram "tokens" do tema, então dá
+   para usar classes como `bg-brand-navy`, `text-brand-blue`, `font-brand`.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ── Fonte da marca (CuraDentes — derivada da Montserrat, SIL OFL 1.1) ──
+   Usada em títulos e no wordmark. O corpo/UI usa Inter (carregada no layout). */
+@font-face { font-family: "CuraDentes"; src: url("/fonts/curadentes/CuraDentes-Light.woff2") format("woff2"); font-weight: 300; font-style: normal; font-display: swap; }
+@font-face { font-family: "CuraDentes"; src: url("/fonts/curadentes/CuraDentes-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "CuraDentes"; src: url("/fonts/curadentes/CuraDentes-Medium.woff2") format("woff2"); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: "CuraDentes"; src: url("/fonts/curadentes/CuraDentes-SemiBold.woff2") format("woff2"); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: "CuraDentes"; src: url("/fonts/curadentes/CuraDentes-Bold.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }
+
+/* ── Tokens do tema (Tailwind v4) ── */
+@theme {
+  /* Paleta da marca */
+  --color-brand-navy: #0a2a66;
+  --color-brand-navy-700: #0d3480;
+  --color-brand-blue: #007aff;
+  --color-brand-blue-600: #1a8aff;
+  --color-brand-magenta: #e6004c;
+  --color-brand-magenta-700: #c4003e;
+  --color-brand-soft: #e3f2fd; /* fundo azul bem claro */
+
+  /* Texto */
+  --color-ink: #1c1c1e;
+  --color-ink-soft: #3a3a3c;
+  --color-ink-muted: #8e8e93;
+
+  /* Estados */
+  --color-success: #34c759;
+  --color-warning: #ff9500;
+  --color-danger: #ff3b30;
+
+  /* Fontes: corpo = Inter (via next/font), títulos = CuraDentes */
+  --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
+  --font-brand: "CuraDentes", var(--font-inter), system-ui, sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ── Base ── */
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: #ffffff;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Títulos usam a fonte da marca. */
+h1, h2, h3 {
+  font-family: var(--font-brand);
+  letter-spacing: -0.01em;
 }

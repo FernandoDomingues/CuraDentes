@@ -7,6 +7,18 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: import.meta.dirname,
   },
+  // Permite que o <Image> do Next otimize as fotos hospedadas no Storage do
+  // nosso Supabase (fotos de dentistas e imagens de especialidades). É o nosso
+  // back-end, não um domínio de terceiros (ver memória [[imagens-locais-sempre]]).
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "dsnzgxjuqlalysyfiion.supabase.co",
+        pathname: "/storage/v1/object/public/**",
+      },
+    ],
+  },
 };
 
 export default nextConfig;
