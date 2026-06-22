@@ -19,7 +19,7 @@ import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, Legend,
 } from "recharts";
-import { Loader2, Search, MapPin, Building2, Activity, TrendingUp, AlertTriangle, ShieldCheck } from "lucide-react";
+import { Loader2, Search, MapPin, Building2, Activity, TrendingUp, AlertTriangle, ShieldCheck, Database } from "lucide-react";
 import HeatMapLayer from "@/components/analytics/HeatMapLayer";
 
 type LogRow = {
@@ -517,13 +517,22 @@ export default function DashboardAnalytics() {
       <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <h1 className="text-2xl font-bold text-[#0A2A66]">Analytics do Site</h1>
-          <button
-            onClick={() => navigate("/pro/verificar-cro")}
-            className="inline-flex items-center gap-2 rounded-xl bg-[#0A6E5C] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#08594b]"
-          >
-            <ShieldCheck className="h-4 w-4" />
-            Conferência de CRO
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => navigate("/pro/dashboard-analytics/dba")}
+              className="inline-flex items-center gap-2 rounded-xl bg-[#0A2A66] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#08306f]"
+            >
+              <Database className="h-4 w-4" />
+              Estatísticas de uso do Banco de dados
+            </button>
+            <button
+              onClick={() => navigate("/pro/verificar-cro")}
+              className="inline-flex items-center gap-2 rounded-xl bg-[#0A6E5C] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#08594b]"
+            >
+              <ShieldCheck className="h-4 w-4" />
+              Conferência de CRO
+            </button>
+          </div>
         </div>
 
         {/* ─── KPIs ──────────────────────────────────────────────────────── */}

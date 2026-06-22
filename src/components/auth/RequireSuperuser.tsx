@@ -2,11 +2,14 @@
 // GUARDA DE ROTA: RequireSuperuser
 //
 // Envolve rotas que só o superuser (SuperDom) pode acessar:
-//   /pro/dashboard-analytics, /pro/verificar-cro, /pro/verificar-cro/:id
+//   /pro/dashboard-analytics, /pro/dashboard-analytics/dba, /pro/verificar-cro[/:id]
 //
 // Enquanto a auth inicializa, mostra loader. Se não for superuser, redireciona
-// para a home. A autorização real dos DADOS continua no RLS (is_superuser());
-// esta guarda é a camada de UX que impede a tela de aparecer.
+// para a home. IMPORTANTE: esta guarda é só UX. A proteção real dos dados depende
+// da fonte: as RPCs sensíveis (dba_estatisticas / dba_series) e as tabelas de
+// evento (logs_*, perfil_*) são restritas por is_superuser(); já curadentespro e
+// clientes têm policies próprias (pública / dono), então dados dessas tabelas não
+// devem ser tratados como restritos ao superuser.
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import { Navigate } from "react-router-dom";
