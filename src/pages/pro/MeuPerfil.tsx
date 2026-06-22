@@ -25,8 +25,8 @@ import { toast } from "sonner";
 import { geocodeEnderecoComFallback } from "@/lib/geocoding";
 import { formatarInstagram, extrairUserInstagram, INSTAGRAM_BASE } from "@/utils/instagram";
 import {
-  User, Building2, Save, ArrowLeft, Loader2,
-  Camera, Plus, Trash2, ShieldCheck, Mail, KeyRound, AlertTriangle, CalendarClock
+  User, Building2, Save, Loader2,
+  Camera, Plus, Trash2, ShieldCheck, Mail, KeyRound, AlertTriangle, CalendarClock, LogOut
 } from "lucide-react";
 import logoProUrl from "@/assets/logos/logo-pro.png";
 import { CepInputComBusca } from "@/components/ui/CepInputComBusca";
@@ -136,6 +136,10 @@ export default function MeuPerfil() {
   const [enderecos, setEnderecos] = useState<EnderecoForm[]>([]);
   const [enderecosRemovidos, setEnderecosRemovidos] = useState<string[]>([]);
 
+  // Aviso de saída sem salvar: snapshot do formulário carregado + modal de confirmação.
+  const [modalSairSemSalvar, setModalSairSemSalvar] = useState(false);
+  const snapshotRef = useRef<string | null>(null);
+
   useEffect(() => {
     async function fetchPerfil() {
       try {
@@ -209,6 +213,21 @@ export default function MeuPerfil() {
           })));
         } else {
           setEnderecos([novoEndereco()]);
+        }
+
+        // Se o dentista veio do dashboard clicando em "Editar" de um endereço
+        // específico (#endereco-<id>), rola até ele e dá um destaque rápido.
+        const hashEndereco = window.location.hash;
+        if (hashEndereco.startsWith("#endereco-")) {
+          setTimeout(() => {
+            const el = document.getElementById(hashEndereco.slice(1));
+            if (el) {
+              el.scrollIntoView({ behavior: "smooth", block: "start" });
+              el.style.transition = "box-shadow 0.4s ease";
+              el.style.boxShadow = "0 0 0 3px rgba(0,122,255,0.45)";
+              setTimeout(() => { el.style.boxShadow = ""; }, 1800);
+            }
+          }, 250);
         }
 
       } catch (error) {
@@ -318,7 +337,8 @@ export default function MeuPerfil() {
       }
 
       toast.success("Perfil atualizado com sucesso!", { id: toastId });
-      setTimeout(() => navigate("/pro/perfil"), 1500);
+      snapshotRef.current = formSnapshot(); // evita disparar o aviso de saida ao navegar
+      setTimeout(() => navigate("/pro/dashboard"), 1500);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Erro ao salvar o perfil.";
       toast.error(message, { id: toastId });
@@ -420,6 +440,26 @@ export default function MeuPerfil() {
     setEnderecos(prev => prev.filter((_, i) => i !== idx));
   };
 
+  // ─── Aviso de alterações não salvas ──────────────────────────────────────
+  // Serializa os campos editáveis para comparar o estado atual com o carregado.
+  function formSnapshot() {
+    return JSON.stringify({ nome, tratamento, nomeCompleto, telefone, anoFormacao, bio, instagram, fotoUrl, enderecos });
+  }
+  function temAlteracoesNaoSalvas() {
+    return snapshotRef.current !== null && snapshotRef.current !== formSnapshot();
+  }
+  function aoClicarSairSemSalvar() {
+    if (temAlteracoesNaoSalvas()) setModalSairSemSalvar(true);
+    else navigate("/pro/dashboard");
+  }
+  // Captura o estado inicial assim que o carregamento termina (uma única vez).
+  useEffect(() => {
+    if (!loading && snapshotRef.current === null) {
+      snapshotRef.current = formSnapshot();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F2F2F7]">
@@ -439,20 +479,30 @@ export default function MeuPerfil() {
   return (
     <div className="min-h-screen pb-20" style={{ background: "#F2F2F7" }}>
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-lg border-b border-gray-200">
-        <div className="container mx-auto px-4 md:px-8 h-[60px] flex items-center justify-between">
-          <button onClick={() => navigate("/")} className="flex items-center gap-1.5 text-[13px] font-semibold text-gray-500 hover:text-gray-900 transition-colors">
-            <ArrowLeft size={16} /> Voltar
-          </button>
+        <div className="container mx-auto px-4 md:px-8 h-[60px] flex items-center">
           <img src={logoProUrl} alt="CuraDentes Pro" className="h-6 w-auto opacity-50 hidden sm:block" />
-          <button 
-            onClick={handleSalvar} 
-            disabled={saving}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-full font-bold text-[13px] text-white transition-all disabled:opacity-50"
-            style={{ background: "#007AFF" }}
-          >
-            {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-            Salvar Tudo
-          </button>
+          <div className="flex items-center gap-2 sm:gap-3 ml-auto">
+            <button
+              onClick={handleSalvar}
+              disabled={saving}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-full font-bold text-[13px] text-white transition-all disabled:opacity-50"
+              style={{ background: "#007AFF" }}
+            >
+              {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+              Salvar Tudo
+            </button>
+            <button
+              onClick={aoClicarSairSemSalvar}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-full font-bold text-[13px] transition-all"
+              style={{ color: "#FF3B30", background: "rgba(255,59,48,0.08)" }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,59,48,0.16)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,59,48,0.08)"; }}
+              title="Sair sem salvar"
+            >
+              <LogOut size={14} />
+              Sair sem salvar
+            </button>
+          </div>
         </div>
       </header>
 
@@ -606,7 +656,7 @@ export default function MeuPerfil() {
           </div>
 
           {enderecos.map((end, idx) => (
-            <div key={end.id} className="bg-white rounded-[24px] shadow-sm border border-gray-200 overflow-hidden">
+            <div key={end.id} id={`endereco-${end.id}`} className="bg-white rounded-[24px] shadow-sm border border-gray-200 overflow-hidden">
               <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
                 <div className="flex items-center gap-2 text-[#0A2A66]">
                   <Building2 size={18} />
@@ -879,6 +929,43 @@ export default function MeuPerfil() {
           )}
         </div>
       </main>
+
+      {/* Modal: confirmar saída sem salvar alterações */}
+      {modalSairSemSalvar && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+          style={{ background: "rgba(10,24,64,0.45)", backdropFilter: "blur(2px)" }}
+          onClick={(e) => { if (e.target === e.currentTarget) setModalSairSemSalvar(false); }}
+        >
+          <div className="bg-white rounded-[20px] shadow-xl w-full max-w-[400px] p-6 flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "rgba(255,159,10,0.12)" }}>
+                <AlertTriangle size={20} style={{ color: "#FF9F0A" }} />
+              </div>
+              <h3 className="text-[17px] font-bold" style={{ color: "#0A2A66" }}>Sair sem salvar?</h3>
+            </div>
+            <p className="text-[14px]" style={{ color: "#3A3A3C", lineHeight: 1.55 }}>
+              Deseja sair sem salvar? Clicando em <strong>Sim</strong>, você está ciente de que todas as alterações feitas nesta seção sem salvar serão perdidas.
+            </p>
+            <div className="flex gap-3 mt-1">
+              <button
+                onClick={() => setModalSairSemSalvar(false)}
+                className="flex-1 py-2.5 rounded-[12px] font-semibold text-[14px] border transition-colors"
+                style={{ borderColor: "rgba(60,60,67,0.18)", color: "#3A3A3C", background: "#fff" }}
+              >
+                Não, continuar editando
+              </button>
+              <button
+                onClick={() => { setModalSairSemSalvar(false); navigate("/pro/dashboard"); }}
+                className="flex-1 py-2.5 rounded-[12px] font-semibold text-[14px] text-white transition-colors"
+                style={{ background: "#E6004C" }}
+              >
+                Sim, sair sem salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

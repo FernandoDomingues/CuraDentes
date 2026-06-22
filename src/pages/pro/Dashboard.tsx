@@ -137,6 +137,7 @@ function EnderecoCard({
 }) {
   // Controla se o accordion de horários está expandido
   const [agendaAberta, setAgendaAberta] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <div
@@ -208,6 +209,7 @@ function EnderecoCard({
             border: "0.5px solid rgba(60,60,67,0.12)",
           }}
           title="Editar informações deste endereço"
+          onClick={() => navigate(`/pro/perfil#endereco-${endereco.id}`)}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = "rgba(0,122,255,0.08)";
             e.currentTarget.style.color = "#007AFF";
