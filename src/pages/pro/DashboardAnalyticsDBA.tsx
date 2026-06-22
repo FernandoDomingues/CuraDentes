@@ -18,7 +18,7 @@ import Header from "@/components/layout/Header";
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
 } from "recharts";
-import { Loader2, Database, HardDrive, Image as ImageIcon, Users, Activity, ArrowLeft } from "lucide-react";
+import { Loader2, Database, HardDrive, Image as ImageIcon, Users, Activity, ArrowLeft, ChevronDown, ChevronUp } from "lucide-react";
 
 interface DbaStats {
   gerado_em: string;
@@ -41,6 +41,7 @@ const chaveDia = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pa
 const chaveMes = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
 const fmtBytes = (b: number) => (b >= 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${(b / 1024).toFixed(b < 10240 ? 1 : 0)} KB`);
 const num = (x: unknown) => Number(x) || 0;
+const nomeBucket = (id: string) => (id === "fotos-dentistas" ? "Fotos de perfil" : id === "especialidades" ? "Imagens de especialidades" : id);
 
 function FiltroPeriodo({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
@@ -170,7 +171,8 @@ export default function DashboardAnalyticsDBA() {
         {/* Barras de uso vs. limite */}
         <div className="grid md:grid-cols-2 gap-4">
           <BarraUso label="Banco de dados" usado={stats.banco.bytes} limite={stats.banco.limite_bytes} icon={Database} />
-          <BarraUso label="Storage (arquivos)" usado={stats.storage.total_bytes} limite={stats.storage.limite_bytes} icon={HardDrive} />
+          <BarraUso label="Storage (arquivos)" usado={stats.storage.total_bytes} limite={stats.storage.limite_bytes} icon={HardDrive}
+            detalhes={stats.storage.buckets.map((b) => ({ nome: nomeBucket(b.bucket), bytes: b.bytes, objetos: b.objetos }))} />
         </div>
 
         {/* KPIs */}
@@ -244,18 +246,56 @@ export default function DashboardAnalyticsDBA() {
   );
 }
 
-function BarraUso({ label, usado, limite, icon: Icon }: { label: string; usado: number; limite: number; icon: React.ComponentType<{ className?: string }> }) {
+function BarraUso({ label, usado, limite, icon: Icon, detalhes }: {
+  label: string; usado: number; limite: number;
+  icon: React.ComponentType<{ className?: string }>;
+  detalhes?: { nome: string; bytes: number; objetos: number }[];
+}) {
+  const [aberto, setAberto] = useState(false);
   const pct = limite > 0 ? Math.min(100, (usado / limite) * 100) : 0;
   const cor = pct < 60 ? "#34C759" : pct < 85 ? "#FF9500" : "#FF3B30";
+  const expansivel = !!detalhes && detalhes.length > 0;
+  const itens = expansivel ? [...detalhes].sort((a, b) => b.bytes - a.bytes) : [];
   return (
     <div className="bg-white rounded-2xl p-5 shadow-sm">
       <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
         <span className="inline-flex items-center gap-2 text-sm font-semibold text-[#0A2A66]"><Icon className="h-4 w-4 text-[#007AFF]" />{label}</span>
-        <span className="text-xs text-[#6B7280]">{fmtBytes(usado)} / {fmtBytes(limite)} · <strong style={{ color: cor }}>{pct.toFixed(pct < 1 ? 2 : 1)}%</strong></span>
+        <span className="inline-flex items-center gap-1.5 text-xs text-[#6B7280]">
+          {fmtBytes(usado)} / {fmtBytes(limite)} · <strong style={{ color: cor }}>{pct.toFixed(pct < 1 ? 2 : 1)}%</strong>
+          {expansivel && (
+            <button
+              onClick={() => setAberto((v) => !v)}
+              className="ml-0.5 text-[#8E8E93] hover:text-[#0A2A66] transition-colors"
+              aria-label={aberto ? "Recolher detalhamento" : "Detalhar por tipo de arquivo"}
+              aria-expanded={aberto}
+            >
+              {aberto ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
+          )}
+        </span>
       </div>
       <div className="h-3 rounded-full bg-gray-100 overflow-hidden">
         <div className="h-full rounded-full transition-all" style={{ width: `${Math.max(pct, 1)}%`, background: cor }} />
       </div>
+      {expansivel && aberto && (
+        <div className="mt-4 flex flex-col gap-3 border-t border-gray-100 pt-3">
+          <p className="text-[11px] text-[#8E8E93]">Composição do uso por tipo de arquivo:</p>
+          {itens.map((d) => {
+            const share = usado > 0 ? (d.bytes / usado) * 100 : 0;
+            return (
+              <div key={d.nome}>
+                <div className="flex items-center justify-between text-xs mb-1 gap-2">
+                  <span className="text-[#3A3A3C]">{d.nome}</span>
+                  <span className="text-[#6B7280]">{fmtBytes(d.bytes)} · {share.toFixed(0)}% · {d.objetos} arq.</span>
+                </div>
+                <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+                  <div className="h-full rounded-full" style={{ width: `${Math.max(share, 1)}%`, background: "#007AFF" }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
