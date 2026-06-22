@@ -13,6 +13,7 @@ import { create } from "zustand";
 import type { Session, Subscription, User as SupabaseUser } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { isSuperuserEmail } from "@/utils/superuser";
+import { detectarOrigemLogin } from "@/utils/origemLogin";
 
 // ============================================================================
 // DEFINIÇÃO DO TIPO DE USUÁRIO NO FRONTEND
@@ -75,6 +76,34 @@ function clearUserCache() {
     console.log("[useAuth] Cache e tokens do Supabase removidos com sucesso.");
   } catch (err) {
     console.error("[useAuth] Erro ao limpar tokens do localStorage:", err);
+  }
+}
+
+/**
+ * Registra a ORIGEM do login (navegador/dispositivo) na tabela logs_login.
+ * Uma vez por sessão de aba (guarda em sessionStorage), limpa no logout — assim
+ * SIGNED_IN re-disparado (foco/refresh) nao conta login duplicado.
+ */
+function registrarLogin(userId: string | null) {
+  try {
+    if (sessionStorage.getItem("curadentes_login_logged")) return;
+    sessionStorage.setItem("curadentes_login_logged", "1");
+    const o = detectarOrigemLogin();
+    supabase
+      .from("logs_login")
+      .insert({
+        origem: o.origem,
+        plataforma: o.plataforma,
+        navegador: o.navegador,
+        is_app: o.is_app,
+        user_agent: o.user_agent,
+        user_id: userId,
+      })
+      .then(({ error }) => {
+        if (error) console.warn("[useAuth] Falha ao registrar origem do login:", error.message);
+      });
+  } catch (err) {
+    console.warn("[useAuth] registrarLogin falhou:", err);
   }
 }
 
@@ -289,7 +318,8 @@ export const useAuth = create<AuthState>((set, get) => ({
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log("[useAuth] Evento de Autenticação Supabase:", event, session ? `Sessão Ativa (User ID: ${session.user.id})` : "Sem Sessão");
       if (event === "SIGNED_IN" && session) {
-        // Login real (vindo do Google): sincroniza/cria no banco
+        // Registra a origem do login (uma vez por sessao) e sincroniza/cria no banco
+        registrarLogin(session.user.id);
         setTimeout(() => {
           signInAndSync(session);
         }, 0);
@@ -313,6 +343,7 @@ export const useAuth = create<AuthState>((set, get) => ({
 
       } else if (event === "SIGNED_OUT") {
         clearUserCache();
+        sessionStorage.removeItem("curadentes_login_logged");
         set({ user: null, isInitializing: false });
 
       } else if (event === "TOKEN_REFRESHED" && session) {
