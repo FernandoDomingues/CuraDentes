@@ -48,6 +48,7 @@ const Sobre = lazy(() => import("@/pages/Sobre"));
 const Especialidade = lazy(() => import("@/pages/Especialidade"));
 const PreferenciasEmail = lazy(() => import("@/pages/PreferenciasEmail"));
 const Urgencia = lazy(() => import("@/pages/Urgencia"));
+const Entrar = lazy(() => import("@/pages/Entrar"));
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -79,6 +80,7 @@ export default function App() {
           <Route path="/" element={<Index />} />
           <Route path="/pesquisa" element={<Pesquisa />} />
           <Route path="/urgencia" element={<Urgencia />} />
+          <Route path="/entrar" element={<Entrar />} />
           <Route path="/dentista/:id" element={<DentistProfile />} />
           <Route path="/pro/novo-cadastro" element={<NovoCadastro />} />
           <Route path="/pro/dashboard" element={<Dashboard />} />
