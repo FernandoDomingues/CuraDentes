@@ -21,6 +21,12 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./vitest.setup.ts"],
+    // Variáveis "de mentira" só para os testes — assim módulos que leem o env do
+    // Supabase (ex.: src/lib/supabase.ts) não quebram ao serem importados num teste.
+    env: {
+      NEXT_PUBLIC_SUPABASE_URL: "http://localhost:54321",
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "chave-de-teste",
+    },
   },
   resolve: {
     alias: { "@": path.resolve(process.cwd(), "src") },
