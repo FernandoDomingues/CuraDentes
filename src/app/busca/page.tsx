@@ -28,20 +28,13 @@ export default async function BuscaPage({ searchParams }: Props) {
   const termo = q?.trim() ?? "";
 
   return (
-    <Container className="py-10 md:py-14">
-      <div className="mx-auto max-w-3xl">
-        <h1 className="text-3xl font-bold text-brand-navy">
-          {termo ? `Resultados para “${termo}”` : "Buscar dentistas"}
-        </h1>
-        <p className="mt-2 text-ink-soft">
-          Encontre profissionais por especialidade, cidade ou nome. Perfis verificados por CRO.
-        </p>
-        <div className="mt-8">
-          {/* key = termo: ao navegar para outro ?q, o componente remonta e o campo
-              de busca + resultados ficam coerentes com a URL (sem dessincronizar). */}
-          <BuscaCliente key={termo} queryInicial={termo} />
-        </div>
-      </div>
+    // Largura ampla (≈k11 max-w-[1200px]) para caber a sidebar de filtros + a grade
+    // de cards em 2 colunas. O <h1> visível e o resto da casca ficam no
+    // BuscaCliente (info bar), exatamente como no k11 (Pesquisa.tsx).
+    <Container className="py-8 md:py-10">
+      {/* key = termo: ao navegar para outro ?q, o componente remonta e o campo
+          de busca + resultados ficam coerentes com a URL (sem dessincronizar). */}
+      <BuscaCliente key={termo} queryInicial={termo} />
     </Container>
   );
 }

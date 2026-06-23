@@ -72,4 +72,11 @@ export interface DentistaPerfil {
   enderecos: EnderecoClinica[];
   /** Resumo de avaliações (média geral, total, por atividade). */
   avaliacoes: ResumoAvaliacoes;
+  /**
+   * Posição geral do dentista no ranking da cidade (pela média geral).
+   * Quando <= 3, o hero exibe um BadgePodio (Top 1/2/3). Igual ao k11.
+   * PENDÊNCIA DE BACKEND: ainda não há RPC/view pública que devolva esta
+   * posição por dentista — fica `undefined` (badge oculto) até existir o dado.
+   */
+  posicao_cidade?: number;
 }

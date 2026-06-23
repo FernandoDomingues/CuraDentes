@@ -11,12 +11,14 @@ import Image from "next/image";
 import Link from "next/link";
 import Container from "@/components/Container";
 import Estrelas from "@/components/Estrelas";
+import { Eye, MessageCircle, Phone, Check, AlertCircle, Trophy, Zap, CalendarClock, Building2, MapPin } from "lucide-react";
 import { redirect } from "next/navigation";
 import { getUsuario } from "@/lib/auth";
 import { criarClienteServidor } from "@/lib/supabase/server";
 import { montarEndereco, nomeExibicao, type DentistaRow, type EnderecoRow } from "@/lib/dentistas";
 import BioEditor from "./BioEditor";
 import AcoesConta from "./AcoesConta";
+import EnderecoCard from "./EnderecoCard";
 
 const AVATAR_PADRAO =
   "https://dsnzgxjuqlalysyfiion.supabase.co/storage/v1/object/public/fotos-dentistas/default-avatar.webp";
@@ -86,53 +88,81 @@ export default async function DashboardPage() {
     <Container className="py-10 md:py-12">
       {/* Cadastro incompleto */}
       {!completo && (
-        <div className="mb-6 rounded-2xl border border-warning/30 bg-warning/10 p-4">
-          <p className="font-semibold text-brand-navy">Seu cadastro está incompleto</p>
-          <p className="mt-1 text-sm text-ink-soft">
-            Conclua o cadastro para que seu perfil apareça nas buscas.
-          </p>
-          <Link href="/cadastro" className="mt-3 inline-block text-sm font-semibold text-brand-blue hover:underline">
-            Completar cadastro →
-          </Link>
+        <div className="mb-6 flex items-start gap-3 rounded-2xl border border-warning/30 bg-warning/10 p-4">
+          <AlertCircle size={18} className="mt-0.5 flex-shrink-0" style={{ color: "#FF9500" }} />
+          <div>
+            <p className="font-semibold text-brand-navy">Seu cadastro está incompleto</p>
+            <p className="mt-1 text-sm text-ink-soft">
+              Conclua o cadastro para que seu perfil apareça nas buscas.
+            </p>
+            <Link href="/cadastro" className="mt-3 inline-block text-sm font-semibold text-brand-blue hover:underline">
+              Completar cadastro →
+            </Link>
+          </div>
         </div>
       )}
 
-      {/* Cabeçalho */}
-      <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+      {/* Cabeçalho — gradiente navy com foto circular e texto branco (estilo k11) */}
+      <div
+        className="flex flex-col items-center gap-5 rounded-3xl p-6 sm:flex-row sm:items-center md:p-9"
+        style={{
+          background: "linear-gradient(135deg, #0A2A66 0%, #1a4b99 100%)",
+          boxShadow: "0 12px 40px rgba(10,42,102,0.25)",
+        }}
+      >
         <Image
           src={foto}
           alt={`Foto de ${nome}`}
           width={96}
           height={96}
-          className="h-24 w-24 flex-shrink-0 rounded-2xl border border-black/10 object-cover"
+          className="h-24 w-24 flex-shrink-0 rounded-full object-cover"
+          style={{
+            border: "3px solid rgba(255,255,255,0.30)",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.30)",
+          }}
         />
-        <div className="flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold text-brand-navy">{nome || "Bem-vindo"}</h1>
+        <div className="flex-1 text-center sm:text-left">
+          <p className="mb-1 text-sm font-medium text-white/65">Bem-vindo(a) de volta!</p>
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+            <h1 className="text-2xl font-bold text-white">{nome || "Bem-vindo"}</h1>
             {pro.cro_verificado && (
-              <span className="rounded-full bg-brand-blue/10 px-3 py-1 text-xs font-semibold text-brand-blue">CRO verificado</span>
+              <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold text-white">CRO verificado</span>
             )}
-            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${completo ? "bg-success/10 text-success" : "bg-warning/15 text-warning"}`}>
+            <span
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold"
+              style={
+                completo
+                  ? { background: "rgba(52,199,89,0.20)", color: "#34C759", border: "0.5px solid rgba(52,199,89,0.30)" }
+                  : { background: "rgba(255,149,0,0.20)", color: "#FF9500", border: "0.5px solid rgba(255,149,0,0.30)" }
+              }
+            >
+              {completo ? <Check size={11} /> : <AlertCircle size={11} />}
               {completo ? "Perfil ativo" : "Cadastro incompleto"}
             </span>
           </div>
-          {pro.cro && <p className="mt-1 text-sm text-ink-muted">{(pro.cro || "").replace(/\s/g, "")}</p>}
+          {pro.cro && <p className="mt-1 text-sm text-white/65">{(pro.cro || "").replace(/\s/g, "")}</p>}
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Link href="/pro/perfil" className="rounded-[12px] bg-brand-blue px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-blue-600">
+        <div className="flex flex-wrap justify-center gap-2">
+          <Link href="/pro/perfil" className="rounded-[12px] bg-white px-5 py-2.5 text-sm font-semibold text-brand-navy hover:bg-white/90">
             Meu perfil
           </Link>
-          <Link href="/pro/editor-de-fotos" className="rounded-[12px] border border-black/15 px-5 py-2.5 text-sm font-medium text-ink-soft hover:bg-black/5">
+          <Link href="/pro/editor-de-fotos" className="rounded-[12px] border border-white/30 px-5 py-2.5 text-sm font-medium text-white hover:bg-white/10">
             Trocar foto
           </Link>
         </div>
       </div>
 
-      {/* Aviso de transição Beta → pago */}
-      <div className="mt-6 rounded-2xl border border-brand-blue/15 bg-brand-soft/60 p-4 text-sm text-ink-soft">
-        Você está na <strong>fase Beta gratuita</strong>. A partir de 1º de julho de 2027, o
-        CuraDentes Pro passa a R$ 49,99/mês — avisaremos por e-mail com 30 dias de antecedência.{" "}
-        <Link href="/termos" className="font-semibold text-brand-blue hover:underline">Ver termos</Link>.
+      {/* Aviso de transição Beta → pago (amarelo k11 com ícone CalendarClock) */}
+      <div
+        className="mt-6 flex items-start gap-3 rounded-2xl border p-4 text-sm"
+        style={{ background: "#FFF8E1", borderColor: "rgba(255,149,0,0.35)" }}
+      >
+        <CalendarClock size={20} className="mt-0.5 flex-shrink-0" style={{ color: "#FF9500" }} />
+        <p className="leading-relaxed text-ink-soft">
+          <strong className="text-brand-navy">Lembrete:</strong> você está na <strong>fase Beta gratuita</strong>. A partir de
+          1º de julho de 2027, o CuraDentes Pro passa a R$ 49,99/mês — avisaremos por e-mail com 30 dias de antecedência.{" "}
+          <Link href="/termos" className="font-semibold text-brand-blue hover:underline">Ver termos</Link>.
+        </p>
       </div>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_320px]">
@@ -143,17 +173,36 @@ export default async function DashboardPage() {
             <section>
               <h2 className="mb-4 text-xl font-bold text-brand-navy">Métricas do perfil</h2>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <Metrica titulo="Visualizações" total={resumo.total_visualizacoes} ult30={resumo.visualizacoes_30d} />
-                <Metrica titulo="Cliques no WhatsApp" total={resumo.total_whatsapp} ult30={resumo.whatsapp_30d} />
-                <Metrica titulo="Cliques em ligar" total={resumo.total_telefone} ult30={resumo.telefone_30d} />
+                <Metrica
+                  titulo="Visualizações"
+                  total={resumo.total_visualizacoes}
+                  ult30={resumo.visualizacoes_30d}
+                  icone={<Eye size={14} style={{ color: "#007AFF" }} />}
+                  fundo="rgba(0,122,255,0.06)"
+                />
+                <Metrica
+                  titulo="Cliques no WhatsApp"
+                  total={resumo.total_whatsapp}
+                  ult30={resumo.whatsapp_30d}
+                  icone={<MessageCircle size={14} style={{ color: "#34C759" }} />}
+                  fundo="rgba(52,199,89,0.08)"
+                />
+                <Metrica
+                  titulo="Cliques em ligar"
+                  total={resumo.total_telefone}
+                  ult30={resumo.telefone_30d}
+                  icone={<Phone size={14} style={{ color: "#007AFF" }} />}
+                  fundo="rgba(0,122,255,0.06)"
+                />
               </div>
             </section>
           )}
 
           {/* Pontuação por atividade */}
           {temAvaliacoes && resumo && (
-            <section className="rounded-2xl border border-black/8 bg-white p-5">
-              <div className="mb-4 flex items-baseline gap-2">
+            <section className="rounded-2xl border border-white/60 bg-white/90 shadow-[0_2px_8px_rgba(16,24,64,0.05)] backdrop-blur p-5">
+              <div className="mb-4 flex items-center gap-2">
+                <Trophy size={18} style={{ color: "#FFD700" }} />
                 <span className="text-3xl font-bold text-brand-navy">{resumo.media_geral.toFixed(1)}</span>
                 <span className="text-sm text-ink-muted">/ 5 · {resumo.total_avaliacoes} avaliações</span>
               </div>
@@ -161,50 +210,47 @@ export default async function DashboardPage() {
                 {(resumo.por_atividade ?? [])
                   .slice()
                   .sort((a, b) => b.media_nota - a.media_nota)
-                  .map((a) => (
-                    <div key={a.nome_atividade}>
-                      <div className="mb-1 flex items-center justify-between text-sm">
-                        <span className="text-ink-soft">{a.nome_atividade}</span>
-                        <span className="font-semibold text-ink">{a.media_nota.toFixed(1)}</span>
+                  .map((a) => {
+                    const cor = a.media_nota >= 4.5 ? "#34C759" : a.media_nota >= 3.5 ? "#FF9500" : "#FF3B30";
+                    return (
+                      <div key={a.nome_atividade}>
+                        <div className="mb-1 flex items-center justify-between text-sm">
+                          <span className="text-ink-soft">{a.nome_atividade}</span>
+                          <span className="font-bold" style={{ color: cor }}>{a.media_nota.toFixed(1)}</span>
+                        </div>
+                        <div className="h-2 overflow-hidden rounded-full bg-black/8">
+                          <div
+                            className="h-full rounded-full transition-[width] duration-500"
+                            style={{ width: `${(a.media_nota / 5) * 100}%`, background: cor }}
+                          />
+                        </div>
                       </div>
-                      <div className="h-2 overflow-hidden rounded-full bg-black/8">
-                        <div className="h-full rounded-full bg-brand-blue" style={{ width: `${(a.media_nota / 5) * 100}%` }} />
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
               </div>
             </section>
           )}
 
-          {/* Endereços */}
+          {/* Endereços — cards ricos (igual k11) */}
           <section>
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-brand-navy">Seus endereços</h2>
-              <Link href="/pro/perfil" className="text-sm font-semibold text-brand-blue hover:underline">Gerenciar</Link>
+            <div className="mb-4 flex items-center gap-2">
+              <MapPin size={16} style={{ color: "#007AFF" }} />
+              <h2 className="text-xl font-bold text-brand-navy">Locais de atendimento</h2>
+              <span className="ml-auto rounded-full px-2.5 py-1 text-[12px] font-semibold" style={{ background: "rgba(0,122,255,0.10)", color: "#007AFF" }}>
+                {enderecos.length} {enderecos.length === 1 ? "endereço" : "endereços"}
+              </span>
             </div>
             {enderecos.length === 0 ? (
-              <p className="text-ink-muted">Nenhum endereço cadastrado ainda.</p>
+              <div className="flex flex-col items-center gap-3 rounded-[20px] py-12 text-center" style={{ background: "#fff", border: "1.5px dashed rgba(60,60,67,0.15)" }}>
+                <Building2 size={32} style={{ color: "rgba(0,122,255,0.30)" }} />
+                <p className="text-[15px] font-semibold" style={{ color: "#0A2A66" }}>Nenhum endereço cadastrado</p>
+                <p className="text-[13px]" style={{ color: "#8E8E93" }}>Adicione seus locais de atendimento para aparecer na busca.</p>
+                <Link href="/cadastro" className="mt-2 rounded-[14px] px-6 py-3 text-[14px] font-semibold text-white" style={{ background: "#007AFF" }}>Adicionar endereço</Link>
+              </div>
             ) : (
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-4">
                 {enderecos.map((e) => (
-                  <div key={e.id} className={`rounded-2xl border bg-white p-4 ${e.atende_urgencias ? "border-brand-magenta/30" : "border-black/8"}`}>
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        {e.nome_clinica && <p className="font-semibold text-brand-navy">{e.nome_clinica}</p>}
-                        <p className="text-sm text-ink-muted">{[e.bairro, e.cidade].filter(Boolean).join(", ")}</p>
-                      </div>
-                      {e.atende_urgencias && (
-                        <span className="rounded-full bg-brand-magenta/10 px-3 py-1 text-xs font-semibold text-brand-magenta">Urgências</span>
-                      )}
-                    </div>
-                    {e.atividades.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-1.5">
-                        {e.atividades.slice(0, 4).map((a) => (
-                          <span key={a} className="rounded-lg bg-brand-soft px-2 py-0.5 text-xs text-brand-navy">{a}</span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  <EnderecoCard key={e.id} endereco={e} />
                 ))}
               </div>
             )}
@@ -213,12 +259,12 @@ export default async function DashboardPage() {
 
         {/* Barra lateral */}
         <aside className="flex flex-col gap-6">
-          <section className="rounded-2xl border border-black/8 bg-white p-5">
+          <section className="rounded-2xl border border-white/60 bg-white/90 shadow-[0_2px_8px_rgba(16,24,64,0.05)] backdrop-blur p-5">
             <h2 className="mb-3 text-lg font-bold text-brand-navy">Sua bio</h2>
             <BioEditor id={pro.id} bioInicial={pro.bio ?? ""} />
           </section>
 
-          <section className="rounded-2xl border border-black/8 bg-white p-5">
+          <section className="rounded-2xl border border-white/60 bg-white/90 shadow-[0_2px_8px_rgba(16,24,64,0.05)] backdrop-blur p-5">
             <h2 className="mb-3 text-lg font-bold text-brand-navy">Conta</h2>
             <AcoesConta />
           </section>
@@ -239,12 +285,27 @@ export default async function DashboardPage() {
   );
 }
 
-function Metrica({ titulo, total, ult30 }: { titulo: string; total: number; ult30: number }) {
+function Metrica({
+  titulo,
+  total,
+  ult30,
+  icone,
+  fundo,
+}: {
+  titulo: string;
+  total: number;
+  ult30: number;
+  icone: React.ReactNode;
+  fundo: string;
+}) {
   return (
-    <div className="rounded-2xl border border-black/8 bg-white p-5">
-      <p className="text-sm text-ink-muted">{titulo}</p>
-      <p className="mt-1 text-3xl font-bold text-brand-navy">{total ?? 0}</p>
-      <p className="mt-1 text-xs text-ink-muted">{ult30 ?? 0} nos últimos 30 dias</p>
+    <div className="rounded-[14px] p-4" style={{ background: fundo }}>
+      <div className="mb-1 flex items-center gap-1.5">
+        {icone}
+        <p className="text-xs font-semibold text-ink-muted">{titulo}</p>
+      </div>
+      <p className="text-3xl font-bold leading-none text-brand-navy">{total ?? 0}</p>
+      <p className="mt-1.5 text-xs text-ink-muted">{ult30 ?? 0} nos últimos 30 dias</p>
     </div>
   );
 }

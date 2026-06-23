@@ -15,6 +15,7 @@
 import { useState, type FormEvent } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import { criarClienteNavegador } from "@/lib/supabase/client";
 import { resolveLoginEmail, isSuperuserEmail } from "@/lib/superuser";
 
@@ -31,16 +32,16 @@ function GoogleIcon() {
   );
 }
 
-export default function EntrarForm() {
+export default function EntrarForm({ modoInicial = "paciente", erroInicial = "" }: { modoInicial?: Modo; erroInicial?: string }) {
   const router = useRouter();
   const supabase = criarClienteNavegador();
 
-  const [modo, setModo] = useState<Modo>("paciente");
+  const [modo, setModo] = useState<Modo>(modoInicial);
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [ocupado, setOcupado] = useState(false);
-  const [erro, setErro] = useState("");
+  const [erro, setErro] = useState(erroInicial);
   const [aviso, setAviso] = useState("");
 
   async function entrarComGoogle() {
@@ -61,34 +62,30 @@ export default function EntrarForm() {
     e.preventDefault();
     setErro("");
     if (!email.trim() || !senha) {
-      setErro("Preencha e-mail e senha.");
+      setErro("Preencha email e senha.");
       return;
     }
     setOcupado(true);
-    const emailResolvido = resolveLoginEmail(email);
-    const { error } = await supabase.auth.signInWithPassword({
-      email: emailResolvido,
-      password: senha,
-    });
-    if (error) {
-      setErro("E-mail ou senha incorretos.");
-      setOcupado(false);
-      return;
-    }
-    // Reativa a conta se estava em soft-delete (parity com o site-k11).
-    // O supabase-js NÃO lança em erro de RPC — devolve { error }; por isso
-    // inspecionamos o retorno e só logamos (o login segue de qualquer forma).
-    if (!isSuperuserEmail(emailResolvido)) {
-      try {
-        const { error: rErr } = await supabase.rpc("restaurar_minha_conta_dentista");
-        if (rErr) console.warn("[entrar] restaurar conta:", rErr.message);
-      } catch (err) {
-        console.warn("[entrar] restaurar conta (exceção):", err);
+    try {
+      // Login no SERVIDOR (o signInWithPassword do navegador trava). A rota grava
+      // os cookies de sessão e reativa a conta se necessário.
+      const r = await fetch("/auth/login-dentista", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password: senha }),
+      });
+      const data = (await r.json().catch(() => ({}))) as { ok?: boolean; redirect?: string; erro?: string };
+      if (!r.ok || !data.ok) {
+        setErro(data.erro || "Email ou senha incorretos.");
+        setOcupado(false);
+        return;
       }
+      router.replace(data.redirect || "/pro/dashboard");
+      router.refresh();
+    } catch {
+      setErro("Não foi possível entrar agora. Tente novamente.");
+      setOcupado(false);
     }
-    // Sessão gravada nos cookies → o servidor já reconhece. Vai para o painel.
-    router.replace("/pro/dashboard");
-    router.refresh();
   }
 
   async function enviarRecuperacao(e: FormEvent) {
@@ -129,7 +126,7 @@ export default function EntrarForm() {
           <>
             <h1 className="text-xl font-bold text-brand-navy">Bem-vindo</h1>
             <p className="mt-1 mb-6 text-center text-sm leading-relaxed text-ink-soft">
-              Entre para encontrar e avaliar os melhores dentistas perto de você.
+              Entre para encontrar e agendar com os melhores dentistas perto de você.
             </p>
             {erro && <p className="mb-3 w-full rounded-lg bg-danger/10 px-3 py-2 text-center text-sm text-danger">{erro}</p>}
             <button
@@ -137,7 +134,7 @@ export default function EntrarForm() {
               disabled={ocupado}
               className="flex w-full items-center justify-center gap-2.5 rounded-[14px] border border-black/15 bg-white py-3 text-[15px] font-semibold text-ink-soft transition-colors hover:bg-black/3 disabled:opacity-60"
             >
-              <GoogleIcon />
+              {ocupado ? <Loader2 size={18} className="animate-spin" /> : <GoogleIcon />}
               Entrar com Google
             </button>
             <button
@@ -157,37 +154,43 @@ export default function EntrarForm() {
             </p>
             {erro && <p className="mb-3 w-full rounded-lg bg-danger/10 px-3 py-2 text-center text-sm text-danger">{erro}</p>}
             <form onSubmit={entrarComEmail} className="flex w-full flex-col gap-3">
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="seu@email.com"
-                autoComplete="email"
-                className="w-full rounded-[14px] border border-black/15 px-4 py-3 text-[15px] outline-none focus:border-brand-blue"
-              />
               <div className="relative">
+                <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="seu@email.com"
+                  autoComplete="email"
+                  className="w-full rounded-[14px] border border-black/15 pl-10 pr-4 py-3 text-[15px] outline-none focus:border-brand-blue"
+                />
+              </div>
+              <div className="relative">
+                <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted" />
                 <input
                   type={mostrarSenha ? "text" : "password"}
                   value={senha}
                   onChange={(e) => setSenha(e.target.value)}
                   placeholder="Sua senha"
                   autoComplete="current-password"
-                  className="w-full rounded-[14px] border border-black/15 px-4 py-3 pr-11 text-[15px] outline-none focus:border-brand-blue"
+                  className="w-full rounded-[14px] border border-black/15 pl-10 pr-11 py-3 text-[15px] outline-none focus:border-brand-blue"
                 />
                 <button
                   type="button"
                   onClick={() => setMostrarSenha((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-ink-muted"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted"
+                  aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
                 >
-                  {mostrarSenha ? "ocultar" : "ver"}
+                  {mostrarSenha ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
               <button
                 type="submit"
                 disabled={ocupado}
-                className="mt-1 w-full rounded-[14px] bg-brand-blue py-3 text-[15px] font-bold text-white transition-colors hover:bg-brand-blue-600 disabled:opacity-60"
+                className="mt-1 flex w-full items-center justify-center gap-2 rounded-[14px] bg-brand-blue py-3 text-[15px] font-bold text-white transition-colors hover:bg-brand-blue-600 disabled:opacity-60"
               >
-                {ocupado ? "Entrando…" : "Entrar"}
+                {ocupado && <Loader2 size={18} className="animate-spin" />}
+                Entrar
               </button>
             </form>
             <div className="mt-5 flex w-full items-center justify-between text-sm">

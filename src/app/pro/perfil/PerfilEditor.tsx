@@ -13,6 +13,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { Trash2, ShieldCheck, Mail, KeyRound } from "lucide-react";
 import Container from "@/components/Container";
 import EnderecosEditor, { type EnderecoForm } from "@/components/pro/EnderecosEditor";
 import { criarClienteNavegador } from "@/lib/supabase/client";
@@ -266,11 +267,11 @@ export default function PerfilEditor({
           <h2 className="mb-6 text-lg font-bold text-brand-navy">Dados pessoais e profissionais</h2>
           <div className="flex flex-col gap-8 md:flex-row md:items-start">
             <div className="flex flex-col items-center gap-3">
-              <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border border-black/10 bg-black/3">
+              <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border border-black/10 bg-[#F2F2F7]">
                 {perfil.fotoUrl ? (
                   <Image src={perfil.fotoUrl} alt="Sua foto" width={112} height={112} className="h-full w-full object-cover" />
                 ) : (
-                  <span className="text-sm text-ink-muted">sem foto</span>
+                  <img src="/logos/logo-pro-alt.png" alt="Sem foto" className="h-16 w-16 object-contain opacity-40" />
                 )}
               </div>
               <Link href="/pro/editor-de-fotos" className="text-sm font-semibold text-brand-blue hover:underline">Trocar foto</Link>
@@ -293,7 +294,7 @@ export default function PerfilEditor({
               </div>
               <div className="md:col-span-2">
                 <label className={labelCls}>Nome completo (verificação do CRO)</label>
-                <input value={perfil.nomeCompleto} disabled className={`${inputCls} bg-black/3 text-ink-muted`} />
+                <input value={perfil.nomeCompleto} disabled className={`${inputCls} bg-[#F2F2F7] text-[#8E8E93]`} />
                 <p className="mt-1 text-[11px] text-ink-muted">Para alterar, envie e-mail para <strong>suporte@curadentes.com.br</strong></p>
               </div>
               <div>
@@ -317,11 +318,11 @@ export default function PerfilEditor({
               </div>
               <div>
                 <label className={labelCls}>CPF (visualização)</label>
-                <input value={perfil.cpf} disabled className={`${inputCls} bg-black/3 text-ink-muted`} />
+                <input value={perfil.cpf} disabled className={`${inputCls} bg-[#F2F2F7] text-[#8E8E93]`} />
               </div>
               <div>
                 <label className={labelCls}>CRO (visualização)</label>
-                <input value={perfil.cro} disabled className={`${inputCls} bg-black/3 text-ink-muted`} />
+                <input value={perfil.cro} disabled className={`${inputCls} bg-[#F2F2F7] text-[#8E8E93]`} />
                 <p className="mt-1 text-[11px] text-ink-muted">Para alterar, envie e-mail para <strong>suporte@curadentes.com.br</strong></p>
               </div>
             </div>
@@ -361,33 +362,40 @@ export default function PerfilEditor({
 
         {/* Segurança */}
         <section className="rounded-3xl border border-black/8 bg-white p-6">
-          <h2 className="mb-3 text-lg font-bold text-brand-navy">Segurança</h2>
+          <div className="mb-3 flex items-center gap-2">
+            <ShieldCheck size={20} className="text-success" />
+            <h2 className="text-lg font-bold text-brand-navy">Segurança</h2>
+          </div>
           <p className="mb-4 text-sm text-ink-soft">Para trocar a senha, enviaremos um link de confirmação para o seu e-mail (uso único).</p>
-          <div className="flex flex-col gap-3 rounded-xl border border-black/10 bg-black/3 p-4 sm:flex-row sm:items-center">
+          <div className="flex flex-col gap-3 rounded-xl border border-black/10 bg-[#F2F2F7] p-4 sm:flex-row sm:items-center sm:gap-4">
+            <Mail size={18} className="shrink-0 text-ink-muted" />
             <div className="min-w-0 flex-1">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">E-mail da conta</p>
               <p className="truncate font-semibold text-brand-navy">{perfil.email || "—"}</p>
             </div>
-            <button onClick={trocarSenha} disabled={enviandoSenha || !perfil.email} className="rounded-[12px] bg-brand-navy px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-navy-700 disabled:opacity-50">
-              {enviandoSenha ? "Enviando…" : "Trocar senha"}
+            <button onClick={trocarSenha} disabled={enviandoSenha || !perfil.email} className="flex shrink-0 items-center justify-center gap-2 rounded-[12px] bg-brand-navy px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-navy-700 disabled:opacity-50">
+              {enviandoSenha ? "Enviando…" : (<><KeyRound size={14} /> Trocar senha</>)}
             </button>
           </div>
         </section>
 
         {/* Zona de perigo */}
         <section className="rounded-3xl border border-danger/15 bg-white p-6">
-          <h2 className="mb-3 text-lg font-bold text-danger">Excluir conta</h2>
+          <div className="mb-3 flex items-center gap-2">
+            <Trash2 size={20} className="text-danger" />
+            <h2 className="text-lg font-bold text-danger">Excluir conta</h2>
+          </div>
           <p className="mb-4 text-sm text-ink-soft">Seu perfil deixa de aparecer no site imediatamente e seus dados sensíveis são removidos.</p>
           {!modoExclusao ? (
-            <button onClick={() => setModoExclusao(true)} className="rounded-[12px] border border-danger/20 bg-danger/5 px-5 py-2.5 text-sm font-semibold text-danger hover:bg-danger/10">
-              Excluir minha conta
+            <button onClick={() => setModoExclusao(true)} className="flex items-center gap-2 rounded-[12px] border border-danger/20 bg-danger/5 px-5 py-2.5 text-sm font-semibold text-danger hover:bg-danger/10">
+              <Trash2 size={14} /> Excluir minha conta
             </button>
           ) : (
             <div className="flex flex-col gap-3 rounded-[12px] border border-danger/20 bg-danger/5 p-4">
               <p className="text-sm font-semibold text-brand-navy">Tem certeza? Esta ação é irreversível.</p>
               <div className="flex flex-col gap-3 sm:flex-row">
-                <button onClick={excluirConta} disabled={excluindo} className="rounded-[12px] bg-danger px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50">
-                  {excluindo ? "Excluindo…" : "Sim, excluir minha conta"}
+                <button onClick={excluirConta} disabled={excluindo} className="flex items-center justify-center gap-2 rounded-[12px] bg-danger px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50">
+                  {excluindo ? "Excluindo…" : (<><Trash2 size={14} /> Sim, excluir minha conta</>)}
                 </button>
                 <button onClick={() => setModoExclusao(false)} disabled={excluindo} className="rounded-[12px] border border-black/15 px-5 py-2.5 text-sm font-medium text-ink-soft hover:bg-black/5">
                   Cancelar

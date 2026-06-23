@@ -2,6 +2,11 @@
    ESTILOS GLOBAIS — CuraDentes (site-R0)
    Tailwind CSS v4. As cores e fontes da marca viram "tokens" do tema, então dá
    para usar classes como `bg-brand-navy`, `text-brand-blue`, `font-brand`.
+
+   Além dos tokens do @theme, replicamos aqui as VARIÁVEIS CSS do site antigo
+   (--primary-blue, --shadow-md, --glass-*, etc.) porque as seções portadas do
+   k11 usam essas variáveis em estilos inline. Manter os dois esquemas garante
+   fidelidade visual 1:1 com a versão anterior.
    ═══════════════════════════════════════════════════════════════════════════════ */
 
 @import "tailwindcss";
@@ -40,20 +45,120 @@
   --font-brand: "CuraDentes", var(--font-inter), system-ui, sans-serif;
 }
 
+/* ── Variáveis CSS do site antigo (k11) — consumidas pelas seções portadas em
+   estilos inline (ex.: style={{ color: "var(--primary-blue)" }}). ── */
+:root {
+  --font-brand: "CuraDentes", var(--font-inter), system-ui, sans-serif;
+  --primary-blue: #007aff;
+  --primary-blue-hover: #1a8aff;
+  --brand-navy: #0a2a66;
+  --brand-magenta: #e6004c;
+  --bg-base: #ffffff;
+  --bg-soft: #e3f2fd;
+  --text-primary: #1c1c1e;
+  --text-secondary: #3a3a3c;
+  --text-muted: #8e8e93;
+  --success: #34c759;
+  --warning: #ff9500;
+  --error: #ff3b30;
+  --divider: rgba(60, 60, 67, 0.12);
+  --glass-fill: rgba(255, 255, 255, 0.55);
+  --glass-fill-strong: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.3);
+  --shadow-sm: 0 2px 6px rgba(16, 24, 64, 0.05);
+  --shadow-md: 0 8px 20px rgba(16, 24, 64, 0.08);
+  --shadow-lg: 0 12px 32px rgba(16, 24, 64, 0.1);
+  --shadow-glow-blue: 0 0 16px rgba(0, 122, 255, 0.35);
+  --shadow-cta: 0 8px 20px rgba(0, 122, 255, 0.25);
+}
+
 /* ── Base ── */
 html {
   scroll-behavior: smooth;
+  /* Compensa o header fixo (64px) ao rolar para âncoras (#como-funciona etc.),
+     para o título da seção não ficar escondido atrás do cabeçalho. */
+  scroll-padding-top: 80px;
 }
 
+/* Fundo da marca: gradiente azul→branco fixo (idêntico ao site antigo). */
 body {
-  background: #ffffff;
+  background: linear-gradient(160deg, #e3f2fd 0%, #ffffff 60%, #ffffff 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
   color: var(--color-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
 
-/* Títulos usam a fonte da marca. */
+/* Títulos usam a fonte da marca (!important para vencer fontFamily inline que
+   algumas seções portadas trazem do k11 — comportamento idêntico ao antigo). */
 h1, h2, h3 {
-  font-family: var(--font-brand);
+  font-family: var(--font-brand) !important;
   letter-spacing: -0.01em;
+}
+
+/* O Tailwind v4 removeu o cursor:pointer padrão dos <button>. Restauramos a
+   "mãozinha" em todos os botões habilitados (e elementos role="button") — assim
+   o URGÊNCIA e qualquer outro botão ganham o ponteiro de mão no hover. */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* ── Utilitários glass-morphism (vidro fosco) — usados no herói, chips, cards ── */
+@utility glass {
+  background: var(--glass-fill);
+  backdrop-filter: blur(24px) saturate(120%);
+  -webkit-backdrop-filter: blur(24px) saturate(120%);
+  border: 0.5px solid var(--glass-border);
+  box-shadow: var(--shadow-md);
+}
+
+@utility glass-strong {
+  background: var(--glass-fill-strong);
+  backdrop-filter: blur(24px) saturate(120%);
+  -webkit-backdrop-filter: blur(24px) saturate(120%);
+  border: 0.5px solid rgba(255, 255, 255, 0.35);
+  box-shadow: var(--shadow-md);
+}
+
+/* Brilho animado para placeholders de carregamento (skeleton). */
+@utility shimmer {
+  background: linear-gradient(90deg, rgba(227, 242, 253, 0.6) 0%, rgba(0, 122, 255, 0.08) 50%, rgba(227, 242, 253, 0.6) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Animação de entrada (fade + subir) usada em abas/conteúdos da home. */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Esconde a barra de rolagem (carrosséis horizontais da home). Substitui o
+   utilitário scrollbar-hide do k11. Precisa de CSS puro por causa do pseudo. */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Animação de entrada (substitui o "animate-in slide-in-from-top-4 fade-in" do
+   tailwindcss-animate, que não está instalado aqui). */
+@keyframes enterFromTop {
+  from { opacity: 0; transform: translateY(-1rem); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-in {
+  animation: enterFromTop 0.3s ease both;
 }

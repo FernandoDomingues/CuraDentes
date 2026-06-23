@@ -16,8 +16,40 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { criarClienteNavegador } from "@/lib/supabase/client";
 import { detectarOrigemLogin } from "@/lib/origem-login";
+import { reverseGeocodeCidadeBairro } from "@/lib/geocoding";
 
 const FLAG_LOGIN = "curadentes_login_logged";
+
+// Após o login, se o muro de login (SessaoProvider) capturou as coordenadas do
+// usuário em sessionStorage ("curadentes_login_coords"), salva no perfil do cliente
+// (best-effort) e guarda a cidade ("curadentes_user_city") para os CTAs que buscam
+// "perto de você" (ex.: página de especialidade) — igual ao site k11.
+async function salvarLocalizacaoLogin(userId: string | null) {
+  try {
+    const raw = sessionStorage.getItem("curadentes_login_coords");
+    if (!raw) return;
+    const { latitude, longitude } = JSON.parse(raw) as { latitude?: number; longitude?: number };
+    if (typeof latitude !== "number" || typeof longitude !== "number") return;
+    try {
+      const { cidade } = await reverseGeocodeCidadeBairro(latitude, longitude);
+      if (cidade) sessionStorage.setItem("curadentes_user_city", cidade);
+    } catch {
+      /* reverse-geocode best-effort */
+    }
+    if (userId) {
+      const supabase = criarClienteNavegador();
+      void supabase
+        .from("clientes")
+        .update({ latitude, longitude })
+        .eq("id", userId)
+        .then(({ error }) => {
+          if (error) console.warn("[AuthListener] não salvou localização do login:", error.message);
+        });
+    }
+  } catch (err) {
+    console.warn("[AuthListener] salvarLocalizacaoLogin falhou:", err);
+  }
+}
 
 function registrarLogin(userId: string | null) {
   try {
@@ -54,6 +86,7 @@ export default function AuthListener() {
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN") {
         registrarLogin(session?.user.id ?? null);
+        void salvarLocalizacaoLogin(session?.user.id ?? null);
         router.refresh();
       } else if (event === "SIGNED_OUT") {
         try {

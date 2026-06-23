@@ -10,7 +10,9 @@
 // pois lá o save é delete-all + reinsert).
 // ═══════════════════════════════════════════════════════════════════════════════
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import { Check, Plus, Save, Trash2 } from "lucide-react";
 import { ESPECIALIDADES } from "@/lib/especialidades";
 import { buscarCep } from "@/lib/cep";
 import { formatarCep } from "@/lib/validacao";
@@ -82,18 +84,41 @@ export function novoEndereco(): EnderecoForm {
 
 const labelCls = "mb-1 block text-xs font-semibold text-ink-soft";
 const inputCls = "w-full rounded-[10px] border border-black/15 px-3.5 py-2.5 text-sm outline-none focus:border-brand-blue";
+// Estilo de borda/sombra laranja para campo obrigatório pendente (estilo k11).
+const pendenteStyle: React.CSSProperties = { borderColor: "#FF9500", boxShadow: "0 0 0 3px rgba(255,149,0,0.15)" };
 
 export default function EnderecosEditor({
   enderecos,
   onChange,
   onRemover,
+  onSalvarProgresso,
   max = 8,
+  mostrarPendencias = false,
 }: {
   enderecos: EnderecoForm[];
   onChange: (lista: EnderecoForm[]) => void;
   onRemover?: (id: string) => void;
+  /** Opcional: persiste o endereço de índice `idx` (a página decide como). Se
+   *  ausente, o botão "Salvar progresso" só dá feedback visual local. */
+  onSalvarProgresso?: (idx: number) => void | Promise<void>;
   max?: number;
+  /** Quando true, destaca em laranja os campos obrigatórios ainda vazios. */
+  mostrarPendencias?: boolean;
 }) {
+  // Índice do endereço que acabou de exibir o feedback "Salvo" (some após 2,5s).
+  const [salvoIdx, setSalvoIdx] = useState<number | null>(null);
+
+  async function salvarProgresso(idx: number) {
+    try {
+      await onSalvarProgresso?.(idx);
+    } catch {
+      toast.error("Não foi possível salvar o progresso. Tente novamente.");
+      return;
+    }
+    setSalvoIdx(idx);
+    toast.success("Progresso salvo.");
+    setTimeout(() => setSalvoIdx((cur) => (cur === idx ? null : cur)), 2500);
+  }
   // Ref sempre com a lista mais recente — para o aplicarCep (assíncrono) mesclar
   // sobre o estado atual por id, sem sobrescrever o que o usuário digitou durante
   // a consulta ao ViaCEP (race pego no review).
@@ -148,30 +173,52 @@ export default function EnderecosEditor({
     <div className="flex flex-col gap-5">
       {enderecos.map((end, idx) => (
         <div key={end.id} className="overflow-hidden rounded-3xl border border-black/10 bg-white">
-          <div className="flex items-center justify-between border-b border-black/8 bg-black/3 px-6 py-4">
+          <div className="flex items-center justify-between gap-3 border-b border-black/8 px-6 py-4" style={{ background: "rgba(0,122,255,0.04)" }}>
             <h3 className="font-bold text-brand-navy">
               Endereço {idx + 1}{end.nome_clinica ? ` — ${end.nome_clinica}` : ""}
             </h3>
-            {enderecos.length > 1 && (
-              <button onClick={() => remover(idx)} className="rounded-full px-3 py-1 text-sm text-danger hover:bg-danger/10" title="Excluir endereço">
-                excluir
+            <div className="flex flex-shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={() => salvarProgresso(idx)}
+                className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors"
+                style={salvoIdx === idx
+                  ? { color: "#34C759", background: "rgba(52,199,89,0.10)" }
+                  : { color: "#007AFF", background: "rgba(0,122,255,0.08)" }}
+                title="Salvar progresso deste endereço"
+              >
+                {salvoIdx === idx ? <Check size={13} /> : <Save size={13} />}
+                {salvoIdx === idx ? "Salvo" : "Salvar progresso"}
               </button>
-            )}
+              {enderecos.length > 1 && (
+                <button
+                  onClick={() => remover(idx)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full transition-colors"
+                  style={{ color: "#FF3B30", background: "rgba(255,59,48,0.08)" }}
+                  title="Excluir endereço"
+                >
+                  <Trash2 size={14} />
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="flex flex-col gap-6 p-6">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
                 <label className={labelCls}>Nome da clínica / consultório *</label>
-                <input value={end.nome_clinica} onChange={(e) => atualizar(idx, "nome_clinica", e.target.value)} className={inputCls} />
+                <input value={end.nome_clinica} onChange={(e) => atualizar(idx, "nome_clinica", e.target.value)} className={inputCls} style={mostrarPendencias && !end.nome_clinica.trim() ? pendenteStyle : undefined} />
+                {mostrarPendencias && !end.nome_clinica.trim() && <p className="mt-1 text-[11px] font-medium" style={{ color: "#FF9500" }}>Campo obrigatório pendente</p>}
               </div>
               <div>
-                <label className={labelCls}>CEP</label>
-                <input value={end.cep} onChange={(e) => aplicarCep(idx, e.target.value)} placeholder="00000-000" className={inputCls} />
+                <label className={labelCls}>CEP *</label>
+                <input value={end.cep} onChange={(e) => aplicarCep(idx, e.target.value)} placeholder="00000-000" className={inputCls} style={mostrarPendencias && !end.cep.trim() ? pendenteStyle : undefined} />
+                {mostrarPendencias && !end.cep.trim() && <p className="mt-1 text-[11px] font-medium" style={{ color: "#FF9500" }}>Campo obrigatório pendente</p>}
               </div>
               <div className="md:col-span-2">
                 <label className={labelCls}>Logradouro *</label>
-                <input value={end.logradouro} onChange={(e) => atualizar(idx, "logradouro", e.target.value)} className={inputCls} />
+                <input value={end.logradouro} onChange={(e) => atualizar(idx, "logradouro", e.target.value)} className={inputCls} style={mostrarPendencias && !end.logradouro.trim() ? pendenteStyle : undefined} />
+                {mostrarPendencias && !end.logradouro.trim() && <p className="mt-1 text-[11px] font-medium" style={{ color: "#FF9500" }}>Campo obrigatório pendente</p>}
               </div>
               <div>
                 <label className={labelCls}>Número *</label>
@@ -183,15 +230,18 @@ export default function EnderecosEditor({
               </div>
               <div className="md:col-span-2">
                 <label className={labelCls}>Bairro *</label>
-                <input value={end.bairro} onChange={(e) => atualizar(idx, "bairro", e.target.value)} className={inputCls} />
+                <input value={end.bairro} onChange={(e) => atualizar(idx, "bairro", e.target.value)} className={inputCls} style={mostrarPendencias && !end.bairro.trim() ? pendenteStyle : undefined} />
+                {mostrarPendencias && !end.bairro.trim() && <p className="mt-1 text-[11px] font-medium" style={{ color: "#FF9500" }}>Campo obrigatório pendente</p>}
               </div>
               <div>
                 <label className={labelCls}>Cidade *</label>
-                <input value={end.cidade} onChange={(e) => atualizar(idx, "cidade", e.target.value)} className={inputCls} />
+                <input value={end.cidade} onChange={(e) => atualizar(idx, "cidade", e.target.value)} className={inputCls} style={mostrarPendencias && !end.cidade.trim() ? pendenteStyle : undefined} />
+                {mostrarPendencias && !end.cidade.trim() && <p className="mt-1 text-[11px] font-medium" style={{ color: "#FF9500" }}>Campo obrigatório pendente</p>}
               </div>
               <div>
                 <label className={labelCls}>Estado *</label>
-                <input value={end.estado} maxLength={2} onChange={(e) => atualizar(idx, "estado", e.target.value.toUpperCase())} className={inputCls} />
+                <input value={end.estado} maxLength={2} onChange={(e) => atualizar(idx, "estado", e.target.value.toUpperCase())} className={inputCls} style={mostrarPendencias && !end.estado.trim() ? pendenteStyle : undefined} />
+                {mostrarPendencias && !end.estado.trim() && <p className="mt-1 text-[11px] font-medium" style={{ color: "#FF9500" }}>Campo obrigatório pendente</p>}
               </div>
               <div>
                 <label className={labelCls}>Telefone fixo</label>
@@ -239,7 +289,7 @@ export default function EnderecosEditor({
                     {d.ativo ? (
                       <div className="flex items-center gap-2 pl-6 sm:pl-0">
                         <input type="time" value={d.inicio} onChange={(e) => atualizarAgenda(idx, idxDia, "inicio", e.target.value)} className="rounded border border-black/15 p-1 text-[13px]" />
-                        <span className="text-xs text-ink-muted">às</span>
+                        <span className="text-xs text-ink-muted">até</span>
                         <input type="time" value={d.fim} onChange={(e) => atualizarAgenda(idx, idxDia, "fim", e.target.value)} className="rounded border border-black/15 p-1 text-[13px]" />
                       </div>
                     ) : (
@@ -252,7 +302,7 @@ export default function EnderecosEditor({
 
             <ChipGroup titulo="Procedimentos realizados neste local" opcoes={ESPECIALIDADES} selecionadas={end.atividades} cor="bg-brand-blue" onToggle={(v) => toggleOpcao(idx, "atividades", v)} />
             <ChipGroup titulo="Convênios aceitos" opcoes={CONVENIOS_OPCOES} selecionadas={end.convenios} cor="bg-success" onToggle={(v) => toggleOpcao(idx, "convenios", v)} />
-            <ChipGroup titulo="Formas de pagamento" opcoes={PAGAMENTOS_OPCOES} selecionadas={end.formas_pagamento} cor="bg-[#5856D6]" onToggle={(v) => toggleOpcao(idx, "formas_pagamento", v)} />
+            <ChipGroup titulo="Formas de pagamento" opcoes={PAGAMENTOS_OPCOES} selecionadas={end.formas_pagamento} cor="bg-[#FF9500]" onToggle={(v) => toggleOpcao(idx, "formas_pagamento", v)} />
           </div>
         </div>
       ))}
@@ -260,9 +310,13 @@ export default function EnderecosEditor({
       {enderecos.length < max && (
         <button
           onClick={() => onChange([...enderecos, novoEndereco()])}
-          className="self-start rounded-full bg-brand-blue/10 px-4 py-2 text-sm font-bold text-brand-blue hover:bg-brand-blue/20"
+          className="flex w-full items-center justify-center gap-2 rounded-[16px] text-[14px] font-semibold transition-all duration-200"
+          style={{ border: "1.5px dashed rgba(0,122,255,0.30)", color: "#007AFF", background: "rgba(0,122,255,0.04)", minHeight: "56px", padding: "16px" }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(0,122,255,0.08)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(0,122,255,0.04)"; }}
         >
-          + Adicionar local
+          <Plus size={18} />
+          Adicionar endereço ({enderecos.length}/{max})
         </button>
       )}
     </div>
@@ -285,7 +339,8 @@ function ChipGroup({
         {opcoes.map((op) => {
           const ativo = selecionadas.includes(op);
           return (
-            <button key={op} type="button" onClick={() => onToggle(op)} className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${ativo ? `${cor} text-white` : "bg-black/5 text-ink-soft"}`}>
+            <button key={op} type="button" onClick={() => onToggle(op)} className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-all ${ativo ? `${cor} text-white` : "bg-black/5 text-ink-soft"}`}>
+              {ativo && <Check size={12} className="flex-shrink-0" />}
               {op}
             </button>
           );

@@ -3,11 +3,14 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // UserMenu — ilha de autenticação do cabeçalho (lado direito).
 //
-// É um Componente Cliente para NÃO tornar as páginas públicas dinâmicas: o resto
-// do Header continua estático/SSR, e só este pedacinho reage ao login (lendo a
-// sessão dos cookies via cliente do navegador). Mostra:
+// Componente Cliente: reage ao login lendo a sessão dos cookies. Mostra:
 //   • deslogado  → "Entrar" + "Acesso do Dentista"
 //   • logado     → nome + menu (Painel, se dentista/superuser; Sair)
+//
+// Aceita `variant`:
+//   • "desktop" (padrão) → layout horizontal, dropdown de perfil
+//   • "mobile"           → botões empilhados full-width / bloco de perfil
+//                          (idêntico à gaveta mobile do site antigo)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import { useEffect, useState } from "react";
@@ -18,73 +21,102 @@ import { isSuperuserEmail } from "@/lib/superuser";
 import { encerrarSessao } from "@/lib/encerrar-sessao";
 
 interface Estado {
-  carregando: boolean;
   nome: string | null;
   ehPro: boolean; // dentista → "Painel do dentista"
   ehSuper: boolean; // superuser → "Painel administrativo"
 }
 
-export default function UserMenu() {
+export default function UserMenu({ variant = "desktop" }: { variant?: "desktop" | "mobile" }) {
   const router = useRouter();
-  const [estado, setEstado] = useState<Estado>({ carregando: true, nome: null, ehPro: false, ehSuper: false });
+  // Começa SEMPRE como "deslogado": isso renderiza os botões Entrar/Acesso já no
+  // HTML do servidor, então eles aparecem na hora. Se houver sessão, o efeito
+  // abaixo troca para o menu de perfil. (Pequeno "flash" para quem está logado —
+  // aceitável, já que a maioria das visitas no cabeçalho público é deslogada.)
+  const [estado, setEstado] = useState<Estado>({ nome: null, ehPro: false, ehSuper: false });
 
   useEffect(() => {
-    const supabase = criarClienteNavegador();
     let ativo = true;
 
     async function sincronizar() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!ativo) return;
-      if (!user) {
-        setEstado({ carregando: false, nome: null, ehPro: false, ehSuper: false });
-        return;
+      try {
+        const supabase = criarClienteNavegador();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!ativo) return;
+        if (!user) {
+          setEstado({ nome: null, ehPro: false, ehSuper: false });
+          return;
+        }
+        const meta = (user.user_metadata ?? {}) as { full_name?: string };
+        if (isSuperuserEmail(user.email)) {
+          setEstado({ nome: "SuperDom", ehPro: false, ehSuper: true });
+          return;
+        }
+        const { data: dent } = await supabase
+          .from("curadentespro")
+          .select("nome")
+          .eq("id", user.id)
+          .is("deleted_at", null)
+          .maybeSingle<{ nome: string | null }>();
+        if (!ativo) return;
+        setEstado({
+          nome: dent?.nome || meta.full_name || user.email || "Minha conta",
+          ehPro: !!dent,
+          ehSuper: false,
+        });
+      } catch {
+        // Falha ao checar sessão → mantém deslogado (botões continuam visíveis).
+        if (ativo) setEstado({ nome: null, ehPro: false, ehSuper: false });
       }
-      const meta = (user.user_metadata ?? {}) as { full_name?: string };
-      if (isSuperuserEmail(user.email)) {
-        setEstado({ carregando: false, nome: "SuperDom", ehPro: false, ehSuper: true });
-        return;
-      }
-      const { data: dent } = await supabase
-        .from("curadentespro")
-        .select("nome")
-        .eq("id", user.id)
-        .is("deleted_at", null)
-        .maybeSingle<{ nome: string | null }>();
-      if (!ativo) return;
-      setEstado({
-        carregando: false,
-        nome: dent?.nome || meta.full_name || user.email || "Minha conta",
-        ehPro: !!dent,
-        ehSuper: false,
-      });
     }
 
     sincronizar();
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => sincronizar());
+    let subscription: { unsubscribe: () => void } | undefined;
+    try {
+      const supabase = criarClienteNavegador();
+      subscription = supabase.auth.onAuthStateChange(() => sincronizar()).data.subscription;
+    } catch {
+      /* sem realtime de auth — tudo bem, o estado inicial já mostra os botões */
+    }
     return () => {
       ativo = false;
-      subscription.unsubscribe();
+      subscription?.unsubscribe();
     };
   }, []);
 
   async function sair() {
     const supabase = criarClienteNavegador();
     await encerrarSessao(supabase);
-    setEstado({ carregando: false, nome: null, ehPro: false, ehSuper: false });
+    setEstado({ nome: null, ehPro: false, ehSuper: false });
     router.replace("/");
     router.refresh();
   }
 
-  // Enquanto carrega, não pisca botão nenhum (evita "flash" de Entrar→logado).
-  if (estado.carregando) {
-    return <div className="h-[44px] w-[120px]" aria-hidden="true" />;
-  }
+  const ehMobile = variant === "mobile";
 
+  // ── Deslogado (estado inicial — botões sempre visíveis) ─────────────────────
   if (!estado.nome) {
+    if (ehMobile) {
+      return (
+        <div className="mt-3 flex flex-col gap-2">
+          <Link
+            href="/entrar"
+            className="min-h-[48px] w-full rounded-[14px] border py-3 text-center text-[15px] font-medium"
+            style={{ borderColor: "rgba(60,60,67,0.18)", color: "#1C1C1E" }}
+          >
+            Entrar
+          </Link>
+          <Link
+            href="/entrar?modo=dentista"
+            className="min-h-[48px] w-full rounded-[14px] py-3 text-center text-[15px] font-semibold text-white"
+            style={{ background: "#E6004C", boxShadow: "0 4px 12px rgba(230,0,76,0.25)" }}
+          >
+            Acesso do Dentista
+          </Link>
+        </div>
+      );
+    }
     return (
       <div className="flex items-center gap-3">
         <Link
@@ -94,7 +126,7 @@ export default function UserMenu() {
           Entrar
         </Link>
         <Link
-          href="/entrar"
+          href="/entrar?modo=dentista"
           className="min-h-[44px] rounded-[14px] bg-brand-magenta px-5 py-3 text-[15px] font-semibold text-white shadow-[0_4px_16px_rgba(230,0,76,0.28)] transition-colors hover:bg-brand-magenta-700"
         >
           Acesso do Dentista
@@ -103,7 +135,38 @@ export default function UserMenu() {
     );
   }
 
+  // ── Logado ─────────────────────────────────────────────────────────────────
   const primeiroNome = estado.nome.split(" ")[0];
+
+  if (ehMobile) {
+    return (
+      <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-gray-100 bg-gray-50 p-3 text-left">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-blue/10 text-base font-bold text-brand-blue">
+            {primeiroNome.charAt(0).toUpperCase()}
+          </span>
+          <p className="min-w-0 truncate text-[14px] font-bold text-gray-900">{estado.nome}</p>
+        </div>
+        {estado.ehSuper && (
+          <Link href="/pro/dashboard-analytics" className="min-h-[44px] rounded-[12px] bg-white px-3 py-2 text-[14px] font-semibold text-ink">
+            Painel administrativo
+          </Link>
+        )}
+        {estado.ehPro && (
+          <Link href="/pro/dashboard" className="min-h-[44px] rounded-[12px] bg-white px-3 py-2 text-[14px] font-semibold text-ink">
+            Painel do dentista
+          </Link>
+        )}
+        <button
+          onClick={sair}
+          className="min-h-[44px] w-full rounded-[12px] border border-red-100 bg-red-50 py-2.5 text-center text-[14px] font-semibold text-red-500"
+        >
+          Sair da Conta
+        </button>
+      </div>
+    );
+  }
+
   return (
     <details className="group relative">
       <summary className="flex min-h-[44px] cursor-pointer list-none items-center gap-2 rounded-xl px-3 py-2 hover:bg-black/5 [&::-webkit-details-marker]:hidden">

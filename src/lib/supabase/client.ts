@@ -14,10 +14,32 @@ import { createBrowserClient } from "@supabase/ssr";
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-/**
- * Cria (ou reaproveita) o cliente Supabase do navegador. O `createBrowserClient`
- * já faz a deduplicação interna, então pode ser chamado à vontade.
- */
+// SINGLETON: UMA única instância do cliente do navegador para toda a aba.
+//
+// Por que isso importa: o supabase-js usa `navigator.locks` para sincronizar a
+// autenticação. Se VÁRIAS instâncias forem criadas (uma por componente), elas
+// disputam o mesmo lock e podem TRAVAR — `getSession()`/`getUser()` ficam
+// pendurados para sempre, e a sessão nunca aparece (cabeçalho preso em "Entrar").
+// Mantendo uma instância só, não há disputa de lock.
+// Lock NO-OP: o lock padrão do supabase-js usa navigator.locks e estava
+// PENDURANDO getSession()/getUser() (deadlock — operações nunca resolviam, e a
+// sessão nunca aparecia). Rodar a função direto, sem lock, elimina o travamento.
+// (Trade-off aceitável: sem coordenação multi-aba de refresh; o token ainda
+// renova normalmente.)
+function lockNoOp<R>(_name: string, _acquireTimeout: number, fn: () => Promise<R>): Promise<R> {
+  return fn();
+}
+
+// Wrapper local: ReturnType<typeof novo> reflete o tipo EXATO inferido —
+// preservando a inferência precisa nos chamadores.
+function novo() {
+  return createBrowserClient(url, anonKey, {
+    auth: { lock: lockNoOp },
+  });
+}
+let clienteNavegador: ReturnType<typeof novo> | null = null;
+
+/** Retorna o cliente Supabase do navegador (criado uma vez e reutilizado). */
 export function criarClienteNavegador() {
-  return createBrowserClient(url, anonKey);
+  return (clienteNavegador ??= novo());
 }

@@ -19,22 +19,24 @@ export const metadata: Metadata = {
 export default function UrgenciaPage() {
   return (
     <Container className="py-10 md:py-14">
-      <div className="mx-auto max-w-2xl">
-        <span className="text-[13px] font-semibold uppercase tracking-widest text-brand-magenta">
-          Urgência odontológica
-        </span>
-        <h1 className="mt-2 text-3xl font-bold text-brand-navy md:text-4xl">
-          Precisa de um dentista agora?
-        </h1>
-        <p className="mt-4 leading-relaxed text-ink-soft">
-          Dor de dente, fratura ou inchaço não esperam. Mostramos os dentistas que atendem
-          urgência mais próximos de você, com contato direto por WhatsApp ou telefone — sem
-          intermediários.
-        </p>
-
-        <div className="mt-8">
-          <UrgenciaCliente />
+      <div className="mx-auto" style={{ maxWidth: 560 }}>
+        {/* Título (porte fiel do k11) — renderizado no servidor para SEO/indexação.
+            O H1 fica aqui (único na página); o componente cliente só cuida da
+            interação (localização + lista). */}
+        <div style={{ textAlign: "center", marginBottom: 26 }}>
+          <div style={{ width: 56, height: 56, borderRadius: 18, background: "#E6004C", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
+            <img src="/icons/emergencia.svg" width={32} height={32} alt="" />
+          </div>
+          <h1 style={{ fontFamily: "Inter, sans-serif", fontWeight: 800, fontSize: 26, letterSpacing: "-0.02em", color: "#0A2A66", margin: 0 }}>
+            Urgência odontológica
+          </h1>
+          <p style={{ color: "#5c6b7a", fontSize: 15, marginTop: 6, lineHeight: 1.5 }}>
+            Dor de dente, fratura ou inchaço não esperam — encontre os dentistas que atendem
+            urgência mais perto de você, com contato direto por WhatsApp ou telefone.
+          </p>
         </div>
+
+        <UrgenciaCliente />
       </div>
     </Container>
   );

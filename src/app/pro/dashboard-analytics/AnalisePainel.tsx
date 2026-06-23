@@ -159,7 +159,7 @@ export default function AnalisePainel() {
     <Container className="space-y-8 py-8">
       {/* Cabeçalho + navegação */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-brand-navy">Análise do site</h1>
+        <h1 className="text-2xl font-bold text-brand-navy">Analytics do Site</h1>
         <div className="flex flex-wrap gap-2">
           <Link href="/pro/dashboard-analytics/dba" className="inline-flex items-center gap-2 rounded-xl bg-brand-navy px-4 py-2 text-sm font-semibold text-white hover:bg-brand-navy-700">
             <Database size={16} /> Banco de dados
@@ -201,16 +201,6 @@ export default function AnalisePainel() {
             <Line type="monotone" dataKey="total" name="Buscas" stroke="#007AFF" strokeWidth={2} dot={false} />
           </LineChart>
         </ResponsiveContainer>
-        {projecao && (
-          <div className="mt-4 rounded-xl border-l-4 border-brand-blue bg-brand-soft/50 p-4 text-sm text-ink-soft">
-            <span className="inline-flex items-center gap-1.5 font-semibold text-brand-navy"><TrendingUp size={15} /> Projeção</span>{" "}
-            Com base nos últimos {periodoTempo} dias, a projeção para os próximos 30 dias é de{" "}
-            <strong>{projecao.projetado} buscas/dia</strong> ({projecao.crescimento}% vs. {projecao.atual} atuais).
-            {Number(projecao.crescimento) < 0 && (
-              <span className="mt-1 flex items-center gap-1.5 text-warning"><AlertTriangle size={14} /> Queda projetada — vale investigar.</span>
-            )}
-          </div>
-        )}
       </Secao>
 
       {/* Origem dos logins */}
@@ -296,10 +286,18 @@ export default function AnalisePainel() {
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold text-brand-navy">
-              {modoMapa === "dentistas" ? "Onde estão os dentistas" : modoMapa === "usuarios" ? "De onde vêm as buscas" : "Regiões com demanda e pouca oferta"}
+              {modoMapa === "dentistas"
+                ? "Mapa de Calor — Dentistas (oferta)"
+                : modoMapa === "usuarios"
+                ? "Mapa de Calor — Usuários (demanda)"
+                : "Mapa de Calor — Regiões fracas (oportunidade)"}
             </h2>
             <p className="text-xs text-ink-muted">
-              {modoMapa === "fracas" ? "Quanto mais quente, mais busca e menos dentistas — oportunidade." : "Mapa de calor por concentração."}
+              {modoMapa === "dentistas"
+                ? "Onde estão os dentistas cadastrados."
+                : modoMapa === "usuarios"
+                ? "De onde partem as buscas dos usuários."
+                : "Muita busca e pouca oferta — onde vale a pena ter mais dentistas."}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -318,6 +316,31 @@ export default function AnalisePainel() {
           <HeatMapLayer points={mapaPoints} />
         </div>
       </section>
+
+      {/* Projeção de crescimento */}
+      {projecao && (
+        <section className="rounded-2xl border-l-4 border-brand-blue bg-white p-6 shadow-sm">
+          <div className="flex items-start gap-4">
+            <TrendingUp className="h-8 w-8 shrink-0 text-brand-blue" />
+            <div>
+              <h2 className="text-lg font-semibold text-brand-navy">Projeção de Crescimento</h2>
+              <p className="mt-1 text-ink-soft">
+                Com base nos últimos {periodoTempo} dias, a projeção para os próximos 30 dias é de
+                <strong className="text-brand-navy"> {projecao.projetado} buscas/dia</strong>
+                {" "}(<strong className={Number(projecao.crescimento) >= 0 ? "text-success" : "text-danger"}>
+                  {projecao.crescimento}%
+                </strong> em relação ao valor atual de {projecao.atual} buscas/dia).
+              </p>
+              {Number(projecao.crescimento) < 0 && (
+                <div className="mt-2 flex items-center gap-2 rounded-lg bg-amber-50 px-4 py-2 text-amber-600">
+                  <AlertTriangle className="h-5 w-5" />
+                  <span className="text-sm">Queda projetada. Considere revisar suas estratégias de aquisição.</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
     </Container>
   );
 }

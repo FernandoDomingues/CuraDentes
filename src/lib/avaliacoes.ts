@@ -18,6 +18,13 @@ export interface ResumoAtividade {
   nome_atividade: string;
   media_nota: number;
   total_avaliacoes: number;
+  /**
+   * Posição do dentista no ranking da cidade para esta atividade específica.
+   * Quando <= 3, a barra exibe um BadgePodio (Top 1/2/3). Igual ao k11.
+   * PENDÊNCIA DE BACKEND: ainda não há RPC/view pública que devolva esta
+   * posição por dentista — fica `undefined` (badge oculto) até existir o dado.
+   */
+  posicao_ranking?: number;
 }
 
 /** Resumo consolidado das avaliações de um dentista. */

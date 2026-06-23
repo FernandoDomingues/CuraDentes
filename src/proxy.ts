@@ -50,5 +50,8 @@ export const config = {
   // /urgencia, /sobre, /termos, /privacidade) não usam sessão no servidor — então
   // não acionam o middleware, economizando invocations/banda (custo) e latência.
   // O login no cabeçalho dessas páginas é uma ilha cliente que se renova sozinha.
-  matcher: ["/pro/:path*", "/entrar", "/cadastro", "/redefinir-senha", "/auth/:path*"],
+  // OBS: /auth/callback NÃO entra aqui de propósito — quem estabelece a sessão é
+  // o próprio route handler do callback (que grava os cookies na resposta de
+  // redirect). Rodar o proxy lá só criaria corrida de cookies.
+  matcher: ["/pro/:path*", "/entrar", "/cadastro", "/redefinir-senha"],
 };

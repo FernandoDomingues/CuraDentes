@@ -197,6 +197,30 @@ export function buscarDentistaPorCro(cro: string): Promise<DentistaPerfil | null
   return buscarDentista("cro", cro);
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Resolve o dentista pelo parâmetro da URL `/dentista/[id]`, que pode ser o UUID
+ * (id) OU o CRO — porque a home e a busca linkam por `cro || id`. Detectamos o
+ * formato UUID para não passar um CRO numa coluna uuid (que causaria erro), e
+ * caímos para a busca por CRO caso contrário (tentando também sem espaços).
+ */
+export async function buscarDentistaPorIdOuCro(param: string): Promise<DentistaPerfil | null> {
+  if (UUID_RE.test(param)) {
+    return buscarDentista("id", param);
+  }
+  // Tenta o CRO exato; se não achar, tenta a versão sem espaços (a busca às vezes
+  // gera o slug do CRO sem espaços, enquanto a home usa o valor bruto do banco).
+  const exato = await buscarDentista("cro", param);
+  if (exato) return exato;
+  const semEspaco = param.replace(/\s/g, "");
+  if (semEspaco !== param) {
+    const alt = await buscarDentista("cro", semEspaco);
+    if (alt) return alt;
+  }
+  return null;
+}
+
 /** Item mínimo de um dentista para o sitemap. */
 export interface DentistaSitemap {
   id: string;

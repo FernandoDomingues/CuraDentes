@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { SITE_URL, SITE_NOME, SITE_DESCRICAO } from "@/lib/site";
+import { Toaster } from "sonner";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import AuthListener from "@/components/AuthListener";
+import SessaoProvider from "@/components/SessaoProvider";
 import "./globals.css";
 
 // Inter é a fonte do corpo/UI (mesma do site-k11). Exposta como variável CSS
@@ -49,11 +51,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className={`${inter.variable} h-full`}>
-      <body className="min-h-full flex flex-col bg-white text-ink">
-        <AuthListener />
-        <Header />
-        <main className="flex-1">{children}</main>
-        <Footer />
+      <body className="min-h-full flex flex-col text-ink">
+        <SessaoProvider>
+          <AuthListener />
+          <Header />
+          <main className="flex-1">{children}</main>
+          <Footer />
+          {/* Notificações (toasts) — mesma lib do site antigo (sonner). */}
+          <Toaster position="top-center" richColors />
+        </SessaoProvider>
       </body>
     </html>
   );

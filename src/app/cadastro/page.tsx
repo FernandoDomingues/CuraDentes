@@ -10,14 +10,17 @@
 // quando o LGPD é aceito (Etapa 6). Ao reabrir com sessão, retoma de onde parou.
 //
 // Reusa as validações (lib/validacao), o editor de endereços (EnderecosEditor) e o
-// geocoding na conclusão. Portado do site-k11 (NovoCadastro.tsx), enxuto.
+// geocoding na conclusão. Portado do site-k11 (NovoCadastro.tsx).
 // ═══════════════════════════════════════════════════════════════════════════════
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
-import Container from "@/components/Container";
+import { toast } from "sonner";
+import {
+  ChevronRight, ChevronLeft, Eye, EyeOff, Check, Upload, Shield, AlertCircle, X,
+  Mail, Phone, User, FileText, Info, Loader2,
+} from "lucide-react";
 import EnderecosEditor, { novoEndereco, DIAS_SEMANA, POLITICA_PADRAO, type EnderecoForm } from "@/components/pro/EnderecosEditor";
 import type { EnderecoRow } from "@/lib/dentistas";
 import { criarClienteNavegador } from "@/lib/supabase/client";
@@ -30,9 +33,35 @@ import {
 } from "@/lib/validacao";
 import { forcaSenha, senhaValida } from "@/lib/senha";
 
-const ETAPAS = ["Conta", "Telefone", "Identidade", "Endereços", "Bio", "Conclusão"];
-const labelCls = "mb-1 block text-xs font-semibold text-ink-soft";
-const inputCls = "w-full rounded-[10px] border border-black/15 px-3.5 py-2.5 text-sm outline-none focus:border-brand-blue";
+// Etapas com ícone e label (estilo k11: indicador circular + label embaixo).
+const ETAPAS = [
+  { id: 1, label: "Conta", icone: User },
+  { id: 2, label: "Telefone", icone: Phone },
+  { id: 3, label: "Identidade", icone: Shield },
+  { id: 4, label: "Endereços", icone: FileText },
+  { id: 5, label: "Bio", icone: FileText },
+  { id: 6, label: "Consentimento", icone: Check },
+] as const;
+
+// ─── Estilos inline copiados verbatim do k11 ──────────────────────────────────
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "12px 16px",
+  border: "1px solid rgba(60,60,67,0.18)",
+  borderRadius: "12px",
+  fontSize: "15px",
+  color: "#1C1C1E",
+  background: "#fff",
+  outline: "none",
+  boxSizing: "border-box",
+};
+const labelStyle: React.CSSProperties = {
+  display: "block",
+  fontSize: "13px",
+  fontWeight: 600,
+  color: "#3A3A3C",
+  marginBottom: "6px",
+};
 
 // Normaliza a agenda do banco (aceita os dois formatos de chave) para 7 dias fixos.
 function normalizarAgenda(raw: unknown) {
@@ -94,6 +123,8 @@ export default function CadastroPage() {
   const [emailVerificado, setEmailVerificado] = useState(false);
   const [senha, setSenha] = useState("");
   const [confirma, setConfirma] = useState("");
+  const [mostrarSenha, setMostrarSenha] = useState(false);
+  const [mostrarConfirma, setMostrarConfirma] = useState(false);
   const [senhaSincronizada, setSenhaSincronizada] = useState(false);
 
   // Etapas 2/3
@@ -101,6 +132,32 @@ export default function CadastroPage() {
   const [cpf, setCpf] = useState("");
   const [cro, setCro] = useState("");
   const [anoFormacao, setAnoFormacao] = useState("");
+  const [fotoUrl, setFotoUrl] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Etapa 3 — Foto: ao escolher o arquivo, grava o dataURL (base64) em
+  // sessionStorage e navega para o editor, que abre JÁ com a foto carregada
+  // (paridade com o k11, que passava o File via router state).
+  function escolherFoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      toast.error("Formato inválido. Use JPG, PNG ou WEBP.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        sessionStorage.setItem("curadentes_foto_pendente", reader.result as string);
+      } catch {
+        toast.error("Imagem muito grande para abrir no editor. Escolha um arquivo menor.");
+        return;
+      }
+      router.push("/pro/editor-de-fotos");
+    };
+    reader.readAsDataURL(file);
+  }
 
   // Etapa 4
   const [enderecos, setEnderecos] = useState<EnderecoForm[]>([novoEndereco()]);
@@ -116,6 +173,10 @@ export default function CadastroPage() {
   const [prefNovidades, setPrefNovidades] = useState(false);
   const [prefParceiros, setPrefParceiros] = useState(false);
 
+  // Modal "Cadastro incompleto" (portado do k11): exibido ao concluir com campos
+  // obrigatórios faltando, com a lista de pendências e a opção de ir ao painel.
+  const [exibirModalIncompleto, setExibirModalIncompleto] = useState(false);
+
   // ─── Retomada: se já há sessão, carrega o que existe e posiciona na etapa ──────
   useEffect(() => {
     (async () => {
@@ -130,7 +191,7 @@ export default function CadastroPage() {
         setEmailVerificado(true);
         const { data: pro } = await supabase
           .from("curadentespro")
-          .select("nome, tratamento, nome_completo, telefone, cro, ano_formacao, bio, instagram, lgpd_aceito")
+          .select("nome, tratamento, nome_completo, telefone, cro, ano_formacao, foto_url, bio, instagram, lgpd_aceito")
           .eq("id", user.id)
           .is("deleted_at", null)
           .maybeSingle();
@@ -145,6 +206,7 @@ export default function CadastroPage() {
           setTelefone(pro.telefone ?? "");
           setCro(pro.cro ?? "");
           setAnoFormacao(pro.ano_formacao ? String(pro.ano_formacao) : "");
+          setFotoUrl(pro.foto_url ?? "");
           setBio(pro.bio ?? "");
           setInstagram(extrairUserInstagram(pro.instagram ?? ""));
           setSenhaSincronizada(true);
@@ -207,13 +269,16 @@ export default function CadastroPage() {
     setErro("");
     if (!nome.trim() || !tratamento) { setErro("Preencha o nome e escolha Dr./Dra."); return; }
     if (!emailVerificado || !userId) { setErro("Verifique seu e-mail com o código."); return; }
-    if (!senhaSincronizada) {
+    // Senha obrigatória só se ainda não sincronizada. Se já sincronizada, validar
+    // apenas quando o dentista digitou algo (re-edição opcional).
+    const trocandoSenha = !senhaSincronizada || senha.length > 0;
+    if (trocandoSenha) {
       if (!senhaValida(senha)) { setErro("A senha precisa ter ao menos 8 caracteres."); return; }
       if (senha !== confirma) { setErro("As senhas não coincidem."); return; }
     }
     setOcupado(true);
     try {
-      if (!senhaSincronizada && senha) {
+      if (trocandoSenha && senha) {
         const { error: sErr } = await supabase.auth.updateUser({ password: senha });
         if (sErr) throw sErr;
         setSenhaSincronizada(true);
@@ -234,7 +299,8 @@ export default function CadastroPage() {
   // ─── Saves das etapas 2..5 (row já existe) ─────────────────────────────────────
   async function avancar2() {
     setErro("");
-    if (!validarTelefone(telefone)) { setErro("Telefone inválido (DDD + 9 dígitos)."); return; }
+    // Telefone é OPCIONAL: só bloqueia se houver algo digitado em formato inválido.
+    if (telefone.trim() && !validarTelefone(telefone)) { setErro("Telefone inválido (DDD + 9 dígitos)."); return; }
     await salvar({ telefone }, 3);
   }
   async function avancar3() {
@@ -337,8 +403,36 @@ export default function CadastroPage() {
     }
   }
 
+  // Lista de campos obrigatórios pendentes (portado do k11). Telefone é OPCIONAL —
+  // só conta como pendência se foi digitado em formato inválido.
+  function camposFaltantes(): string[] {
+    const faltando: string[] = [];
+    if (!nome.trim()) faltando.push("Nome para exibição");
+    if (!nomeCompleto.trim()) faltando.push("Nome completo (para verificação do CRO)");
+    if (!emailVerificado) faltando.push("Verificação de e-mail");
+    const precisaSenha = !senhaSincronizada || senha.length > 0;
+    if (precisaSenha && !senhaValida(senha)) faltando.push("Senha (mín. 8 caracteres)");
+    if (telefone.trim() && !validarTelefone(telefone)) faltando.push("Telefone");
+    if (!validarCpf(cpf)) faltando.push("CPF");
+    if (!validarCro(cro)) faltando.push("CRO");
+    if (!lgpd) faltando.push("Aceite da LGPD");
+    if (!cobranca) faltando.push("Ciência da cobrança a partir de 01/07/2027");
+    const { valido: endOk, erros: endErros } = validarEnderecos(enderecos);
+    if (!endOk) faltando.push(...endErros);
+    return faltando;
+  }
+  const camposFaltando = camposFaltantes();
+
+  // Vai para o painel mesmo com o cadastro incompleto (o perfil não fica público).
+  function continuarIncompleto() {
+    setExibirModalIncompleto(false);
+    router.push("/pro/dashboard");
+  }
+
   async function concluir() {
     setErro("");
+    // Se faltarem obrigatórios, abre o modal de pendências em vez de só barrar.
+    if (camposFaltantes().length > 0) { setExibirModalIncompleto(true); return; }
     if (!lgpd) { setErro("É preciso aceitar os termos (LGPD) para concluir."); return; }
     if (!cobranca) { setErro("Confirme que está ciente do aviso de cobrança futura."); return; }
     setOcupado(true);
@@ -370,215 +464,681 @@ export default function CadastroPage() {
   }
 
   if (carregando) {
-    return <Container className="py-20 text-center text-ink-muted">Carregando…</Container>;
+    return (
+      <div className="min-h-screen" style={{ background: "#F2F2F7" }}>
+        <div className="container mx-auto max-w-3xl px-5 py-20 text-center text-ink-muted">Carregando…</div>
+      </div>
+    );
   }
 
   const forca = forcaSenha(senha);
+  const progresso = ((etapa - 1) / (ETAPAS.length - 1)) * 100;
+  // Sinaliza obrigatórios pendentes em laranja só quando há algum progresso depois.
+  const temProgressoPosterior = !!(
+    telefone || cpf || cro || anoFormacao || fotoUrl || bio ||
+    enderecos.some((end) => end.nome_clinica.trim() || end.logradouro.trim() || end.cep.trim())
+  );
 
   return (
-    <Container className="py-8 md:py-12">
-      <div className="mx-auto max-w-2xl">
-        <Image src="/logos/logo-pro.png" alt="CuraDentes Pro" width={2480} height={926} className="mb-6 h-10 w-auto" />
+    <div className="min-h-screen" style={{ background: "#F2F2F7" }}>
+      {/* Header sticky do wizard (logo + "Etapa N de 6") */}
+      <header
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 100,
+          background: "rgba(255,255,255,0.92)",
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+          borderBottom: "0.5px solid rgba(60,60,67,0.10)",
+        }}
+      >
+        <div className="container mx-auto max-w-3xl px-5 md:px-8">
+          <div className="flex items-center justify-between" style={{ height: "60px" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logos/logo-pro.png" alt="CuraDentes Pro" className="h-8 w-auto" />
+            <span className="text-[13px]" style={{ color: "#8E8E93" }}>
+              Etapa {etapa} de {ETAPAS.length}
+            </span>
+          </div>
+        </div>
+      </header>
 
-        {/* Stepper — etapas já alcançadas são clicáveis (voltar direto a uma delas) */}
-        <div className="mb-8 flex flex-wrap gap-2">
-          {ETAPAS.map((nomeEtapa, i) => {
-            const n = i + 1;
-            const estado = n === etapa ? "atual" : n < etapa ? "feita" : "futura";
-            const podeIr = n < etapa && !ocupado;
-            return (
-              <button
-                key={nomeEtapa}
-                type="button"
-                onClick={() => { if (podeIr) { setErro(""); setEtapa(n); } }}
-                disabled={!podeIr}
-                aria-current={estado === "atual" ? "step" : undefined}
-                className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-colors ${estado === "atual" ? "bg-brand-blue text-white" : estado === "feita" ? "bg-brand-blue/10 text-brand-blue hover:bg-brand-blue/20 cursor-pointer" : "bg-black/5 text-ink-muted cursor-default"}`}
-              >
-                <span>{n}</span> {nomeEtapa}
-              </button>
-            );
-          })}
+      <main className="container mx-auto max-w-3xl px-5 md:px-8 py-8">
+        {/* ─── Stepper: indicadores circulares (32px) + label embaixo ─── */}
+        <div className="mb-8">
+          <div className="mb-3 flex items-center justify-between">
+            {ETAPAS.map((e) => {
+              const concluida = e.id < etapa;
+              const atual = etapa === e.id;
+              const podeNavegar = e.id < etapa && !ocupado;
+              const bgColor = concluida ? "#34C759" : "#FF9500";
+              return (
+                <button
+                  key={e.id}
+                  type="button"
+                  disabled={!podeNavegar}
+                  onClick={() => { if (podeNavegar) { setErro(""); setEtapa(e.id); } }}
+                  aria-current={atual ? "step" : undefined}
+                  className="flex flex-1 flex-col items-center gap-1 transition-opacity"
+                  style={{ cursor: podeNavegar ? "pointer" : "default", opacity: podeNavegar || atual ? 1 : 0.5, background: "none", border: "none", padding: 0 }}
+                >
+                  <div
+                    className="flex items-center justify-center rounded-full text-[12px] font-bold transition-all duration-300"
+                    style={{
+                      width: "32px",
+                      height: "32px",
+                      background: bgColor,
+                      color: "#fff",
+                      border: atual ? "3px solid #007AFF" : "none",
+                      boxShadow: atual ? "0 0 0 4px rgba(0, 122, 255, 0.25)" : "none",
+                    }}
+                  >
+                    {concluida ? <Check size={14} /> : <span className="text-[14px] font-bold">!</span>}
+                  </div>
+                  <span
+                    className="hidden text-center text-[10px] sm:block"
+                    style={{ color: concluida ? "#34C759" : "#FF9500", fontWeight: atual ? "bold" : 600 }}
+                  >
+                    {e.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          {/* Barra de progresso contínua */}
+          <div style={{ height: "4px", background: "rgba(60,60,67,0.10)", borderRadius: "2px" }}>
+            <div
+              style={{
+                height: "100%",
+                width: `${progresso}%`,
+                background: "linear-gradient(90deg, #007AFF, #34C759)",
+                borderRadius: "2px",
+                transition: "width 0.4s ease",
+              }}
+            />
+          </div>
         </div>
 
         {erro && <p className="mb-5 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">{erro}</p>}
 
-        <div className="rounded-3xl border border-black/8 bg-white p-6 md:p-8">
+        {/* Card do formulário */}
+        <div
+          style={{
+            background: "rgba(255,255,255,0.92)",
+            backdropFilter: "blur(24px)",
+            WebkitBackdropFilter: "blur(24px)",
+            borderRadius: "24px",
+            border: "0.5px solid rgba(255,255,255,0.60)",
+            boxShadow: "0 8px 32px rgba(16,24,64,0.08)",
+            padding: "clamp(24px, 4vw, 40px)",
+          }}
+        >
           {/* ── Etapa 1: Conta ── */}
           {etapa === 1 && (
-            <div className="flex flex-col gap-4">
-              <h1 className="text-xl font-bold text-brand-navy">Crie sua conta</h1>
+            <div className="flex flex-col gap-5">
               <div>
-                <label className={labelCls}>Nome de exibição *</label>
-                <input value={nome} onChange={(e) => setNome(e.target.value)} className={inputCls} placeholder="Ana Silva" />
+                <h1 className="mb-1 text-[22px] font-bold" style={{ color: "#0A2A66" }}>Criar sua conta</h1>
+                <p className="text-[14px]" style={{ color: "#8E8E93" }}>Informações básicas de acesso à plataforma</p>
               </div>
+
               <div>
-                <label className={labelCls}>Como aparece no seu perfil *</label>
+                <label style={labelStyle}>Nome para exibição *</label>
+                <input value={nome} onChange={(e) => setNome(e.target.value)} style={inputStyle} placeholder="João Silva" />
+              </div>
+
+              <div>
+                <label style={labelStyle}>Como aparece no seu perfil *</label>
                 <div className="flex gap-2">
                   {(["Dr.", "Dra."] as const).map((t) => (
-                    <button key={t} type="button" onClick={() => setTratamento(t)} className={`flex-1 rounded-[12px] py-2.5 text-sm font-semibold transition-all ${tratamento === t ? "bg-brand-blue text-white" : "border border-black/10 bg-black/5 text-ink-soft"}`}>
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setTratamento(t)}
+                      className="flex-1 rounded-[12px] py-2.5 text-[14px] font-semibold transition-all"
+                      style={tratamento === t
+                        ? { background: "#007AFF", color: "#fff" }
+                        : { background: "rgba(60,60,67,0.06)", color: "#3A3A3C", border: "0.5px solid rgba(60,60,67,0.12)" }}
+                    >
                       {t} {nome.trim() ? nome.trim().split(" ")[0] : ""}
                     </button>
                   ))}
                 </div>
               </div>
+
               <div>
-                <label className={labelCls}>Nome completo (verificação do CRO) *</label>
-                <input value={nomeCompleto} onChange={(e) => setNomeCompleto(e.target.value)} className={inputCls} />
-                <p className="mt-1 text-[11px] text-ink-muted">Depois só pode ser alterado via suporte.</p>
+                <label style={labelStyle}>
+                  <span className="flex items-center gap-1.5">
+                    <Shield size={13} />
+                    Nome completo (para verificação do CRO) *
+                  </span>
+                </label>
+                <input value={nomeCompleto} onChange={(e) => setNomeCompleto(e.target.value)} style={inputStyle} placeholder="João Silva Santos (igual ao documento)" />
+                <p className="mt-1 text-[11px]" style={{ color: "#8E8E93" }}>
+                  Este nome será usado para conferência com o CRO no sistema CFO e não poderá ser alterado depois.
+                </p>
               </div>
 
               {/* E-mail + OTP */}
               <div>
-                <label className={labelCls}>E-mail *</label>
+                <label style={labelStyle}>
+                  <span className="flex items-center gap-1.5">
+                    <Mail size={13} />
+                    E-mail *
+                    {emailVerificado && (
+                      <span className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: "rgba(52,199,89,0.10)", color: "#34C759" }}>
+                        <Check size={10} /> Verificado
+                      </span>
+                    )}
+                  </span>
+                </label>
                 <div className="flex gap-2">
-                  <input type="email" value={email} disabled={emailVerificado} onChange={(e) => setEmail(e.target.value)} className={`${inputCls} ${emailVerificado ? "bg-black/3 text-ink-muted" : ""}`} placeholder="seu@email.com" />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => {
+                      // Reeditar o e-mail destrava a verificação: zera os flags para
+                      // o dentista reenviar/reconfirmar o código (paridade k11).
+                      setEmail(e.target.value);
+                      if (emailVerificado) setEmailVerificado(false);
+                      if (otpEnviado) setOtpEnviado(false);
+                      setCodigo("");
+                    }}
+                    style={{ ...inputStyle, flex: 1 }}
+                    placeholder="seu@email.com.br"
+                  />
                   {!emailVerificado && (
-                    <button onClick={enviarCodigo} disabled={ocupado || !email.includes("@")} className="flex-shrink-0 rounded-[10px] bg-brand-navy px-4 text-sm font-semibold text-white disabled:opacity-50">
+                    <button
+                      onClick={enviarCodigo}
+                      disabled={ocupado || !email.includes("@")}
+                      className="flex-shrink-0 rounded-[12px] px-4 py-3 text-[13px] font-semibold text-white transition-all duration-200"
+                      style={{ background: email.includes("@") && !ocupado ? "#007AFF" : "rgba(0,122,255,0.25)", cursor: email.includes("@") ? "pointer" : "not-allowed", minHeight: "44px" }}
+                    >
                       {otpEnviado ? "Reenviar" : "Enviar código"}
                     </button>
                   )}
                 </div>
+
+                {otpEnviado && !emailVerificado && (
+                  <div className="mt-3 flex flex-col gap-3 rounded-[12px] p-4" style={{ background: "rgba(0,122,255,0.06)", border: "0.5px solid rgba(0,122,255,0.15)" }}>
+                    <p className="text-[13px]" style={{ color: "#007AFF" }}>
+                      Enviamos um código de 8 dígitos para <strong>{email}</strong>. Verifique sua caixa de entrada.
+                    </p>
+                    <div className="flex gap-2">
+                      <input
+                        value={codigo}
+                        onChange={(e) => setCodigo(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                        inputMode="numeric"
+                        maxLength={8}
+                        placeholder="00000000"
+                        className="text-center text-[20px] font-bold tracking-[0.3em]"
+                        style={{ ...inputStyle, flex: 1, letterSpacing: "0.3em" }}
+                      />
+                      <button
+                        onClick={verificarCodigo}
+                        disabled={ocupado || codigo.length !== 8}
+                        className="flex-shrink-0 rounded-[12px] px-4 py-3 text-[13px] font-semibold text-white transition-all duration-200"
+                        style={{ background: codigo.length === 8 && !ocupado ? "#34C759" : "rgba(52,199,89,0.4)", cursor: codigo.length === 8 ? "pointer" : "not-allowed" }}
+                      >
+                        Confirmar
+                      </button>
+                    </div>
+                    <p className="text-[11px]" style={{ color: "#8E8E93" }}>
+                      Caso não encontre, verifique sua pasta de Spam ou Lixo Eletrônico.
+                    </p>
+                  </div>
+                )}
               </div>
-              {otpEnviado && !emailVerificado && (
+
+              {/* Senha. Quando já sincronizada (retomada de cadastro), a seção
+                  continua visível com placeholder indicando que a senha está
+                  salva — deixar em branco mantém a senha; digitar algo a troca. */}
+              <>
                 <div>
-                  <label className={labelCls}>Código de 8 dígitos (enviado ao e-mail)</label>
-                  <div className="flex gap-2">
-                    <input value={codigo} onChange={(e) => setCodigo(e.target.value.replace(/\D/g, "").slice(0, 8))} inputMode="numeric" className={inputCls} placeholder="00000000" />
-                    <button onClick={verificarCodigo} disabled={ocupado || codigo.length !== 8} className="flex-shrink-0 rounded-[10px] bg-brand-blue px-4 text-sm font-semibold text-white disabled:opacity-50">
-                      Verificar
+                  <label style={labelStyle}>Senha {senhaSincronizada ? "" : "*"}</label>
+                  <div className="relative">
+                    <input
+                      type={mostrarSenha ? "text" : "password"}
+                      value={senha}
+                      onChange={(e) => setSenha(e.target.value)}
+                      placeholder={senhaSincronizada ? "Sua senha já está salva (deixe em branco para manter)" : "Mínimo 8 caracteres"}
+                      autoComplete="new-password"
+                      style={{ ...inputStyle, paddingRight: "48px" }}
+                    />
+                    <button type="button" onClick={() => setMostrarSenha(!mostrarSenha)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "#8E8E93" }}>
+                      {mostrarSenha ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
-                </div>
-              )}
-              {emailVerificado && <p className="rounded-lg bg-success/10 px-3 py-2 text-sm text-success">E-mail verificado ✓</p>}
-
-              {/* Senha (só se ainda não sincronizada) */}
-              {!senhaSincronizada && (
-                <>
-                  <div>
-                    <label className={labelCls}>Senha (mín. 8 caracteres) *</label>
-                    <input type="password" value={senha} onChange={(e) => setSenha(e.target.value)} className={inputCls} autoComplete="new-password" />
-                    {senha && (
-                      <div className="mt-1 flex items-center gap-2">
-                        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-black/8">
-                          <div className="h-full rounded-full" style={{ width: `${(forca.nivel / 4) * 100}%`, background: forca.cor }} />
-                        </div>
-                        <span className="text-xs text-ink-muted">{forca.rotulo}</span>
+                  {senha.length > 0 && (
+                    <div className="mt-2">
+                      <div className="mb-1 flex gap-1">
+                        {[0, 1, 2, 3].map((i) => (
+                          <div
+                            key={i}
+                            style={{
+                              flex: 1,
+                              height: "4px",
+                              borderRadius: "2px",
+                              background: i < forca.nivel ? forca.cor : "rgba(60,60,67,0.10)",
+                              transition: "background 0.3s ease",
+                            }}
+                          />
+                        ))}
                       </div>
+                      <p className="text-[12px] font-medium" style={{ color: forca.nivel > 0 ? forca.cor : "#8E8E93" }}>
+                        {forca.nivel > 0 ? forca.rotulo : ""}
+                      </p>
+                    </div>
+                  )}
+                </div>
+                {/* Confirmação só faz sentido ao definir/trocar a senha. */}
+                {(!senhaSincronizada || senha.length > 0) && (
+                  <div>
+                    <label style={labelStyle}>Confirmar senha {senhaSincronizada ? "" : "*"}</label>
+                    <div className="relative">
+                      <input
+                        type={mostrarConfirma ? "text" : "password"}
+                        value={confirma}
+                        onChange={(e) => setConfirma(e.target.value)}
+                        placeholder="Repita a senha"
+                        autoComplete="new-password"
+                        style={{ ...inputStyle, paddingRight: "48px", borderColor: confirma && confirma !== senha ? "#FF3B30" : undefined }}
+                      />
+                      <button type="button" onClick={() => setMostrarConfirma(!mostrarConfirma)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "#8E8E93" }}>
+                        {mostrarConfirma ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                    {confirma && confirma !== senha && (
+                      <p className="mt-1 text-[12px]" style={{ color: "#FF3B30" }}>As senhas não coincidem.</p>
                     )}
                   </div>
-                  <div>
-                    <label className={labelCls}>Confirmar senha *</label>
-                    <input type="password" value={confirma} onChange={(e) => setConfirma(e.target.value)} className={inputCls} autoComplete="new-password" />
-                  </div>
-                </>
-              )}
+                )}
+              </>
 
-              <div className="mt-2 flex justify-between">
-                <Link href="/" className="rounded-full px-4 py-2.5 text-sm font-semibold text-ink-muted hover:text-ink">Cancelar</Link>
-                <button onClick={avancar1} disabled={ocupado} className="rounded-full bg-brand-blue px-6 py-2.5 text-sm font-bold text-white hover:bg-brand-blue-600 disabled:opacity-60">
-                  {ocupado ? "Salvando…" : "Avançar"}
-                </button>
-              </div>
+              {/* Navegação Etapa 1 (sem "Deixar para depois" — e-mail deve ser verificado) */}
+              <NavEtapa
+                voltarLabel="Cancelar"
+                onVoltar={() => router.push("/")}
+                onAvancar={avancar1}
+                ocupado={ocupado}
+                podeAvancar={nome.trim() !== "" && emailVerificado && (
+                  senhaSincronizada
+                    ? (senha.length === 0 || (senha.length >= 8 && senha === confirma))
+                    : (senha.length >= 8 && senha === confirma)
+                )}
+              />
             </div>
           )}
 
           {/* ── Etapa 2: Telefone ── */}
           {etapa === 2 && (
-            <div className="flex flex-col gap-4">
-              <h1 className="text-xl font-bold text-brand-navy">Telefone de contato</h1>
+            <div className="flex flex-col gap-5">
               <div>
-                <label className={labelCls}>Celular (com DDD) *</label>
-                <input value={telefone} onChange={(e) => setTelefone(formatarTelefone(e.target.value))} className={inputCls} placeholder="(11) 99999-8888" />
+                <h1 className="mb-1 text-[22px] font-bold" style={{ color: "#0A2A66" }}>Telefone de contato</h1>
+                <p className="text-[14px]" style={{ color: "#8E8E93" }}>
+                  Usaremos para notificações e segurança da conta.
+                  A verificação por SMS/WhatsApp será habilitada em uma versão futura — por enquanto o campo é opcional.
+                </p>
               </div>
-              <NavEtapa onVoltar={() => setEtapa(1)} onAvancar={avancar2} onDepois={deixarParaDepois} ocupado={ocupado} />
+              <div>
+                <label style={labelStyle}>
+                  <span className="flex items-center gap-1.5">
+                    <Phone size={13} />
+                    Número de telefone (opcional)
+                    {validarTelefone(telefone) && (
+                      <span className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: "rgba(52,199,89,0.10)", color: "#34C759" }}>
+                        <Check size={10} /> Válido
+                      </span>
+                    )}
+                  </span>
+                </label>
+                <input
+                  value={telefone}
+                  onChange={(e) => setTelefone(formatarTelefone(e.target.value))}
+                  placeholder="(11) 99999-8888"
+                  maxLength={15}
+                  style={{
+                    ...inputStyle,
+                    borderColor: temProgressoPosterior && !validarTelefone(telefone)
+                      ? "#FF9500"
+                      : (telefone.replace(/\D/g, "").length === 11 && !validarTelefone(telefone) ? "#FF3B30" : "rgba(60,60,67,0.18)"),
+                    boxShadow: temProgressoPosterior && !validarTelefone(telefone) ? "0 0 0 3px rgba(255,149,0,0.15)" : undefined,
+                  }}
+                />
+                {temProgressoPosterior && !validarTelefone(telefone) && (
+                  <p className="mt-1 text-[12px] font-medium" style={{ color: "#FF9500" }}>
+                    Telefone obrigatório pendente. Insira um celular válido (ex.: (11) 99999-9999).
+                  </p>
+                )}
+                {telefone.replace(/\D/g, "").length === 11 && !validarTelefone(telefone) && !temProgressoPosterior && (
+                  <p className="mt-1 text-[12px]" style={{ color: "#FF3B30" }}>
+                    Número inválido. O celular deve conter DDD e começar com 9.
+                  </p>
+                )}
+                <p className="mt-1 text-[12px]" style={{ color: "#8E8E93" }}>
+                  Opcional. Formato: DDD + 9 dígitos (ex.: (11) 99999-9999).
+                </p>
+              </div>
+              <NavEtapa onVoltar={() => setEtapa(1)} onAvancar={avancar2} onDepois={deixarParaDepois} ocupado={ocupado} podeAvancar />
             </div>
           )}
 
           {/* ── Etapa 3: Identidade ── */}
           {etapa === 3 && (
-            <div className="flex flex-col gap-4">
-              <h1 className="text-xl font-bold text-brand-navy">Identidade profissional</h1>
+            <div className="flex flex-col gap-5">
               <div>
-                <label className={labelCls}>CPF *</label>
-                <input value={cpf} onChange={(e) => setCpf(formatarCpf(e.target.value))} className={inputCls} placeholder="000.000.000-00" />
+                <h1 className="mb-1 text-[22px] font-bold" style={{ color: "#0A2A66" }}>Identidade profissional</h1>
+                <p className="text-[14px]" style={{ color: "#8E8E93" }}>Seus dados profissionais garantem a credibilidade do seu perfil</p>
               </div>
+
+              {/* Foto de perfil */}
               <div>
-                <label className={labelCls}>CRO *</label>
-                <input value={cro} onChange={(e) => setCro(formatarCro(e.target.value))} className={inputCls} placeholder="CRO-SP12345" />
+                <label style={labelStyle}>Foto de perfil</label>
+                <div className="flex items-center gap-4">
+                  <div
+                    className="flex flex-shrink-0 items-center justify-center overflow-hidden"
+                    style={{ width: "80px", height: "80px", borderRadius: "50%", background: "rgba(0,122,255,0.08)", border: "2px dashed rgba(0,122,255,0.25)" }}
+                  >
+                    {fotoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={fotoUrl} alt="Foto" className="h-full w-full object-cover" />
+                    ) : (
+                      <User size={28} style={{ color: "rgba(0,122,255,0.40)" }} />
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex items-center gap-2 rounded-[12px] px-4 py-2.5 text-[13px] font-semibold transition-all duration-200"
+                      style={{ background: "rgba(0,122,255,0.08)", color: "#007AFF", border: "0.5px solid rgba(0,122,255,0.20)", minHeight: "40px" }}
+                    >
+                      <Upload size={14} />
+                      Fazer upload
+                    </button>
+                    <p className="text-[12px]" style={{ color: "#8E8E93" }}>JPG, PNG ou WEBP · máx. 5 MB</p>
+                  </div>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={escolherFoto}
+                />
               </div>
+
+              {/* CPF */}
               <div>
-                <label className={labelCls}>Ano de formação (opcional)</label>
-                <input type="number" value={anoFormacao} onChange={(e) => setAnoFormacao(e.target.value)} className={inputCls} placeholder="2015" />
+                <label style={labelStyle}>CPF *</label>
+                <input
+                  value={cpf}
+                  onChange={(e) => setCpf(formatarCpf(e.target.value))}
+                  placeholder="000.000.000-00"
+                  maxLength={14}
+                  style={{
+                    ...inputStyle,
+                    borderColor: temProgressoPosterior && !validarCpf(cpf)
+                      ? "#FF9500"
+                      : (cpf.length === 14 && !validarCpf(cpf) ? "#FF3B30" : "rgba(60,60,67,0.18)"),
+                    boxShadow: temProgressoPosterior && !validarCpf(cpf) ? "0 0 0 3px rgba(255,149,0,0.15)" : undefined,
+                  }}
+                />
+                {temProgressoPosterior && !validarCpf(cpf) && (
+                  <p className="mt-1 text-[12px] font-medium" style={{ color: "#FF9500" }}>CPF obrigatório pendente. Informe um CPF válido.</p>
+                )}
+                {cpf.length === 14 && !validarCpf(cpf) && !temProgressoPosterior && (
+                  <p className="mt-1 text-[12px]" style={{ color: "#FF3B30" }}>CPF inválido. Verifique os dígitos digitados.</p>
+                )}
               </div>
-              <p className="text-xs text-ink-muted">A foto de perfil você adiciona depois, no painel.</p>
-              <NavEtapa onVoltar={() => setEtapa(2)} onAvancar={avancar3} onDepois={deixarParaDepois} ocupado={ocupado} />
+
+              {/* CRO */}
+              <div>
+                <label style={labelStyle}>
+                  <span className="flex items-center gap-1.5">
+                    <Shield size={13} />
+                    CRO (Conselho Regional de Odontologia) *
+                  </span>
+                </label>
+                <input
+                  value={cro}
+                  onChange={(e) => setCro(formatarCro(e.target.value))}
+                  placeholder="CRO-SP123456"
+                  maxLength={12}
+                  style={{
+                    ...inputStyle,
+                    borderColor: temProgressoPosterior && !validarCro(cro)
+                      ? "#FF9500"
+                      : (cro.length > 4 && !validarCro(cro) ? "#FF3B30" : "rgba(60,60,67,0.18)"),
+                    boxShadow: temProgressoPosterior && !validarCro(cro) ? "0 0 0 3px rgba(255,149,0,0.15)" : undefined,
+                  }}
+                />
+                {temProgressoPosterior && !validarCro(cro) && (
+                  <p className="mt-1 text-[12px] font-medium" style={{ color: "#FF9500" }}>CRO obrigatório pendente. Informe o CRO no formato CRO-SP123456.</p>
+                )}
+                {cro.length > 4 && !validarCro(cro) && !temProgressoPosterior && (
+                  <p className="mt-1 text-[12px]" style={{ color: "#FF3B30" }}>CRO inválido. Deve conter sigla do estado e 3 a 6 números (ex: CRO-SP123456).</p>
+                )}
+                <p className="mt-1 text-[12px]" style={{ color: "#8E8E93" }}>Formato: CRO-UF seguido do número de registro</p>
+              </div>
+
+              {/* Ano de formação */}
+              <div>
+                <label style={labelStyle}>Ano de formação (opcional)</label>
+                <input
+                  type="number"
+                  value={anoFormacao}
+                  onChange={(e) => setAnoFormacao(e.target.value)}
+                  placeholder="Ex: 2015"
+                  min={1960}
+                  max={new Date().getFullYear()}
+                  style={inputStyle}
+                />
+              </div>
+
+              <NavEtapa onVoltar={() => setEtapa(2)} onAvancar={avancar3} onDepois={deixarParaDepois} ocupado={ocupado} podeAvancar={validarCpf(cpf) && validarCro(cro)} />
             </div>
           )}
 
           {/* ── Etapa 4: Endereços ── */}
           {etapa === 4 && (
-            <div className="flex flex-col gap-5">
-              <h1 className="text-xl font-bold text-brand-navy">Locais de atendimento</h1>
-              <EnderecosEditor enderecos={enderecos} onChange={setEnderecos} />
-              <NavEtapa onVoltar={() => setEtapa(3)} onAvancar={avancar4} onDepois={deixarParaDepois} ocupado={ocupado} />
+            <div className="flex flex-col gap-6">
+              <div>
+                <h1 className="mb-1 text-[22px] font-bold" style={{ color: "#0A2A66" }}>Locais de atendimento</h1>
+                <p className="text-[14px]" style={{ color: "#8E8E93" }}>
+                  Cadastre de 1 a 8 endereços. Você poderá editar essas informações após o cadastro.
+                </p>
+              </div>
+              <EnderecosEditor
+                enderecos={enderecos}
+                onChange={setEnderecos}
+                mostrarPendencias={temProgressoPosterior}
+                onSalvarProgresso={async () => {
+                  // Salva o progresso dos endereços sem geocodificar (a geocodificação
+                  // roda só na conclusão). Persiste apenas se válidos — caso contrário
+                  // o EnderecosEditor mostra só o feedback visual local.
+                  if (userId && validarEnderecos(enderecos).valido) {
+                    await persistirEnderecos(false);
+                  }
+                }}
+              />
+              <NavEtapa onVoltar={() => setEtapa(3)} onAvancar={avancar4} onDepois={deixarParaDepois} ocupado={ocupado} podeAvancar={enderecos.length > 0 && validarEnderecos(enderecos).valido} />
             </div>
           )}
 
           {/* ── Etapa 5: Bio ── */}
           {etapa === 5 && (
-            <div className="flex flex-col gap-4">
-              <h1 className="text-xl font-bold text-brand-navy">Sobre você (opcional)</h1>
+            <div className="flex flex-col gap-5">
               <div>
-                <label className={labelCls}>Bio</label>
-                <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={4} maxLength={500} className={`${inputCls} resize-none`} placeholder="Conte sobre seu atendimento (opcional)." />
+                <h1 className="mb-1 text-[22px] font-bold" style={{ color: "#0A2A66" }}>Sua bio profissional</h1>
+                <p className="text-[14px]" style={{ color: "#8E8E93" }}>Opcional — ajuda pacientes a conhecerem seu trabalho</p>
               </div>
+
+              <div className="flex items-start gap-2 rounded-[12px] p-3" style={{ background: "rgba(0,122,255,0.06)", border: "0.5px solid rgba(0,122,255,0.15)" }}>
+                <Info size={14} style={{ color: "#007AFF", marginTop: "2px", flexShrink: 0 }} />
+                <p className="text-[13px]" style={{ color: "#007AFF", lineHeight: 1.6 }}>
+                  Uma boa bio aumenta a taxa de contato dos pacientes. Conte sobre sua experiência, formação e diferenciais.
+                </p>
+              </div>
+
               <div>
-                <label className={labelCls}>Instagram (opcional)</label>
-                <div className="flex overflow-hidden rounded-[12px] border border-black/15">
-                  <span className="flex-shrink-0 bg-black/3 px-3 py-2.5 font-mono text-[13px] text-ink-muted">{INSTAGRAM_BASE}</span>
-                  <input value={instagram} onChange={(e) => setInstagram(e.target.value.replace(/[^a-zA-Z0-9_.@-]/g, ""))} placeholder="@seu-perfil" className="flex-1 px-3 py-2.5 text-sm outline-none" />
+                <label style={{ ...labelStyle, marginBottom: "8px" }}>
+                  Bio (opcional)
+                  <span className="ml-1 text-[11px] font-normal" style={{ color: "#8E8E93" }}>(máx. 500 caracteres)</span>
+                </label>
+                <textarea
+                  value={bio}
+                  maxLength={500}
+                  onChange={(e) => { if (e.target.value.length <= 500) setBio(e.target.value); }}
+                  rows={6}
+                  placeholder="Ex: Especialista em odontologia estética com mais de 10 anos de experiência. Formado pela USP, com pós-graduação em Harmonização Orofacial..."
+                  style={{ ...inputStyle, resize: "vertical", lineHeight: 1.7 }}
+                />
+                <p className="mt-1 text-right text-[12px]" style={{ color: "#8E8E93" }}>{bio.length}/500</p>
+              </div>
+
+              <div>
+                <label style={{ ...labelStyle, marginBottom: "8px" }}>Instagram (opcional)</label>
+                <div className="flex items-center gap-0 overflow-hidden rounded-[12px]" style={{ border: "1px solid rgba(60,60,67,0.18)", background: "#fff" }}>
+                  <span className="flex-shrink-0 px-3 py-3 text-[13px]" style={{ color: "#8E8E93", background: "#F2F2F7", borderRight: "1px solid rgba(60,60,67,0.12)", fontFamily: "monospace" }}>
+                    {INSTAGRAM_BASE}
+                  </span>
+                  <input
+                    value={instagram}
+                    onChange={(e) => setInstagram(e.target.value.replace(/[^a-zA-Z0-9_.@-]/g, ""))}
+                    placeholder="@seu-perfil"
+                    style={{ ...inputStyle, border: "none", borderRadius: 0, padding: "12px 12px" }}
+                  />
                 </div>
               </div>
-              <NavEtapa onVoltar={() => setEtapa(4)} onAvancar={avancar5} onDepois={deixarParaDepois} ocupado={ocupado} />
+
+              <NavEtapa onVoltar={() => setEtapa(4)} onAvancar={avancar5} onDepois={deixarParaDepois} ocupado={ocupado} podeAvancar />
             </div>
           )}
 
           {/* ── Etapa 6: Conclusão (LGPD) ── */}
           {etapa === 6 && (
-            <div className="flex flex-col gap-4">
-              <h1 className="text-xl font-bold text-brand-navy">Quase lá!</h1>
-              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-black/10 p-4">
-                <input type="checkbox" checked={lgpd} onChange={(e) => setLgpd(e.target.checked)} className="mt-0.5 h-5 w-5 accent-brand-blue" />
-                <span className="text-sm text-ink-soft">
-                  Li e aceito os <Link href="/termos" target="_blank" className="font-semibold text-brand-blue underline">Termos de Uso</Link> e a{" "}
-                  <Link href="/privacidade" target="_blank" className="font-semibold text-brand-blue underline">Política de Privacidade</Link> (LGPD).
-                </span>
-              </label>
-              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-black/10 p-4">
-                <input type="checkbox" checked={cobranca} onChange={(e) => setCobranca(e.target.checked)} className="mt-0.5 h-5 w-5 accent-brand-blue" />
-                <span className="text-sm text-ink-soft">
-                  Estou ciente de que o CuraDentes Pro é gratuito na fase Beta e passará a R$ 49,99/mês a
-                  partir de 1º de julho de 2027, com aviso por e-mail 30 dias antes (seção 5 dos Termos).
+            <div className="flex flex-col gap-5">
+              <div>
+                <h1 className="mb-1 text-[22px] font-bold" style={{ color: "#0A2A66" }}>Consentimento e privacidade</h1>
+                <p className="text-[14px]" style={{ color: "#8E8E93" }}>Revise e aceite os termos para concluir o cadastro</p>
+              </div>
+
+              {/* Card de resumo do cadastro */}
+              <div className="flex flex-col gap-3 rounded-[16px] p-4" style={{ background: "rgba(52,199,89,0.06)", border: "0.5px solid rgba(52,199,89,0.20)" }}>
+                <p className="text-[13px] font-semibold" style={{ color: "#34C759" }}>Resumo do cadastro</p>
+                <div className="flex flex-col gap-1.5">
+                  {[
+                    { label: "Nome para exibição", valor: nome || "—", ok: !!nome },
+                    { label: "Nome completo (CRO)", valor: nomeCompleto || "—", ok: !!nomeCompleto },
+                    { label: "E-mail", valor: email, ok: emailVerificado },
+                    { label: "Telefone", valor: telefone || "Não informado", ok: !telefone || validarTelefone(telefone) },
+                    { label: "CRO", valor: cro || "—", ok: !!cro },
+                    { label: "CPF", valor: cpf ? "Informado" : "—", ok: !!cpf },
+                    { label: "Endereços", valor: `${enderecos.length} cadastrado(s)`, ok: enderecos.length > 0 },
+                  ].map((item) => (
+                    <div key={item.label} className="flex items-center justify-between">
+                      <span className="text-[13px]" style={{ color: "#3A3A3C" }}>{item.label}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[13px] font-medium" style={{ color: "#1C1C1E" }}>{item.valor}</span>
+                        {item.ok
+                          ? <Check size={13} style={{ color: "#34C759" }} />
+                          : <AlertCircle size={13} style={{ color: "#FF9500" }} />}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Checkbox LGPD (verde quando aceito) */}
+              <label
+                className="flex cursor-pointer items-start gap-3 rounded-[14px] p-4 transition-colors"
+                style={{
+                  border: lgpd ? "1px solid rgba(52,199,89,0.30)" : "1px solid rgba(60,60,67,0.15)",
+                  background: lgpd ? "rgba(52,199,89,0.04)" : "rgba(60,60,67,0.02)",
+                }}
+              >
+                <input type="checkbox" checked={lgpd} onChange={(e) => setLgpd(e.target.checked)} className="mt-0.5 h-5 w-5 flex-shrink-0 cursor-pointer accent-[#34C759]" />
+                <span className="text-[14px]" style={{ color: "#3A3A3C", lineHeight: 1.7 }}>
+                  Li e concordo com a{" "}
+                  <Link href="/privacidade" target="_blank" className="font-semibold underline" style={{ color: "#007AFF" }}>Política de Privacidade</Link>{" "}
+                  e os{" "}
+                  <Link href="/termos" target="_blank" className="font-semibold underline" style={{ color: "#007AFF" }}>Termos de Uso</Link>{" "}
+                  do CuraDentes Pro, incluindo o tratamento dos meus dados conforme a LGPD (Lei nº 13.709/2018).{" "}
+                  <span className="font-semibold" style={{ color: "#E6004C" }}>*</span>
                 </span>
               </label>
 
-              <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">E-mails opcionais (você escolhe)</p>
-              {[
-                { v: prefDesempenho, set: setPrefDesempenho, t: "Desempenho do meu perfil" },
-                { v: prefNovidades, set: setPrefNovidades, t: "Novidades e dicas" },
-                { v: prefParceiros, set: setPrefParceiros, t: "Ofertas de parceiros" },
-              ].map((p) => (
-                <label key={p.t} className="flex cursor-pointer items-center gap-3">
-                  <input type="checkbox" checked={p.v} onChange={(e) => p.set(e.target.checked)} className="h-4 w-4 accent-brand-blue" />
-                  <span className="text-sm text-ink-soft">{p.t}</span>
-                </label>
-              ))}
+              {/* Checkbox cobrança (laranja se não aceito) */}
+              <label
+                className="flex cursor-pointer items-start gap-3 rounded-[14px] p-4 transition-colors"
+                style={{
+                  border: cobranca ? "1px solid rgba(52,199,89,0.30)" : "1px solid rgba(255,149,0,0.40)",
+                  background: cobranca ? "rgba(52,199,89,0.04)" : "rgba(255,149,0,0.06)",
+                }}
+              >
+                <input type="checkbox" checked={cobranca} onChange={(e) => setCobranca(e.target.checked)} className="mt-0.5 h-5 w-5 flex-shrink-0 cursor-pointer accent-[#34C759]" />
+                <span className="text-[14px]" style={{ color: "#3A3A3C", lineHeight: 1.7 }}>
+                  Estou ciente de que o CuraDentes Pro é gratuito durante o Beta e que, a partir de{" "}
+                  <strong>1º de julho de 2027</strong>, passará a ter um plano mensal de{" "}
+                  <strong>R$ 49,99 por mês</strong> por dentista. Serei avisado por e-mail com antecedência
+                  e nenhum valor será cobrado sem o meu aceite expresso, conforme a seção 5 dos{" "}
+                  <Link href="/termos" target="_blank" className="font-semibold underline" style={{ color: "#007AFF" }}>Termos de Uso</Link>.{" "}
+                  <span className="font-semibold" style={{ color: "#E6004C" }}>*</span>
+                </span>
+              </label>
 
-              <div className="mt-2 flex justify-between">
-                <button onClick={() => setEtapa(5)} disabled={ocupado} className="rounded-full px-4 py-2.5 text-sm font-semibold text-ink-muted hover:text-ink">Voltar</button>
-                <button onClick={concluir} disabled={ocupado || !lgpd || !cobranca} className="rounded-full bg-brand-magenta px-6 py-2.5 text-sm font-bold text-white hover:bg-brand-magenta-700 disabled:opacity-50">
+              {/* Preferências de e-mail (opcionais, opt-in) */}
+              <div className="flex flex-col gap-2">
+                <p className="text-[14px] font-semibold" style={{ color: "#0A2A66" }}>
+                  Quero receber por e-mail{" "}
+                  <span className="font-normal" style={{ color: "#8E8E93" }}>(opcional)</span>
+                </p>
+                {[
+                  { v: prefDesempenho, set: setPrefDesempenho, titulo: "Desempenho do meu perfil", desc: "Resumos de visualizações, contatos e novas avaliações." },
+                  { v: prefNovidades, set: setPrefNovidades, titulo: "Novidades e dicas", desc: "Novos recursos, dicas para atrair pacientes e ofertas do CuraDentes." },
+                  { v: prefParceiros, set: setPrefParceiros, titulo: "Ofertas de parceiros", desc: "Comunicações de empresas parceiras selecionadas." },
+                ].map((opt) => (
+                  <label
+                    key={opt.titulo}
+                    className="flex cursor-pointer items-start gap-3 rounded-[12px] p-3"
+                    style={{ border: "1px solid rgba(60,60,67,0.12)", background: "rgba(60,60,67,0.02)" }}
+                  >
+                    <input type="checkbox" checked={opt.v} onChange={(e) => opt.set(e.target.checked)} className="mt-0.5 h-5 w-5 flex-shrink-0 cursor-pointer accent-[#007AFF]" />
+                    <span style={{ lineHeight: 1.4 }}>
+                      <span className="block text-[14px] font-medium" style={{ color: "#1C1C1E" }}>{opt.titulo}</span>
+                      <span className="text-[12px]" style={{ color: "#8E8E93" }}>{opt.desc}</span>
+                    </span>
+                  </label>
+                ))}
+                <p className="text-[12px]" style={{ color: "#8E8E93", lineHeight: 1.5 }}>
+                  Você pode alterar ou cancelar essas comunicações a qualquer momento. E-mails essenciais
+                  (conta, segurança e avisos do serviço) são enviados independentemente desta escolha.
+                </p>
+              </div>
+
+              {/* Navegação final */}
+              <div className="mt-8 flex items-center justify-between pt-6" style={{ borderTop: "0.5px solid rgba(60,60,67,0.10)" }}>
+                <button
+                  onClick={() => setEtapa(5)}
+                  disabled={ocupado}
+                  className="flex items-center gap-2 rounded-[12px] px-4 py-3 text-[14px] font-medium transition-all duration-200"
+                  style={{ color: "#007AFF", background: "rgba(0,122,255,0.06)", border: "0.5px solid rgba(0,122,255,0.18)", minHeight: "44px" }}
+                >
+                  <ChevronLeft size={16} />
+                  Voltar
+                </button>
+                <button
+                  onClick={concluir}
+                  disabled={ocupado || !lgpd || !cobranca}
+                  className="flex items-center gap-2 rounded-[14px] px-6 py-3 text-[15px] font-semibold text-white transition-all duration-200"
+                  style={{
+                    background: lgpd && cobranca && !ocupado ? "#34C759" : "rgba(52,199,89,0.35)",
+                    boxShadow: lgpd && cobranca && !ocupado ? "0 4px 16px rgba(52,199,89,0.30)" : "none",
+                    cursor: lgpd && cobranca && !ocupado ? "pointer" : "not-allowed",
+                    minHeight: "44px",
+                  }}
+                >
+                  {ocupado ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
                   {ocupado ? "Concluindo…" : "Concluir cadastro"}
                 </button>
               </div>
@@ -586,22 +1146,123 @@ export default function CadastroPage() {
           )}
         </div>
 
-        <p className="mt-6 text-center text-sm text-ink-muted">
-          Já tem conta? <Link href="/entrar" className="font-semibold text-brand-blue hover:underline">Entrar</Link>
+        <p className="mt-6 text-center text-sm" style={{ color: "#8E8E93" }}>
+          Já tem conta? <Link href="/entrar" className="font-semibold hover:underline" style={{ color: "#007AFF" }}>Entrar</Link>
         </p>
-      </div>
-    </Container>
+      </main>
+
+      {/* Modal: cadastro incompleto (portado do k11) */}
+      {exibirModalIncompleto && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center px-4"
+          style={{ background: "rgba(10,42,102,0.45)", backdropFilter: "blur(4px)" }}
+        >
+          <div
+            className="flex w-full max-w-[420px] flex-col gap-5 rounded-[24px] p-7"
+            style={{ background: "#fff", boxShadow: "0 24px 64px rgba(10,42,102,0.25)" }}
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full" style={{ background: "rgba(255,149,0,0.10)" }}>
+                <AlertCircle size={24} style={{ color: "#FF9500" }} />
+              </div>
+              <button type="button" onClick={() => setExibirModalIncompleto(false)} style={{ color: "#8E8E93" }} aria-label="Fechar">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div>
+              <h3 className="mb-2 text-[19px] font-bold" style={{ color: "#0A2A66" }}>Cadastro incompleto</h3>
+              <p className="text-[14px]" style={{ color: "#3A3A3C", lineHeight: 1.7 }}>
+                Sua conta foi criada, mas <strong>não será exibida para os pacientes</strong> até que todas as informações obrigatórias sejam preenchidas.
+              </p>
+              {camposFaltando.length > 0 && (
+                <ul className="mt-3 flex flex-col gap-1.5">
+                  {camposFaltando.map((campo) => (
+                    <li key={campo} className="flex items-center gap-2 text-[13px]" style={{ color: "#FF3B30" }}>
+                      <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full" style={{ background: "#FF3B30" }} />
+                      {campo}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className="mt-1 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => setExibirModalIncompleto(false)}
+                className="min-h-[48px] w-full rounded-[14px] py-3 text-[15px] font-semibold transition-all duration-200"
+                style={{ background: "#007AFF", color: "#fff" }}
+              >
+                Completar agora
+              </button>
+              <button
+                type="button"
+                onClick={continuarIncompleto}
+                className="min-h-[48px] w-full rounded-[14px] py-3 text-[15px] font-semibold transition-all duration-200"
+                style={{ background: "rgba(60,60,67,0.06)", color: "#8E8E93" }}
+              >
+                Ir para o painel assim mesmo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
-function NavEtapa({ onVoltar, onAvancar, onDepois, ocupado }: { onVoltar: () => void; onAvancar: () => void; onDepois: () => void; ocupado: boolean }) {
+// Navegação entre etapas no estilo k11 (Voltar/Cancelar à esquerda; Deixar para
+// depois + Continuar à direita).
+function NavEtapa({
+  onVoltar, onAvancar, onDepois, ocupado, podeAvancar, voltarLabel = "Voltar",
+}: {
+  onVoltar: () => void;
+  onAvancar: () => void;
+  onDepois?: () => void;
+  ocupado: boolean;
+  podeAvancar: boolean;
+  voltarLabel?: string;
+}) {
+  const ehCancelar = voltarLabel === "Cancelar";
   return (
-    <div className="mt-2 flex items-center justify-between">
-      <button onClick={onVoltar} disabled={ocupado} className="rounded-full px-4 py-2.5 text-sm font-semibold text-ink-muted hover:text-ink">Voltar</button>
-      <div className="flex gap-2">
-        <button onClick={onDepois} disabled={ocupado} className="rounded-full px-4 py-2.5 text-sm font-medium text-ink-soft hover:bg-black/5">Deixar para depois</button>
-        <button onClick={onAvancar} disabled={ocupado} className="rounded-full bg-brand-blue px-6 py-2.5 text-sm font-bold text-white hover:bg-brand-blue-600 disabled:opacity-60">
-          {ocupado ? "Salvando…" : "Avançar"}
+    <div className="mt-8 flex items-center justify-between pt-6" style={{ borderTop: "0.5px solid rgba(60,60,67,0.10)" }}>
+      <button
+        onClick={onVoltar}
+        disabled={ocupado}
+        className="flex items-center gap-2 rounded-[12px] px-4 py-3 text-[14px] font-medium transition-all duration-200"
+        style={ehCancelar
+          ? { color: "#8E8E93", background: "rgba(60,60,67,0.05)", border: "0.5px solid rgba(60,60,67,0.12)", minHeight: "44px" }
+          : { color: "#007AFF", background: "rgba(0,122,255,0.06)", border: "0.5px solid rgba(0,122,255,0.18)", minHeight: "44px" }}
+      >
+        <ChevronLeft size={16} />
+        {voltarLabel}
+      </button>
+      <div className="flex items-center gap-2">
+        {onDepois && (
+          <button
+            onClick={onDepois}
+            disabled={ocupado}
+            className="rounded-[12px] px-4 py-3 text-[13px] font-medium transition-all duration-200"
+            style={{ color: "#8E8E93", background: "transparent", minHeight: "44px" }}
+          >
+            Deixar para mais tarde
+          </button>
+        )}
+        <button
+          onClick={onAvancar}
+          disabled={ocupado || !podeAvancar}
+          className="flex items-center gap-2 rounded-[14px] px-6 py-3 text-[15px] font-semibold text-white transition-all duration-200"
+          style={{
+            background: podeAvancar && !ocupado ? "#007AFF" : "rgba(0,122,255,0.30)",
+            boxShadow: podeAvancar && !ocupado ? "0 4px 16px rgba(0,122,255,0.28)" : "none",
+            cursor: podeAvancar && !ocupado ? "pointer" : "not-allowed",
+            minHeight: "44px",
+          }}
+        >
+          {ocupado ? <Loader2 size={16} className="animate-spin" /> : null}
+          {ocupado ? "Salvando…" : "Continuar"}
+          {!ocupado && <ChevronRight size={16} />}
         </button>
       </div>
     </div>

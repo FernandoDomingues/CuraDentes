@@ -16,8 +16,20 @@ export const metadata: Metadata = {
   robots: { index: false },
 };
 
-export default async function EntrarPage() {
+export default async function EntrarPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ modo?: string; erro?: string; m?: string }>;
+}) {
   const usuario = await getUsuario();
   if (usuario) redirect(rotaInicialPorPapel(usuario.papel));
-  return <EntrarForm />;
+  // ?modo=dentista abre direto no login do dentista (vindo do botão "Acesso do
+  // Dentista" do cabeçalho); o padrão é o login do paciente (Google).
+  const { modo, erro, m } = await searchParams;
+  const modoInicial = modo === "dentista" ? "dentista" : "paciente";
+  // Mensagem de erro vinda do /auth/callback (diagnóstico do login).
+  const erroInicial = erro
+    ? `Falha no login (${erro})${m ? `: ${m}` : ""}. Tente novamente.`
+    : "";
+  return <EntrarForm modoInicial={modoInicial} erroInicial={erroInicial} />;
 }

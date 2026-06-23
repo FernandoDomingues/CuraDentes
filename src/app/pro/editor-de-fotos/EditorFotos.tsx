@@ -8,8 +8,9 @@
 // matemática de crop do site-k11.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { RotateCw } from "lucide-react";
 import ReactCrop, { type Crop, type PixelCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 import { uploadFotoDentista } from "@/lib/upload-foto";
@@ -35,11 +36,29 @@ export default function EditorFotos({ dentistaId }: { dentistaId: string }) {
   const [srcImagem, setSrcImagem] = useState<string | null>(null);
   const [base, setBase] = useState<{ w: number; h: number } | null>(null);
   const [zoom, setZoom] = useState(1);
+  const [rotacao, setRotacao] = useState(0); // graus, múltiplos de 90
   const [crop, setCrop] = useState<Crop>();
   const [completo, setCompleto] = useState<PixelCrop | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
   const [ok, setOk] = useState(false);
+
+  // Ao chegar do cadastro (Etapa 3), a foto escolhida foi gravada como dataURL em
+  // sessionStorage. Lê a chave após o mount (não no init, para não divergir do HTML
+  // do SSR e evitar hydration mismatch), carrega a imagem e limpa a chave — abrindo
+  // o editor JÁ com a foto pronta para enquadrar (paridade com o k11).
+  useEffect(() => {
+    let pendente: string | null = null;
+    try {
+      pendente = sessionStorage.getItem("curadentes_foto_pendente");
+      if (pendente) sessionStorage.removeItem("curadentes_foto_pendente");
+    } catch {
+      pendente = null;
+    }
+    // Leitura única de sessionStorage no mount (sistema externo); por design não roda no init/SSR.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (pendente) setSrcImagem(pendente);
+  }, []);
 
   function escolherArquivo(e: React.ChangeEvent<HTMLInputElement>) {
     setErro("");
@@ -52,6 +71,7 @@ export default function EditorFotos({ dentistaId }: { dentistaId: string }) {
     const reader = new FileReader();
     reader.onload = () => {
       setZoom(1);
+      setRotacao(0);
       setSrcImagem(reader.result as string);
     };
     reader.readAsDataURL(file);
@@ -101,6 +121,17 @@ export default function EditorFotos({ dentistaId }: { dentistaId: string }) {
 
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = "high";
+
+      // Rotação: gira o destino em torno do centro antes de desenhar, para a
+      // foto final sair girada igual ao preview (CSS transform). Como o recorte
+      // é sempre o quadrado central, basta rotacionar o canvas no seu centro.
+      const ang = ((rotacao % 360) + 360) % 360;
+      if (ang !== 0) {
+        ctx.translate(TAMANHO_FINAL / 2, TAMANHO_FINAL / 2);
+        ctx.rotate((ang * Math.PI) / 180);
+        ctx.translate(-TAMANHO_FINAL / 2, -TAMANHO_FINAL / 2);
+      }
+
       ctx.drawImage(
         image,
         completo.x * scaleX,
@@ -165,7 +196,10 @@ export default function EditorFotos({ dentistaId }: { dentistaId: string }) {
                 src={srcImagem}
                 alt="Pré-visualização para recorte"
                 onLoad={aoCarregarImagem}
-                style={larguraRenderizada ? { width: larguraRenderizada } : undefined}
+                style={{
+                  ...(larguraRenderizada ? { width: larguraRenderizada } : {}),
+                  transform: rotacao ? `rotate(${rotacao}deg)` : undefined,
+                }}
               />
             </ReactCrop>
           </div>
@@ -181,8 +215,28 @@ export default function EditorFotos({ dentistaId }: { dentistaId: string }) {
               value={zoom}
               onChange={(e) => mudarZoom(Number(e.target.value))}
               className="flex-1"
+              style={{ accentColor: "#007AFF" }}
               aria-label="Zoom da foto"
             />
+            <span className="w-10 text-right font-mono text-sm text-brand-blue">{zoom.toFixed(1)}x</span>
+          </div>
+
+          {/* Rotação */}
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => setRotacao((r) => (r + 90) % 360)}
+              className="flex items-center gap-1.5 rounded-[14px] border border-black/15 px-4 py-2 text-sm font-medium text-ink-soft hover:bg-black/5"
+            >
+              <RotateCw size={16} /> Girar 90°
+            </button>
+            <button
+              type="button"
+              onClick={() => { setRotacao(0); mudarZoom(1); }}
+              className="rounded-[14px] border border-black/15 px-4 py-2 text-sm font-medium text-ink-soft hover:bg-black/5"
+            >
+              Resetar
+            </button>
           </div>
 
           {erro && <p className="text-sm text-danger">{erro}</p>}
