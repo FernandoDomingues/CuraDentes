@@ -28,6 +28,7 @@ export interface DentistaRow {
   bio: string | null;
   instagram: string | null;
   especialidade: string | null;
+  google_review_url: string | null;
   lgpd_aceito: boolean | null;
   deleted_at: string | null;
 }
@@ -143,6 +144,7 @@ export function montarPerfilDentista(
     foto_url: foto,
     bio: pro.bio,
     instagram: pro.instagram || null,
+    google_review_url: pro.google_review_url ?? null,
     especialidade_principal: especialidade,
     enderecos: ends,
     avaliacoes: calcularAvaliacoes(avaliacoes),
@@ -160,7 +162,7 @@ export function nomeExibicao(p: Pick<DentistaPerfil, "nome" | "tratamento">): st
 
 // Campos públicos do perfil (CPF/e-mail pessoal OMITIDOS de propósito — LGPD).
 const CAMPOS_PRO =
-  "id, nome, tratamento, cro, cro_verificado, foto_url, bio, instagram, especialidade, lgpd_aceito, deleted_at";
+  "id, nome, tratamento, cro, cro_verificado, foto_url, bio, instagram, especialidade, google_review_url, lgpd_aceito, deleted_at";
 
 /**
  * Busca um dentista pelo campo indicado ("id" ou "cro") e monta o perfil público.

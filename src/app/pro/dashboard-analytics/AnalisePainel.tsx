@@ -24,7 +24,7 @@ import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
 } from "recharts";
 import {
-  Loader2, Search, MapPin, Building2, Activity, TrendingUp, AlertTriangle, ShieldCheck, Database,
+  Loader2, Search, MapPin, Building2, Activity, TrendingUp, AlertTriangle, ShieldCheck, Database, Siren,
 } from "lucide-react";
 
 // Leaflet só no cliente (toca window/DOM).
@@ -161,6 +161,9 @@ export default function AnalisePainel() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-brand-navy">Analytics do Site</h1>
         <div className="flex flex-wrap gap-2">
+          <Link href="/pro/dashboard-analytics/urgencias" className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white hover:opacity-90" style={{ background: "#E6004C" }}>
+            <Siren size={16} /> Urgências
+          </Link>
           <Link href="/pro/dashboard-analytics/dba" className="inline-flex items-center gap-2 rounded-xl bg-brand-navy px-4 py-2 text-sm font-semibold text-white hover:bg-brand-navy-700">
             <Database size={16} /> Banco de dados
           </Link>

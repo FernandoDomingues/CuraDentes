@@ -66,6 +66,8 @@ export interface DentistaPerfil {
   bio?: string | null;
   /** @usuario do Instagram, sem o "@". */
   instagram?: string | null;
+  /** Link de avaliação do Google Meu Negócio (CTA "Avaliar também no Google"). */
+  google_review_url?: string | null;
   /** Especialidade principal (primeira atividade do primeiro endereço). */
   especialidade_principal: string;
   /** Endereços de atendimento. */

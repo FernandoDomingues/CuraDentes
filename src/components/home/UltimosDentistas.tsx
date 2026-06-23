@@ -79,7 +79,7 @@ export default function UltimosDentistas() {
           .eq("lgpd_aceito", true)
           .is("deleted_at", null)
           .order("criado_em", { ascending: false })
-          .limit(15);
+          .limit(6);
 
         if (error) throw error;
 

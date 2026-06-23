@@ -182,6 +182,15 @@ export function buscasSemResultado(logs: LogBusca[], periodo: string, agora: Dat
   };
 }
 
+// ─── Urgências (pedidos de atendimento de urgência) ──────────────────────────
+/** Filtra os logs que são pedidos de URGÊNCIA (query "urgência"/"urgencia"). */
+export function apenasUrgencias(logs: LogBusca[]): LogBusca[] {
+  return logs.filter((l) => {
+    const q = (l.query || "").trim().toLowerCase();
+    return q === "urgência" || q === "urgencia";
+  });
+}
+
 // ─── Mapa de calor ──────────────────────────────────────────────────────────
 function temGeo(p: { latitude?: number | null; longitude?: number | null }): boolean {
   return p.latitude != null && p.longitude != null;

@@ -51,3 +51,19 @@ export function urlMapsEndereco(e: PartesEndereco): string {
   const consulta = [linha1, e.bairro, e.cidade, e.estado].filter(Boolean).join(" - ");
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(consulta)}`;
 }
+
+/**
+ * Link para o paciente AVALIAR o dentista no Google. Aceita o que o dentista
+ * cadastrar: um LINK pronto (formulário de avaliação do Google / g.page / maps)
+ * → usado como está; ou um PLACE ID → monta o deep link de "escrever avaliação".
+ * Retorna null se vazio/inválido.
+ */
+export function urlAvaliarGoogle(entrada: string | null | undefined): string | null {
+  const v = (entrada || "").trim();
+  if (!v) return null;
+  if (/^https?:\/\//i.test(v)) return v;
+  if (/^[A-Za-z0-9_-]{10,}$/.test(v)) {
+    return `https://search.google.com/local/writereview?placeid=${encodeURIComponent(v)}`;
+  }
+  return null;
+}

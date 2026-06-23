@@ -38,6 +38,7 @@ export interface PerfilForm {
   especialidade: string;
   bio: string;
   instagram: string;
+  googleReviewUrl: string;
   fotoUrl: string;
   lgpdAceito: boolean;
   prefsEmail: { desempenho: boolean; novidades: boolean; parceiros: boolean };
@@ -63,6 +64,7 @@ export default function PerfilEditor({
   const [especialidade, setEspecialidade] = useState(perfil.especialidade);
   const [bio, setBio] = useState(perfil.bio);
   const [instagram, setInstagram] = useState(perfil.instagram);
+  const [googleReviewUrl, setGoogleReviewUrl] = useState(perfil.googleReviewUrl);
 
   const [enderecos, setEnderecos] = useState<EnderecoForm[]>(enderecosIniciais);
   const [removidos, setRemovidos] = useState<string[]>([]);
@@ -81,7 +83,7 @@ export default function PerfilEditor({
 
   const snapshotRef = useRef<string>("");
   function snapshot() {
-    return JSON.stringify({ nome, tratamento, telefone, anoFormacao, especialidade, bio, instagram, enderecos, prefDesempenho, prefNovidades, prefParceiros });
+    return JSON.stringify({ nome, tratamento, telefone, anoFormacao, especialidade, googleReviewUrl, bio, instagram, enderecos, prefDesempenho, prefNovidades, prefParceiros });
   }
   useEffect(() => {
     if (!snapshotRef.current) snapshotRef.current = snapshot();
@@ -127,6 +129,7 @@ export default function PerfilEditor({
           especialidade,
           bio,
           instagram: instagramUrl,
+          google_review_url: googleReviewUrl.trim() || null,
         })
         .eq("id", perfil.id);
       if (pErr) throw pErr;
@@ -198,7 +201,7 @@ export default function PerfilEditor({
 
       // Snapshot pós-save com o instagram já normalizado (evita falso "alterações
       // não salvas" logo após salvar — o setState do instagram é assíncrono).
-      snapshotRef.current = JSON.stringify({ nome, tratamento, telefone, anoFormacao, especialidade, bio, instagram: instaNorm, enderecos, prefDesempenho, prefNovidades, prefParceiros });
+      snapshotRef.current = JSON.stringify({ nome, tratamento, telefone, anoFormacao, especialidade, googleReviewUrl, bio, instagram: instaNorm, enderecos, prefDesempenho, prefNovidades, prefParceiros });
       setMsg({ tipo: "ok", texto: "Perfil atualizado com sucesso!" });
       setTimeout(() => {
         router.push("/pro/dashboard");
@@ -333,6 +336,18 @@ export default function PerfilEditor({
                   <span className="flex-shrink-0 bg-black/3 px-3 py-2.5 font-mono text-[13px] text-ink-muted">{INSTAGRAM_BASE}</span>
                   <input value={instagram} onChange={(e) => setInstagram(e.target.value.replace(/[^a-zA-Z0-9_.@-]/g, ""))} placeholder="@seu-perfil" className="flex-1 px-3 py-2.5 text-sm outline-none" />
                 </div>
+              </div>
+              <div className="md:col-span-2">
+                <label className={labelCls}>Avaliações no Google (opcional)</label>
+                <input
+                  value={googleReviewUrl}
+                  onChange={(e) => setGoogleReviewUrl(e.target.value)}
+                  placeholder="Link de avaliação do seu Google Meu Negócio"
+                  className={inputCls}
+                />
+                <p className="mt-1 text-[11px] text-ink-muted">
+                  Após avaliarem você no CuraDentes, os pacientes veem um botão para avaliar também no Google. Pegue o link em: Google Meu Negócio → Peça avaliações.
+                </p>
               </div>
               <div>
                 <label className={labelCls}>CPF (visualização)</label>

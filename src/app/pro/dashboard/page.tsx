@@ -11,7 +11,7 @@ import Image from "next/image";
 import Link from "next/link";
 import Container from "@/components/Container";
 import Estrelas from "@/components/Estrelas";
-import { Eye, MessageCircle, Phone, Check, AlertCircle, Trophy, Zap, CalendarClock, Building2, MapPin } from "lucide-react";
+import { Eye, MessageCircle, Phone, Check, AlertCircle, Trophy, Zap, CalendarClock, Building2, MapPin, Settings } from "lucide-react";
 import { redirect } from "next/navigation";
 import { getUsuario } from "@/lib/auth";
 import { criarClienteServidor } from "@/lib/supabase/server";
@@ -142,12 +142,15 @@ export default async function DashboardPage() {
           </div>
           {pro.cro && <p className="mt-1 text-sm text-white/65">{(pro.cro || "").replace(/\s/g, "")}</p>}
         </div>
-        <div className="flex flex-wrap justify-center gap-2">
-          <Link href="/pro/perfil" className="rounded-[12px] bg-white px-5 py-2.5 text-sm font-semibold text-brand-navy hover:bg-white/90">
-            Meu perfil
-          </Link>
-          <Link href="/pro/editor-de-fotos" className="rounded-[12px] border border-white/30 px-5 py-2.5 text-sm font-medium text-white hover:bg-white/10">
-            Trocar foto
+        <div className="flex justify-center">
+          {/* Engrenagem → edição de perfil (lá também se troca a foto). */}
+          <Link
+            href="/pro/perfil"
+            aria-label="Meu perfil"
+            title="Meu perfil"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-brand-navy transition-colors hover:bg-white/90"
+          >
+            <Settings size={20} />
           </Link>
         </div>
       </div>

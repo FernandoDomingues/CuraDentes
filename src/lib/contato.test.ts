@@ -3,7 +3,7 @@
 // garantir que ficam corretos e seguros.
 
 import { describe, it, expect } from "vitest";
-import { urlWhatsapp, urlInstagram, urlMapsEndereco, telLimpo } from "./contato";
+import { urlWhatsapp, urlInstagram, urlMapsEndereco, telLimpo, urlAvaliarGoogle } from "./contato";
 
 describe("urlWhatsapp", () => {
   it("monta o link wa.me só com dígitos", () => {
@@ -15,6 +15,22 @@ describe("urlWhatsapp", () => {
   it("retorna null se não houver número", () => {
     expect(urlWhatsapp("")).toBeNull();
     expect(urlWhatsapp(null)).toBeNull();
+  });
+});
+
+describe("urlAvaliarGoogle", () => {
+  it("usa um link pronto como está", () => {
+    expect(urlAvaliarGoogle("https://g.page/r/abc/review")).toBe("https://g.page/r/abc/review");
+  });
+  it("monta o deep link de avaliação a partir de um Place ID", () => {
+    expect(urlAvaliarGoogle("ChIJN1t_tDeuEmsRUsoyG83frY4")).toBe(
+      "https://search.google.com/local/writereview?placeid=ChIJN1t_tDeuEmsRUsoyG83frY4",
+    );
+  });
+  it("retorna null para vazio/ inválido", () => {
+    expect(urlAvaliarGoogle("")).toBeNull();
+    expect(urlAvaliarGoogle(null)).toBeNull();
+    expect(urlAvaliarGoogle("abc")).toBeNull();
   });
 });
 

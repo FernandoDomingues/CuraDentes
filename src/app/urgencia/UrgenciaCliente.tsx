@@ -12,7 +12,7 @@
 // pink da marca (#E6004C).
 // ═══════════════════════════════════════════════════════════════════════════════
 
-import { useState, useCallback, type CSSProperties } from "react";
+import { useState, useCallback, useEffect, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/public";
 import { logarBusca } from "@/lib/log-busca";
@@ -107,6 +107,16 @@ export default function UrgenciaCliente() {
       { timeout: 8000, enableHighAccuracy: true },
     );
   };
+
+  // Veio da home com as coords na URL (?lat&lng)? Busca AUTOMATICAMENTE e registra
+  // a urgência — sem pedir a localização de novo. Garante a coleta do evento
+  // (origem + dia) que alimenta a Análise de Urgências.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const lat = parseFloat(params.get("lat") || "");
+    const lng = parseFloat(params.get("lng") || "");
+    if (!Number.isNaN(lat) && !Number.isNaN(lng)) buscar(lat, lng);
+  }, [buscar]);
 
   return (
     <>

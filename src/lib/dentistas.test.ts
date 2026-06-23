@@ -29,6 +29,7 @@ function dentistaRow(over: Partial<DentistaRow> = {}): DentistaRow {
     bio: "Atendo com carinho.",
     instagram: "ana.dentista",
     especialidade: null,
+    google_review_url: null,
     lgpd_aceito: true,
     deleted_at: null,
     ...over,

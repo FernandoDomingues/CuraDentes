@@ -64,7 +64,7 @@ function IconeInstagram({ size = 22 }: { size?: number }) {
 }
 import CroVerificationBadge from "@/components/CroVerificationBadge";
 import { nomeAmigavel, slugDaEspecialidade } from "@/lib/especialidades";
-import { urlWhatsapp, telLimpo, urlInstagram, urlMapsEndereco } from "@/lib/contato";
+import { urlWhatsapp, telLimpo, urlInstagram, urlMapsEndereco, urlAvaliarGoogle } from "@/lib/contato";
 import type { DentistaPerfil, EnderecoClinica, AgendaDia } from "@/types/dentista";
 import type { ResumoAtividade } from "@/lib/avaliacoes";
 
@@ -293,12 +293,12 @@ function BarraAvaliacao({
 function EnderecoCard({
   endereco,
   index,
-  nomeDentista,
+  saudacaoDentista,
   onContactRequest,
 }: {
   endereco: EnderecoClinica;
   index: number;
-  nomeDentista: string;
+  saudacaoDentista: string;
   /** Muro de login + registro de contato: recebe a URL (wa.me/tel:) e o tipo. */
   onContactRequest: (url: string, tipo: "whatsapp" | "telefone") => void;
 }) {
@@ -311,7 +311,7 @@ function EnderecoCard({
   const wpp = baseWpp
     ? baseWpp +
       `?text=${encodeURIComponent(
-        `Olá, te encontrei na CuraDentes e gostaria de agendar uma consulta com o dr. ${nomeDentista}`,
+        `Olá, ${saudacaoDentista}!\n\nTudo bem?\n\nEncontrei você pela CuraDentes e gostaria de agendar uma consulta.`,
       )}`
     : null;
   const tel = telLimpo(endereco.telefone);
@@ -654,12 +654,15 @@ function AvaliarDentista({
   dentistaId,
   nomeDentista,
   atividades,
+  googleUrl,
 }: {
   dentistaId: string;
   /** Nome de exibição do dentista (para a notificação de nova avaliação). */
   nomeDentista: string;
   /** Procedimentos do dentista (para o select de "qual procedimento você realizou"). */
   atividades: string[];
+  /** Link de avaliação no Google (CTA pós-avaliação). null/ausente = sem botão. */
+  googleUrl?: string | null;
 }) {
   const [carregandoSessao, setCarregandoSessao] = useState(true);
   const [logado, setLogado] = useState(false);
@@ -775,13 +778,31 @@ function AvaliarDentista({
         </h2>
       </div>
 
-      {/* Mensagem de sucesso (inline, sem toast). */}
+      {/* Sucesso + CTA "Avaliar também no Google" (aparece só se o dentista tem link). */}
       {sucesso && (
-        <div className="flex items-start gap-2 px-3 py-2.5 rounded-[12px]" style={{ background: "rgba(52,199,89,0.10)" }}>
-          <CheckCircle size={15} style={{ color: "#34C759", marginTop: "1px", flexShrink: 0 }} />
-          <p className="text-[13px]" style={{ color: "#34C759", lineHeight: 1.5 }}>
-            Avaliação salva com sucesso! Obrigado por contribuir.
-          </p>
+        <div className="flex flex-col gap-3 px-4 py-3.5 rounded-[14px]" style={{ background: "rgba(52,199,89,0.10)" }}>
+          <div className="flex items-start gap-2">
+            <CheckCircle size={16} style={{ color: "#34C759", marginTop: "1px", flexShrink: 0 }} />
+            <p className="text-[14px] font-medium" style={{ color: "#1C7A3E", lineHeight: 1.5 }}>
+              Avaliação salva com sucesso! Obrigado por contribuir. 🦷
+            </p>
+          </div>
+          {googleUrl && (
+            <div className="flex flex-col gap-2">
+              <p className="text-[13px]" style={{ color: "#3A4F68", lineHeight: 1.5 }}>
+                Quer ajudar ainda mais? Deixe também a sua avaliação no Google ⭐
+              </p>
+              <a
+                href={googleUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-[12px] px-4 py-2.5 text-[14px] font-semibold"
+                style={{ background: "#fff", color: "#1C1C1E", border: "1px solid rgba(60,60,67,0.18)", textDecoration: "none" }}
+              >
+                <Star size={15} style={{ color: "#F5B400" }} fill="#F5B400" stroke="none" /> Avaliar também no Google
+              </a>
+            </div>
+          )}
         </div>
       )}
 
@@ -934,6 +955,15 @@ export default function PerfilDentistaView({
   const totalAvaliacoes = perfil.avaliacoes.total_avaliacoes;
   const igUrl = urlInstagram(perfil.instagram);
 
+  // Saudação da mensagem de WhatsApp: tratamento (Dr./Dra.) + PRIMEIRO nome
+  // (ex.: "Dra. Evelin"). Se o nome já vier com o tratamento, removemos antes.
+  const nomeBaseSaudacao =
+    perfil.tratamento && perfil.nome.startsWith(perfil.tratamento)
+      ? perfil.nome.slice(perfil.tratamento.length).trim()
+      : perfil.nome;
+  const primeiroNome = nomeBaseSaudacao.trim().split(/\s+/)[0] || nomeBaseSaudacao.trim();
+  const saudacaoDentista = perfil.tratamento ? `${perfil.tratamento} ${primeiroNome}` : primeiroNome;
+
   // Muro de login (igual ao k11): contato exige paciente logado.
   const { user, pedirLoginPaciente } = useSessao();
 
@@ -969,6 +999,22 @@ export default function PerfilDentistaView({
     },
     [pedirLoginPaciente, user, perfil.id],
   );
+
+  // ── Registra a VISUALIZAÇÃO do perfil (alimenta o funil e as métricas) ────────
+  // Regra (igual k11): 1× por dia por CONTA LOGADA por dentista. Anônimos não
+  // contam (a RLS exige authenticated) e o próprio dentista não conta a si mesmo.
+  // Espelha o padrão do perfil_contatos (upsert idempotente, best-effort).
+  useEffect(() => {
+    if (!user || user.id === perfil.id) return;
+    const supabase = criarClienteNavegador();
+    supabase
+      .from("perfil_visualizacoes")
+      .upsert(
+        { dentista_id: perfil.id, viewer_id: user.id },
+        { onConflict: "dentista_id,viewer_id,data_visita", ignoreDuplicates: true },
+      )
+      .then(undefined, () => {});
+  }, [user, perfil.id]);
 
   // ── Busca as avaliações individuais de uma atividade (modal "Ver", k11) ───────
   // Lê de `avaliacoes` (por dentista_id + atividade) e `clientes` (nome/foto).
@@ -1182,7 +1228,7 @@ export default function PerfilDentistaView({
                 key={end.id}
                 endereco={end}
                 index={idx}
-                nomeDentista={nome}
+                saudacaoDentista={saudacaoDentista}
                 onContactRequest={handleContactRequest}
               />
             ))}
@@ -1272,7 +1318,7 @@ export default function PerfilDentistaView({
             )}
 
             {/* ── Avaliar este dentista (paciente logado) ── */}
-            <AvaliarDentista dentistaId={perfil.id} nomeDentista={nome} atividades={todasAtividades} />
+            <AvaliarDentista dentistaId={perfil.id} nomeDentista={nome} atividades={todasAtividades} googleUrl={urlAvaliarGoogle(perfil.google_review_url)} />
           </div>
         </div>
       </div>

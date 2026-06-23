@@ -167,6 +167,7 @@ export default function CadastroPage() {
   // Etapa 5
   const [bio, setBio] = useState("");
   const [instagram, setInstagram] = useState("");
+  const [googleReviewUrl, setGoogleReviewUrl] = useState("");
 
   // Etapa 6
   const [lgpd, setLgpd] = useState(false);
@@ -193,7 +194,7 @@ export default function CadastroPage() {
         setEmailVerificado(true);
         const { data: pro } = await supabase
           .from("curadentespro")
-          .select("nome, tratamento, nome_completo, telefone, cro, ano_formacao, foto_url, bio, instagram, especialidade, lgpd_aceito")
+          .select("nome, tratamento, nome_completo, telefone, cro, ano_formacao, foto_url, bio, instagram, especialidade, google_review_url, lgpd_aceito")
           .eq("id", user.id)
           .is("deleted_at", null)
           .maybeSingle();
@@ -212,6 +213,7 @@ export default function CadastroPage() {
           setFotoUrl(pro.foto_url ?? "");
           setBio(pro.bio ?? "");
           setInstagram(extrairUserInstagram(pro.instagram ?? ""));
+          setGoogleReviewUrl(pro.google_review_url ?? "");
           setSenhaSincronizada(true);
           const { data: cpfData } = await supabase.rpc("meu_cpf");
           if (typeof cpfData === "string") setCpf(cpfData);
@@ -343,7 +345,7 @@ export default function CadastroPage() {
     setErro("");
     const instagramUrl = formatarInstagram(instagram);
     if (instagram && !instagramUrl) { setErro("Instagram inválido."); return; }
-    await salvar({ bio, instagram: instagramUrl }, 6);
+    await salvar({ bio, instagram: instagramUrl, google_review_url: googleReviewUrl.trim() || null }, 6);
   }
 
   // "Deixar para depois": salva o que estiver VÁLIDO na etapa atual e vai ao painel
@@ -360,7 +362,7 @@ export default function CadastroPage() {
         await persistirEnderecos(false);
       } else if (etapa === 5) {
         const url = formatarInstagram(instagram);
-        if (!instagram || url) await supabase.from("curadentespro").update({ bio, instagram: url }).eq("id", userId!);
+        if (!instagram || url) await supabase.from("curadentespro").update({ bio, instagram: url, google_review_url: googleReviewUrl.trim() || null }).eq("id", userId!);
       }
     } catch (e) {
       console.warn("[cadastro] salvar parcial:", e);
@@ -1038,6 +1040,19 @@ export default function CadastroPage() {
                     style={{ ...inputStyle, border: "none", borderRadius: 0, padding: "12px 12px" }}
                   />
                 </div>
+              </div>
+
+              <div>
+                <label style={{ ...labelStyle, marginBottom: "8px" }}>Avaliações no Google (opcional)</label>
+                <input
+                  value={googleReviewUrl}
+                  onChange={(e) => setGoogleReviewUrl(e.target.value)}
+                  placeholder="Cole o link de avaliação do seu Google Meu Negócio"
+                  style={inputStyle}
+                />
+                <p className="mt-1 text-[12px]" style={{ color: "#8E8E93", lineHeight: 1.5 }}>
+                  Depois de avaliarem você aqui, os pacientes verão um botão para avaliar também no Google. Pegue o link em: Google Meu Negócio → Peça avaliações.
+                </p>
               </div>
 
               <NavEtapa onVoltar={() => setEtapa(4)} onAvancar={avancar5} onDepois={deixarParaDepois} ocupado={ocupado} podeAvancar />
