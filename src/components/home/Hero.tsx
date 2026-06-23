@@ -12,12 +12,14 @@
 // porque o R0 existe para ser indexável (SEO). Buscar leva a /busca?q=…
 // ═══════════════════════════════════════════════════════════════════════════════
 
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Search, MapPin } from "lucide-react";
 import { ESPECIALIDADES, nomeAmigavel } from "@/lib/especialidades";
 import { reverseGeocodeCidadeBairro } from "@/lib/geocoding";
 import { useSessao } from "@/components/SessaoProvider";
+import { useAddressSuggestions, type AddressSuggestion } from "@/lib/sugestoes";
+import { SuggestionItem } from "@/components/busca/SugestaoEndereco";
 
 // Número de dentistas + asterisco azul + tooltip ao passar o mouse (no número e no
 // asterisco) avisando que o dado é atualizado a cada 5 min. `title` é o fallback
@@ -52,17 +54,89 @@ export default function Hero({ contagemInicial = 0 }: { contagemInicial?: number
   const router = useRouter();
   const { user, pedirLoginPaciente } = useSessao();
 
-  // Buscar — EXIGE login com Google (igual k11: a busca é só para quem entrou).
-  // Inclui o filtro de especialidade do chip ativo (?atividade=).
+  // ── Autocomplete de endereço (cidade/bairro/clínica já cadastrados) ──────────
+  // Mesma ferramenta do k11: sugere enquanto digita, com base nos endereços e
+  // clínicas do banco. Só funciona logado — deslogado, o "muro" cobre o campo.
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [highlightedIdx, setHighlightedIdx] = useState(-1);
+  const buscaMobileRef = useRef<HTMLDivElement>(null);
+  const buscaDesktopRef = useRef<HTMLDivElement>(null);
+  const { suggestions } = useAddressSuggestions(showSuggestions ? searchValue : "");
+
+  // Fecha o dropdown ao clicar fora (checa os dois layouts: mobile e desktop).
+  useEffect(() => {
+    function aoClicarFora(e: MouseEvent) {
+      const alvo = e.target as Node;
+      const dentro =
+        !!buscaMobileRef.current?.contains(alvo) || !!buscaDesktopRef.current?.contains(alvo);
+      if (!dentro) {
+        setShowSuggestions(false);
+        setHighlightedIdx(-1);
+      }
+    }
+    document.addEventListener("mousedown", aoClicarFora);
+    return () => document.removeEventListener("mousedown", aoClicarFora);
+  }, []);
+
+  // Reseta o item destacado quando a lista de sugestões muda.
+  useEffect(() => {
+    setHighlightedIdx(-1);
+  }, [suggestions]);
+
+  // Navega para /busca (EXIGE login com Google, igual k11) com o termo + chip ativo.
+  // Reutilizado pelo submit e pelo Enter sobre uma sugestão destacada.
+  const irParaBusca = useCallback(
+    (valor: string) => {
+      if (!pedirLoginPaciente()) return; // abre o modal de login se não estiver logado
+      const v = valor.trim();
+      if (!v && !activeChip) return;
+      const params = new URLSearchParams();
+      if (v) params.set("q", v);
+      if (activeChip) params.set("atividade", activeChip);
+      router.push(`/busca?${params.toString()}`);
+    },
+    [pedirLoginPaciente, activeChip, router],
+  );
+
+  // Buscar (submit): usa a sugestão destacada, se houver; senão o texto digitado.
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!pedirLoginPaciente()) return; // abre o modal de login se não estiver logado
-    const v = searchValue.trim();
-    if (!v && !activeChip) return;
-    const params = new URLSearchParams();
-    if (v) params.set("q", v);
-    if (activeChip) params.set("atividade", activeChip);
-    router.push(`/busca?${params.toString()}`);
+    setShowSuggestions(false);
+    const valor =
+      highlightedIdx >= 0 && suggestions[highlightedIdx]
+        ? suggestions[highlightedIdx].value
+        : searchValue;
+    setHighlightedIdx(-1);
+    irParaBusca(valor);
+  };
+
+  // Selecionar uma sugestão apenas PREENCHE o campo (não navega) — igual k11.
+  const handleSuggestionSelect = useCallback((s: AddressSuggestion) => {
+    setSearchValue(s.value);
+    setShowSuggestions(false);
+    setHighlightedIdx(-1);
+  }, []);
+
+  // Teclado no campo: ↑/↓ percorrem a lista, Enter na destacada busca, Esc fecha.
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showSuggestions || suggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlightedIdx((i) => Math.min(i + 1, suggestions.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlightedIdx((i) => Math.max(i - 1, -1));
+    } else if (e.key === "Enter" && highlightedIdx >= 0) {
+      e.preventDefault();
+      const val = suggestions[highlightedIdx].value;
+      setSearchValue(val);
+      setShowSuggestions(false);
+      setHighlightedIdx(-1);
+      irParaBusca(val);
+    } else if (e.key === "Escape") {
+      setShowSuggestions(false);
+      setHighlightedIdx(-1);
+    }
   };
 
   // Usar minha localização — também EXIGE login (igual k11). Captura coordenadas,
@@ -110,7 +184,7 @@ export default function Hero({ contagemInicial = 0 }: { contagemInicial?: number
       {/* ── MOBILE (< lg) ─────────────────────────────────────────────────── */}
       <div className="lg:hidden">
         {/* Barra de busca */}
-        <div className="px-4 pt-4 pb-3 relative" style={{ background: "#F2F2F7" }}>
+        <div ref={buscaMobileRef} className="px-4 pt-4 pb-3 relative" style={{ background: "#F2F2F7" }}>
           {/* Deslogado: clicar na barra pede login (Google), igual k11 */}
           {!user && (
             <div onClick={() => pedirLoginPaciente()} role="button" aria-label="Entrar com Google para buscar" className="absolute inset-0 z-20 cursor-pointer" />
@@ -120,16 +194,19 @@ export default function Hero({ contagemInicial = 0 }: { contagemInicial?: number
             className="flex items-center gap-3 px-4"
             style={{
               background: "#fff",
-              borderRadius: "14px",
+              borderRadius: showSuggestions && suggestions.length > 0 ? "14px 14px 0 0" : "14px",
               minHeight: "48px",
               boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+              transition: "border-radius 0.15s",
             }}
           >
             <Search size={18} style={{ color: "#8E8E93", flexShrink: 0 }} />
             <input
               type="text"
               value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
+              onChange={(e) => { setSearchValue(e.target.value); setShowSuggestions(true); }}
+              onFocus={() => setShowSuggestions(true)}
+              onKeyDown={handleSearchKeyDown}
               placeholder="Bairro, Cidade"
               aria-label="O que você procura?"
               className="flex-1 outline-none bg-transparent text-[16px]"
@@ -137,6 +214,35 @@ export default function Hero({ contagemInicial = 0 }: { contagemInicial?: number
               autoComplete="off"
             />
           </form>
+
+          {/* Dropdown de sugestões — mobile */}
+          {showSuggestions && suggestions.length > 0 && (
+            <div
+              style={{
+                position: "absolute",
+                top: "calc(100% - 12px)",
+                left: "16px",
+                right: "16px",
+                background: "#fff",
+                borderRadius: "0 0 14px 14px",
+                boxShadow: "0 8px 24px rgba(10,42,102,0.12)",
+                border: "0.5px solid rgba(60,60,67,0.10)",
+                borderTop: "none",
+                zIndex: 30,
+                overflow: "hidden",
+              }}
+            >
+              {suggestions.map((s, i) => (
+                <SuggestionItem
+                  key={`${s.type}-${s.label}`}
+                  suggestion={s}
+                  highlighted={i === highlightedIdx}
+                  query={searchValue}
+                  onSelect={handleSuggestionSelect}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Botões + chips */}
@@ -227,7 +333,7 @@ export default function Hero({ contagemInicial = 0 }: { contagemInicial?: number
 
             {/* Barra de busca + botão URGÊNCIA */}
             <div className="max-w-[860px] mx-auto mb-4 flex items-stretch gap-2.5">
-              <div className="flex-1 relative">
+              <div ref={buscaDesktopRef} className="flex-1 relative">
                 {/* Deslogado: clicar na barra pede login (Google), igual k11 */}
                 {!user && (
                   <div onClick={() => pedirLoginPaciente()} role="button" aria-label="Entrar com Google para buscar" className="absolute inset-0 z-20 cursor-pointer rounded-[16px]" />
@@ -240,17 +346,20 @@ export default function Hero({ contagemInicial = 0 }: { contagemInicial?: number
                     backdropFilter: "blur(20px) saturate(120%)",
                     WebkitBackdropFilter: "blur(20px) saturate(120%)",
                     border: "0.5px solid rgba(255,255,255,0.5)",
-                    borderRadius: "16px",
+                    borderRadius: showSuggestions && suggestions.length > 0 ? "16px 16px 0 0" : "16px",
                     padding: "6px 6px 6px 16px",
                     minHeight: "56px",
                     boxShadow: "0 8px 20px rgba(16,24,64,0.08)",
+                    transition: "border-radius 0.15s",
                   }}
                 >
                   <Search size={20} style={{ color: "#8E8E93", flexShrink: 0 }} />
                   <input
                     type="text"
                     value={searchValue}
-                    onChange={(e) => setSearchValue(e.target.value)}
+                    onChange={(e) => { setSearchValue(e.target.value); setShowSuggestions(true); }}
+                    onFocus={() => setShowSuggestions(true)}
+                    onKeyDown={handleSearchKeyDown}
                     placeholder="Bairro, Cidade"
                     aria-label="O que você procura?"
                     className="flex-1 min-w-0 outline-none bg-transparent"
@@ -275,6 +384,37 @@ export default function Hero({ contagemInicial = 0 }: { contagemInicial?: number
                     Buscar
                   </button>
                 </form>
+
+                {/* Dropdown de sugestões — desktop */}
+                {showSuggestions && suggestions.length > 0 && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "100%",
+                      left: 0,
+                      right: 0,
+                      background: "rgba(255,255,255,0.96)",
+                      backdropFilter: "blur(20px)",
+                      WebkitBackdropFilter: "blur(20px)",
+                      borderRadius: "0 0 16px 16px",
+                      boxShadow: "0 16px 40px rgba(10,42,102,0.14)",
+                      border: "0.5px solid rgba(255,255,255,0.5)",
+                      borderTop: "none",
+                      zIndex: 30,
+                      overflow: "hidden",
+                    }}
+                  >
+                    {suggestions.map((s, i) => (
+                      <SuggestionItem
+                        key={`${s.type}-${s.label}`}
+                        suggestion={s}
+                        highlighted={i === highlightedIdx}
+                        query={searchValue}
+                        onSelect={handleSuggestionSelect}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
               <button
                 type="button"

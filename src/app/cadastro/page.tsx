@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import EnderecosEditor, { novoEndereco, DIAS_SEMANA, POLITICA_PADRAO, type EnderecoForm } from "@/components/pro/EnderecosEditor";
 import type { EnderecoRow } from "@/lib/dentistas";
+import { ESPECIALIDADES, nomeAmigavel } from "@/lib/especialidades";
 import { criarClienteNavegador } from "@/lib/supabase/client";
 import { isSuperuserEmail } from "@/lib/superuser";
 import { extrairUserInstagram, formatarInstagram, INSTAGRAM_BASE } from "@/lib/instagram";
@@ -132,6 +133,7 @@ export default function CadastroPage() {
   const [cpf, setCpf] = useState("");
   const [cro, setCro] = useState("");
   const [anoFormacao, setAnoFormacao] = useState("");
+  const [especialidade, setEspecialidade] = useState("");
   const [fotoUrl, setFotoUrl] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -191,7 +193,7 @@ export default function CadastroPage() {
         setEmailVerificado(true);
         const { data: pro } = await supabase
           .from("curadentespro")
-          .select("nome, tratamento, nome_completo, telefone, cro, ano_formacao, foto_url, bio, instagram, lgpd_aceito")
+          .select("nome, tratamento, nome_completo, telefone, cro, ano_formacao, foto_url, bio, instagram, especialidade, lgpd_aceito")
           .eq("id", user.id)
           .is("deleted_at", null)
           .maybeSingle();
@@ -206,6 +208,7 @@ export default function CadastroPage() {
           setTelefone(pro.telefone ?? "");
           setCro(pro.cro ?? "");
           setAnoFormacao(pro.ano_formacao ? String(pro.ano_formacao) : "");
+          setEspecialidade(pro.especialidade ?? "");
           setFotoUrl(pro.foto_url ?? "");
           setBio(pro.bio ?? "");
           setInstagram(extrairUserInstagram(pro.instagram ?? ""));
@@ -308,9 +311,10 @@ export default function CadastroPage() {
     if (!validarCpf(cpf)) { setErro("CPF inválido."); return; }
     if (!validarCro(cro)) { setErro("CRO inválido (ex.: CRO-SP12345)."); return; }
     if (!validarAnoFormacao(anoFormacao)) { setErro("Ano de formação inválido."); return; }
+    if (!especialidade) { setErro("Escolha sua especialidade principal."); return; }
     setOcupado(true);
     try {
-      const { error } = await supabase.from("curadentespro").update({ cro, ano_formacao: anoFormacao ? parseInt(anoFormacao, 10) : null }).eq("id", userId!);
+      const { error } = await supabase.from("curadentespro").update({ cro, ano_formacao: anoFormacao ? parseInt(anoFormacao, 10) : null, especialidade }).eq("id", userId!);
       if (error) throw error;
       const { error: cpfErr } = await supabase.from("curadentespro_cpf").upsert({ curadentespro_id: userId, cpf: cpf.replace(/\D/g, "") }, { onConflict: "curadentespro_id" });
       if (cpfErr) throw cpfErr;
@@ -350,7 +354,7 @@ export default function CadastroPage() {
       if (etapa === 2 && validarTelefone(telefone)) {
         await supabase.from("curadentespro").update({ telefone }).eq("id", userId!);
       } else if (etapa === 3 && validarCpf(cpf) && validarCro(cro) && validarAnoFormacao(anoFormacao)) {
-        await supabase.from("curadentespro").update({ cro, ano_formacao: anoFormacao ? parseInt(anoFormacao, 10) : null }).eq("id", userId!);
+        await supabase.from("curadentespro").update({ cro, ano_formacao: anoFormacao ? parseInt(anoFormacao, 10) : null, especialidade: especialidade || null }).eq("id", userId!);
         await supabase.from("curadentespro_cpf").upsert({ curadentespro_id: userId, cpf: cpf.replace(/\D/g, "") }, { onConflict: "curadentespro_id" });
       } else if (etapa === 4 && validarEnderecos(enderecos).valido) {
         await persistirEnderecos(false);
@@ -512,7 +516,7 @@ export default function CadastroPage() {
               const concluida = e.id < etapa;
               const atual = etapa === e.id;
               const podeNavegar = e.id < etapa && !ocupado;
-              const bgColor = concluida ? "#34C759" : "#FF9500";
+              const bgColor = concluida ? "#34C759" : atual ? "#007AFF" : "#C7C7CC";
               return (
                 <button
                   key={e.id}
@@ -530,15 +534,15 @@ export default function CadastroPage() {
                       height: "32px",
                       background: bgColor,
                       color: "#fff",
-                      border: atual ? "3px solid #007AFF" : "none",
+                      border: atual ? "2px solid #ffffff" : "none",
                       boxShadow: atual ? "0 0 0 4px rgba(0, 122, 255, 0.25)" : "none",
                     }}
                   >
-                    {concluida ? <Check size={14} /> : <span className="text-[14px] font-bold">!</span>}
+                    {concluida ? <Check size={14} /> : <span className="text-[13px] font-bold">{e.id}</span>}
                   </div>
                   <span
                     className="hidden text-center text-[10px] sm:block"
-                    style={{ color: concluida ? "#34C759" : "#FF9500", fontWeight: atual ? "bold" : 600 }}
+                    style={{ color: concluida ? "#34C759" : atual ? "#007AFF" : "#8E8E93", fontWeight: atual ? "bold" : 600 }}
                   >
                     {e.label}
                   </span>
@@ -935,7 +939,32 @@ export default function CadastroPage() {
                 />
               </div>
 
-              <NavEtapa onVoltar={() => setEtapa(2)} onAvancar={avancar3} onDepois={deixarParaDepois} ocupado={ocupado} podeAvancar={validarCpf(cpf) && validarCro(cro)} />
+              {/* Especialidade principal (campo próprio do dentista, aparece junto ao nome no site) */}
+              <div>
+                <label style={labelStyle}>Especialidade principal *</label>
+                <select
+                  value={especialidade}
+                  onChange={(e) => setEspecialidade(e.target.value)}
+                  style={{
+                    ...inputStyle,
+                    borderColor: temProgressoPosterior && !especialidade ? "#FF9500" : "rgba(60,60,67,0.18)",
+                    boxShadow: temProgressoPosterior && !especialidade ? "0 0 0 3px rgba(255,149,0,0.15)" : undefined,
+                  }}
+                >
+                  <option value="" disabled>Selecione sua especialidade</option>
+                  {ESPECIALIDADES.map((esp) => (
+                    <option key={esp} value={esp}>{nomeAmigavel(esp)}</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-[12px]" style={{ color: "#8E8E93" }}>
+                  É a especialidade que aparece junto ao seu nome no site. As atividades de cada local você escolhe no próximo passo.
+                </p>
+                {temProgressoPosterior && !especialidade && (
+                  <p className="mt-1 text-[12px] font-medium" style={{ color: "#FF9500" }}>Especialidade obrigatória pendente.</p>
+                )}
+              </div>
+
+              <NavEtapa onVoltar={() => setEtapa(2)} onAvancar={avancar3} onDepois={deixarParaDepois} ocupado={ocupado} podeAvancar={validarCpf(cpf) && validarCro(cro) && !!especialidade} />
             </div>
           )}
 

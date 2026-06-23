@@ -17,6 +17,8 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/public";
 import { logarBusca } from "@/lib/log-busca";
 import { MapPin, Phone, MessageCircle, Loader2, Navigation } from "lucide-react";
+import CroVerificationBadge from "@/components/CroVerificationBadge";
+import { nomeAmigavel } from "@/lib/especialidades";
 
 const PINK = "#E6004C";
 const AVATAR_FALLBACK =
@@ -35,6 +37,8 @@ interface DentistaUrgencia {
   whatsapp: string | null;
   telefone: string | null;
   distancia_km: number;
+  cro_verificado: boolean;
+  especialidade: string | null;
 }
 
 type Estado = "precisa-localizacao" | "carregando" | "ok" | "vazio" | "erro";
@@ -55,6 +59,31 @@ export default function UrgenciaCliente() {
       return;
     }
     const lista = (data as DentistaUrgencia[]) || [];
+    // A RPC de urgência não retorna cro_verificado; enriquecemos com curadentespro
+    // para o selo de "Verificado" aparecer corretamente (consistente com a busca).
+    const ids = [...new Set(lista.map((d) => d.dentista_id))].filter(Boolean);
+    if (ids.length > 0) {
+      try {
+        const { data: verifs } = await supabase
+          .from("curadentespro")
+          .select("id, cro_verificado, especialidade")
+          .in("id", ids);
+        if (verifs && verifs.length > 0) {
+          const verifMap: Record<string, boolean> = {};
+          const espMap: Record<string, string | null> = {};
+          (verifs as { id: string; cro_verificado: boolean | null; especialidade: string | null }[]).forEach((v) => {
+            verifMap[v.id] = !!v.cro_verificado;
+            espMap[v.id] = v.especialidade;
+          });
+          lista.forEach((d) => {
+            d.cro_verificado = verifMap[d.dentista_id] ?? false;
+            d.especialidade = espMap[d.dentista_id] ?? null;
+          });
+        }
+      } catch (err) {
+        console.error("[Urgência] Erro ao buscar verificação de CRO:", err);
+      }
+    }
     setDentistas(lista);
     setEstado(lista.length ? "ok" : "vazio");
     // Registra a busca de urgência (com coordenadas → alimenta o mapa de demanda).
@@ -140,6 +169,14 @@ export default function UrgenciaCliente() {
                       >
                         {nome}
                       </button>
+                      {d.especialidade && (
+                        <div style={{ marginTop: 2, fontSize: 12.5, fontWeight: 600, color: PINK }}>
+                          {nomeAmigavel(d.especialidade)}
+                        </div>
+                      )}
+                      <div style={{ marginTop: 4 }}>
+                        <CroVerificationBadge verificado={!!d.cro_verificado} size="sm" />
+                      </div>
                       <div style={{ color: "#8E8E93", fontSize: 12.5, display: "flex", alignItems: "center", gap: 4, marginTop: 3 }}>
                         <MapPin size={12} style={{ flexShrink: 0 }} />
                         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>

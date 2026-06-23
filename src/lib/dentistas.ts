@@ -27,6 +27,7 @@ export interface DentistaRow {
   foto_url: string | null;
   bio: string | null;
   instagram: string | null;
+  especialidade: string | null;
   lgpd_aceito: boolean | null;
   deleted_at: string | null;
 }
@@ -121,9 +122,14 @@ export function montarPerfilDentista(
 ): DentistaPerfil {
   const ends = (enderecos ?? []).map(montarEndereco);
 
-  let especialidade = "Clínico Geral";
-  const primeira = ends.find((e) => e.atividades.length > 0);
-  if (primeira) especialidade = primeira.atividades[0];
+  // Especialidade principal = campo EXPLÍCITO do dentista (escolhido por ele). Se
+  // vazio (cadastros antigos), cai na derivação histórica (1ª atividade do 1º
+  // endereço) e, por fim, "Clínico Geral".
+  let especialidade = pro.especialidade?.trim() || "";
+  if (!especialidade) {
+    const primeira = ends.find((e) => e.atividades.length > 0);
+    especialidade = primeira ? primeira.atividades[0] : "Clínico Geral";
+  }
 
   // Foto inválida (blob: de um upload não salvo) é descartada.
   const foto = pro.foto_url && !pro.foto_url.startsWith("blob:") ? pro.foto_url : "";
@@ -154,7 +160,7 @@ export function nomeExibicao(p: Pick<DentistaPerfil, "nome" | "tratamento">): st
 
 // Campos públicos do perfil (CPF/e-mail pessoal OMITIDOS de propósito — LGPD).
 const CAMPOS_PRO =
-  "id, nome, tratamento, cro, cro_verificado, foto_url, bio, instagram, lgpd_aceito, deleted_at";
+  "id, nome, tratamento, cro, cro_verificado, foto_url, bio, instagram, especialidade, lgpd_aceito, deleted_at";
 
 /**
  * Busca um dentista pelo campo indicado ("id" ou "cro") e monta o perfil público.

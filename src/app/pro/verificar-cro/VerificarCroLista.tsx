@@ -31,18 +31,11 @@ function statusIcon(status: string) {
   if (status === "falhou") return <XCircle size={16} className="text-danger" />;
   return <Loader2 size={16} className="animate-spin text-ink-muted" />;
 }
-function statusLabel(status: string) {
-  if (status === "verificado") return "Verificado";
-  if (status === "pendente") return "Pendente";
-  if (status === "falhou") return "Inativo";
-  return "Processando";
-}
-
 const FILTROS = [
   { key: "todas", label: "Todas" },
   { key: "pendentes", label: "Pendentes" },
   { key: "verificadas", label: "Verificadas" },
-  { key: "falhas", label: "Inativas" },
+  { key: "falhas", label: "Rejeitadas" },
 ] as const;
 
 export default function VerificarCroLista({ rows }: { rows: VerificacaoRow[] }) {
@@ -82,27 +75,31 @@ export default function VerificarCroLista({ rows }: { rows: VerificacaoRow[] }) 
       <div className="grid grid-cols-3 gap-4">
         <Kpi icon={<ShieldAlert size={20} className="text-warning" />} label="Pendentes" valor={pendentes} />
         <Kpi icon={<ShieldCheck size={20} className="text-success" />} label="Verificadas" valor={verificadas} />
-        <Kpi icon={<XCircle size={20} className="text-danger" />} label="Inativas" valor={inativas} />
+        <Kpi icon={<XCircle size={20} className="text-danger" />} label="Rejeitadas" valor={inativas} />
       </div>
 
       {/* Filtros + busca */}
-      <div className="flex flex-wrap items-center gap-3">
-        {FILTROS.map((f) => (
-          <button
-            key={f.key}
-            onClick={() => setFiltro(f.key)}
-            className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${filtro === f.key ? "bg-brand-blue text-white" : "bg-white text-brand-navy hover:bg-black/5"}`}
-          >
-            {f.label}
-          </button>
-        ))}
-        <div className="relative ml-auto">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center">
+        {/* Os 4 filtros SEMPRE em uma linha: no mobile viram segmentos de largura
+            igual (flex-1 + min-w-0, sem quebra nem overflow); no desktop, largura natural. */}
+        <div className="flex items-stretch gap-1.5 md:gap-2">
+          {FILTROS.map((f) => (
+            <button
+              key={f.key}
+              onClick={() => setFiltro(f.key)}
+              className={`min-w-0 flex-1 rounded-lg px-2 py-2 text-center text-[12px] font-medium leading-tight transition-colors md:flex-none md:px-4 md:text-sm ${filtro === f.key ? "bg-brand-blue text-white" : "bg-white text-brand-navy hover:bg-black/5"}`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <div className="relative md:ml-auto">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
           <input
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             placeholder="Buscar por nome ou CRO…"
-            className="w-64 rounded-lg border border-black/10 bg-white py-2 pl-9 pr-4 text-sm outline-none focus:border-brand-blue"
+            className="w-full rounded-lg border border-black/10 bg-white py-2 pl-9 pr-4 text-sm outline-none focus:border-brand-blue md:w-64"
           />
         </div>
       </div>
@@ -117,40 +114,35 @@ export default function VerificarCroLista({ rows }: { rows: VerificacaoRow[] }) 
         ) : (
           filtradas.map((v) => (
             <div key={v.dentista_id} className="rounded-2xl border border-black/8 bg-white p-5 shadow-sm">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex min-w-0 flex-1 items-center gap-4">
+              {/* Cabeçalho: dentista à esquerda, selo de status no canto SUPERIOR DIREITO */}
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
                   {statusIcon(v.status)}
                   <div className="min-w-0">
-                    <p className="font-semibold text-brand-navy">
-                      {v.nome || "Sem nome"}
-                      {v.deleted_at && (
-                        <span className="ml-2 rounded-full bg-danger/10 px-1.5 py-0.5 text-[10px] font-medium text-danger">Inativo</span>
-                      )}
-                    </p>
-                    <div className="mt-1 flex items-center gap-3 text-sm text-ink-muted">
-                      <span className="font-mono">{v.cro}</span>
-                      <CroVerificationBadge verificado={v.cro_verificado} />
-                    </div>
+                    <p className="truncate font-semibold text-brand-navy">{v.nome || "Sem nome"}</p>
+                    <span className="font-mono text-sm text-ink-muted">{v.cro}</span>
                   </div>
                 </div>
-                <div className="flex shrink-0 items-center gap-3">
-                  <div className="text-right">
-                    <p className="text-xs text-ink-muted">{v.criado_em ? new Date(v.criado_em).toLocaleDateString("pt-BR") : "—"}</p>
-                    <p className="mt-0.5 text-xs text-ink-muted">{statusLabel(v.status)}</p>
-                  </div>
-                  {v.id ? (
-                    <Link
-                      href={`/pro/verificar-cro/${v.id}`}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-brand-blue px-3 py-2 text-xs font-medium text-white hover:bg-brand-blue-600"
-                    >
-                      <Eye size={13} /> Verificar
-                    </Link>
-                  ) : (
-                    <span className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg bg-brand-blue/40 px-3 py-2 text-xs font-medium text-white" title="Sem registro de verificação ainda">
-                      <Eye size={13} /> Verificar
-                    </span>
-                  )}
+                <div className="shrink-0">
+                  <CroVerificationBadge verificado={v.cro_verificado} inativo={v.status === "falhou"} />
                 </div>
+              </div>
+
+              {/* Rodapé: data + ação */}
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <p className="text-xs text-ink-muted">{v.criado_em ? new Date(v.criado_em).toLocaleDateString("pt-BR") : "—"}</p>
+                {v.id ? (
+                  <Link
+                    href={`/pro/verificar-cro/${v.id}`}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-brand-blue px-3 py-2 text-xs font-medium text-white hover:bg-brand-blue-600"
+                  >
+                    <Eye size={13} /> Verificar
+                  </Link>
+                ) : (
+                  <span className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg bg-brand-blue/40 px-3 py-2 text-xs font-medium text-white" title="Sem registro de verificação ainda">
+                    <Eye size={13} /> Verificar
+                  </span>
+                )}
               </div>
               {v.erro && v.status === "falhou" && <p className="mt-2 text-xs text-danger">{v.erro}</p>}
             </div>

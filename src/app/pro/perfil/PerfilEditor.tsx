@@ -21,6 +21,7 @@ import { encerrarSessao } from "@/lib/encerrar-sessao";
 import { formatarInstagram, extrairUserInstagram, INSTAGRAM_BASE } from "@/lib/instagram";
 import { validarTelefone, validarAnoFormacao } from "@/lib/validacao";
 import { geocodeEnderecoComFallback } from "@/lib/geocoding";
+import { ESPECIALIDADES, nomeAmigavel } from "@/lib/especialidades";
 
 export type { EnderecoForm };
 
@@ -34,6 +35,7 @@ export interface PerfilForm {
   cpf: string;
   cro: string;
   anoFormacao: string;
+  especialidade: string;
   bio: string;
   instagram: string;
   fotoUrl: string;
@@ -58,6 +60,7 @@ export default function PerfilEditor({
   const [tratamento, setTratamento] = useState(perfil.tratamento);
   const [telefone, setTelefone] = useState(perfil.telefone);
   const [anoFormacao, setAnoFormacao] = useState(perfil.anoFormacao);
+  const [especialidade, setEspecialidade] = useState(perfil.especialidade);
   const [bio, setBio] = useState(perfil.bio);
   const [instagram, setInstagram] = useState(perfil.instagram);
 
@@ -78,7 +81,7 @@ export default function PerfilEditor({
 
   const snapshotRef = useRef<string>("");
   function snapshot() {
-    return JSON.stringify({ nome, tratamento, telefone, anoFormacao, bio, instagram, enderecos, prefDesempenho, prefNovidades, prefParceiros });
+    return JSON.stringify({ nome, tratamento, telefone, anoFormacao, especialidade, bio, instagram, enderecos, prefDesempenho, prefNovidades, prefParceiros });
   }
   useEffect(() => {
     if (!snapshotRef.current) snapshotRef.current = snapshot();
@@ -99,6 +102,10 @@ export default function PerfilEditor({
       setMsg({ tipo: "erro", texto: "Ano de formação inválido." });
       return;
     }
+    if (!especialidade) {
+      setMsg({ tipo: "erro", texto: "Escolha sua especialidade principal." });
+      return;
+    }
     setSalvando(true);
     try {
       const instagramUrl = formatarInstagram(instagram);
@@ -117,6 +124,7 @@ export default function PerfilEditor({
           tratamento: tratamento || null,
           telefone,
           ano_formacao: anoFormacao ? parseInt(anoFormacao, 10) : null,
+          especialidade,
           bio,
           instagram: instagramUrl,
         })
@@ -190,7 +198,7 @@ export default function PerfilEditor({
 
       // Snapshot pós-save com o instagram já normalizado (evita falso "alterações
       // não salvas" logo após salvar — o setState do instagram é assíncrono).
-      snapshotRef.current = JSON.stringify({ nome, tratamento, telefone, anoFormacao, bio, instagram: instaNorm, enderecos, prefDesempenho, prefNovidades, prefParceiros });
+      snapshotRef.current = JSON.stringify({ nome, tratamento, telefone, anoFormacao, especialidade, bio, instagram: instaNorm, enderecos, prefDesempenho, prefNovidades, prefParceiros });
       setMsg({ tipo: "ok", texto: "Perfil atualizado com sucesso!" });
       setTimeout(() => {
         router.push("/pro/dashboard");
@@ -304,6 +312,16 @@ export default function PerfilEditor({
               <div>
                 <label className={labelCls}>Ano de formação</label>
                 <input type="number" value={anoFormacao} onChange={(e) => setAnoFormacao(e.target.value)} className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Especialidade principal</label>
+                <select value={especialidade} onChange={(e) => setEspecialidade(e.target.value)} className={inputCls}>
+                  <option value="" disabled>Selecione</option>
+                  {ESPECIALIDADES.map((esp) => (
+                    <option key={esp} value={esp}>{nomeAmigavel(esp)}</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-[11px] text-ink-muted">Aparece junto ao seu nome em todo o site.</p>
               </div>
               <div className="md:col-span-2">
                 <label className={labelCls}>Sobre mim (bio)</label>

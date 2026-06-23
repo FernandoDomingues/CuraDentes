@@ -54,13 +54,13 @@ export default async function MeuPerfilPage() {
   const [perfilRes, cpfRes, endsRes, prefsRes] = await Promise.all([
     supabase
       .from("curadentespro")
-      .select("id, nome, tratamento, nome_completo, email, telefone, cro, ano_formacao, foto_url, bio, instagram, lgpd_aceito")
+      .select("id, nome, tratamento, nome_completo, email, telefone, cro, ano_formacao, foto_url, bio, instagram, especialidade, lgpd_aceito")
       .eq("id", id)
       .is("deleted_at", null)
       .maybeSingle<{
         id: string; nome: string | null; tratamento: string | null; nome_completo: string | null;
         email: string | null; telefone: string | null; cro: string | null; ano_formacao: number | null;
-        foto_url: string | null; bio: string | null; instagram: string | null; lgpd_aceito: boolean | null;
+        foto_url: string | null; bio: string | null; instagram: string | null; especialidade: string | null; lgpd_aceito: boolean | null;
       }>(),
     supabase.rpc("meu_cpf"),
     supabase.from("curadentespro_enderecos").select("*").eq("curadentespro_id", id),
@@ -80,6 +80,7 @@ export default async function MeuPerfilPage() {
     cpf: typeof cpfRes.data === "string" ? cpfRes.data : "",
     cro: pro!.cro ?? "",
     anoFormacao: pro!.ano_formacao ? String(pro!.ano_formacao) : "",
+    especialidade: pro!.especialidade ?? "",
     bio: pro!.bio ?? "",
     instagram: extrairUserInstagram(pro!.instagram ?? ""),
     fotoUrl: pro!.foto_url ?? "",

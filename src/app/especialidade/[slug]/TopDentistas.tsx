@@ -45,6 +45,7 @@ interface TopDentistaRpc {
 interface TopDentista extends TopDentistaRpc {
   cro: string | null;
   cro_verificado: boolean | null;
+  especialidade: string | null;
 }
 
 export default function TopDentistas({ especialidade }: { especialidade: string }) {
@@ -89,12 +90,13 @@ export default function TopDentistas({ especialidade }: { especialidade: string 
         ...d,
         cro: null,
         cro_verificado: null,
+        especialidade: null,
       }));
 
       if (ids.length > 0) {
         const { data: pros } = await supabase
           .from("curadentespro")
-          .select("id, tratamento, cro, cro_verificado")
+          .select("id, tratamento, cro, cro_verificado, especialidade")
           .in("id", ids);
 
         if (!cancelado && pros && pros.length > 0) {
@@ -111,6 +113,7 @@ export default function TopDentistas({ especialidade }: { especialidade: string 
               dentista_nome: nome,
               cro: p?.cro ?? null,
               cro_verificado: p?.cro_verificado ?? null,
+              especialidade: p?.especialidade ?? null,
             };
           });
         }
@@ -230,6 +233,11 @@ export default function TopDentistas({ especialidade }: { especialidade: string 
                 <div className="text-[13px] font-semibold truncate" style={{ color: "#fff" }}>
                   {d.dentista_nome}
                 </div>
+                {d.especialidade && (
+                  <div className="text-[11px] font-semibold truncate" style={{ color: "#FF8FB3" }}>
+                    {nomeAmigavel(d.especialidade)}
+                  </div>
+                )}
                 <div className="flex items-center gap-2 flex-wrap">
                   {d.cro && (
                     <span className="text-[11px]" style={{ color: "rgba(255,255,255,0.55)" }}>

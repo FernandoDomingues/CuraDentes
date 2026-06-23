@@ -28,6 +28,7 @@ function dentistaRow(over: Partial<DentistaRow> = {}): DentistaRow {
     foto_url: "https://exemplo/foto.webp",
     bio: "Atendo com carinho.",
     instagram: "ana.dentista",
+    especialidade: null,
     lgpd_aceito: true,
     deleted_at: null,
     ...over,
@@ -92,7 +93,16 @@ describe("montarPerfilDentista", () => {
     expect(p.cro_verificado).toBe(true);
   });
 
-  it("usa a primeira atividade do primeiro endereço como especialidade principal", () => {
+  it("usa a especialidade EXPLÍCITA do dentista quando preenchida (vence a atividade)", () => {
+    const p = montarPerfilDentista(
+      dentistaRow({ especialidade: "Ortodontia (aparelho)" }),
+      [enderecoRow()],
+      [],
+    );
+    expect(p.especialidade_principal).toBe("Ortodontia (aparelho)");
+  });
+
+  it("sem especialidade explícita, usa a 1ª atividade do 1º endereço (fallback)", () => {
     const p = montarPerfilDentista(dentistaRow(), [enderecoRow()], []);
     expect(p.especialidade_principal).toBe("Implante dentário");
   });

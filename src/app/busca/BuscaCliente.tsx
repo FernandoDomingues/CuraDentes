@@ -22,90 +22,8 @@ import { logarBusca } from "@/lib/log-busca";
 import { saveToSearchCache, saveQueryCache, loadQueryCache, buildQueryCacheKey } from "@/lib/dentistCache";
 import { useAddressSuggestions } from "@/lib/sugestoes";
 import type { AddressSuggestion } from "@/lib/sugestoes";
+import { SuggestionItem } from "@/components/busca/SugestaoEndereco";
 import { useSessao } from "@/components/SessaoProvider";
-
-// ─── Subcomponentes para o Autocomplete ──────────────────────────────────────
-function HighlightMatch({ text, query }: { text: string; query: string }) {
-  if (!query.trim()) return <>{text}</>;
-  const idx = text.toLowerCase().indexOf(query.toLowerCase());
-  if (idx === -1) return <>{text}</>;
-  return (
-    <>
-      {text.slice(0, idx)}
-      <strong style={{ color: "#007AFF", fontWeight: 700 }}>{text.slice(idx, idx + query.length)}</strong>
-      {text.slice(idx + query.length)}
-    </>
-  );
-}
-
-const TYPE_LABELS: Record<string, string> = {
-  cidade: "Cidade",
-  bairro: "Bairro",
-  clinica: "Clínica",
-};
-
-function SuggestionItem({
-  suggestion,
-  highlighted,
-  query,
-  onSelect,
-}: {
-  suggestion: AddressSuggestion;
-  highlighted: boolean;
-  query: string;
-  onSelect: (s: AddressSuggestion) => void;
-}) {
-  return (
-    <button
-      type="button"
-      onMouseDown={(e) => { e.preventDefault(); onSelect(suggestion); }}
-      className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors"
-      style={{
-        background: highlighted ? "rgba(0,122,255,0.07)" : "transparent",
-        borderBottom: "0.5px solid rgba(60,60,67,0.06)",
-        cursor: "pointer",
-      }}
-    >
-      <div
-        className="flex-shrink-0 flex items-center justify-center"
-        style={{
-          width: "32px",
-          height: "32px",
-          borderRadius: "10px",
-          background: suggestion.type === "cidade"
-            ? "rgba(0,122,255,0.10)"
-            : suggestion.type === "bairro"
-            ? "rgba(52,199,89,0.10)"
-            : "rgba(255,149,0,0.10)",
-        }}
-      >
-        {suggestion.type === "clinica" ? (
-          <Building2 size={15} style={{ color: "#FF9500" }} />
-        ) : (
-          <MapPin size={15} style={{ color: suggestion.type === "cidade" ? "#007AFF" : "#34C759" }} />
-        )}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-[14px] font-medium truncate" style={{ color: "#1C1C1E" }}>
-          <HighlightMatch text={suggestion.label} query={query} />
-        </p>
-      </div>
-      <span
-        className="flex-shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full"
-        style={{
-          background: suggestion.type === "cidade"
-            ? "rgba(0,122,255,0.08)"
-            : suggestion.type === "bairro"
-            ? "rgba(52,199,89,0.08)"
-            : "rgba(255,149,0,0.08)",
-          color: suggestion.type === "cidade" ? "#007AFF" : suggestion.type === "bairro" ? "#34C759" : "#FF9500",
-        }}
-      >
-        {TYPE_LABELS[suggestion.type]}
-      </span>
-    </button>
-  );
-}
 
 // Função utilitária para cálculo de distância Haversine em JS
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -124,6 +42,7 @@ interface DentistaResultado {
   dentista_id: string;
   dentista_cro: string;
   dentista_cro_verificado: boolean;
+  dentista_especialidade?: string;
   dentista_nome: string;
   dentista_foto: string;
   dentista_bio: string;
@@ -601,21 +520,36 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
             console.error("[Busca] Erro ao buscar avaliações:", err);
           }
 
-          // ─── Enriquece o nome com o tratamento (Dr./Dra.) ──────────────────
+          // ─── Enriquece nome (Dr./Dra.) + verificação do CRO ────────────────
+          // A RPC geográfica (get_dentistas_proximos) NÃO retorna cro_verificado,
+          // e no merge ela tem precedência sobre a busca textual — por isso o card
+          // mostrava "CRO não verificada" mesmo já verificada. Buscamos tratamento
+          // E cro_verificado de curadentespro e aplicamos em TODOS os resultados
+          // (corrige qualquer caminho de busca: geo, textual ou por nome).
           try {
             const { data: trats } = await supabase
               .from('curadentespro')
-              .select('id, tratamento')
+              .select('id, tratamento, cro_verificado, especialidade')
               .in('id', dentistaIds);
             if (trats && trats.length > 0) {
               const tratMap: Record<string, string> = {};
-              trats.forEach((t: { id: string; tratamento: string | null }) => {
+              const verifMap: Record<string, boolean> = {};
+              const espMap: Record<string, string> = {};
+              trats.forEach((t: { id: string; tratamento: string | null; cro_verificado: boolean | null; especialidade: string | null }) => {
                 if (t.tratamento) tratMap[t.id] = t.tratamento;
+                verifMap[t.id] = !!t.cro_verificado;
+                if (t.especialidade) espMap[t.id] = t.especialidade;
               });
               finalResults.forEach(r => {
                 const t = tratMap[r.dentista_id];
                 if (t && !r.dentista_nome.startsWith(t)) {
                   r.dentista_nome = `${t} ${r.dentista_nome}`;
+                }
+                if (r.dentista_id in verifMap) {
+                  r.dentista_cro_verificado = verifMap[r.dentista_id];
+                }
+                if (espMap[r.dentista_id]) {
+                  r.dentista_especialidade = espMap[r.dentista_id];
                 }
               });
             }
@@ -733,6 +667,7 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
     dentista_id: string;
     dentista_cro: string;
     dentista_cro_verificado: boolean;
+    dentista_especialidade?: string;
     dentista_nome: string;
     dentista_foto: string;
     dentista_bio: string;
@@ -760,6 +695,7 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
         dentista_id: item.dentista_id,
         dentista_cro: item.dentista_cro,
         dentista_cro_verificado: item.dentista_cro_verificado,
+        dentista_especialidade: item.dentista_especialidade,
         dentista_nome: item.dentista_nome,
         dentista_foto: item.dentista_foto,
         dentista_bio: item.dentista_bio,
@@ -1128,6 +1064,11 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
                         <h3 className="font-bold text-[16px] text-[#1C1C1E] leading-tight group-hover:text-[#007AFF] transition-colors">
                           {dentista.dentista_nome}
                         </h3>
+                        {dentista.dentista_especialidade && (
+                          <p className="text-[12px] font-semibold mt-0.5" style={{ color: "#E6004C" }}>
+                            {nomeAmigavel(dentista.dentista_especialidade)}
+                          </p>
+                        )}
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="text-[11px] font-mono text-gray-400">{dentista.dentista_cro}</span>
                           <CroVerificationBadge verificado={dentista.dentista_cro_verificado} size="sm" />

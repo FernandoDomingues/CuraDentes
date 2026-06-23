@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Container from "@/components/Container";
 import { criarClienteNavegador } from "@/lib/supabase/client";
+import { lerSessaoDoCookie } from "@/lib/sessao-cookie";
 import { numeroDoCro, ufDoCro, nomeUf } from "@/lib/cro";
 import {
   ArrowLeft, ExternalLink, RefreshCw, ShieldAlert, CheckCircle, Copy, Loader2,
@@ -48,7 +49,42 @@ export default function VerificarCroDetalheCliente({ verificacao: inicial }: { v
     setTimeout(() => setCopiado(""), 2000);
   }
 
+  // Dispara o e-mail oficial de regularização (suporte@) via edge function.
+  // Best-effort: usa o token da sessão (cookie) para não depender do supabase-js,
+  // que trava no navegador. Retorna true se o e-mail foi aceito pelo servidor.
+  async function notificarDentista(): Promise<boolean> {
+    try {
+      const sessao = lerSessaoDoCookie();
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      if (!sessao?.accessToken || !url || !anon || !pro?.email) return false;
+      const res = await fetch(`${url}/functions/v1/notificar-cro-inativa`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sessao.accessToken}`,
+          apikey: anon,
+        },
+        body: JSON.stringify({ email: pro.email, nome: pro.nome, cro: verificacao.cro }),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }
+
   async function marcar(verificado: boolean) {
+    // Rejeitar/inativar é consequente: oculta o perfil e e-mail o dentista. Confirma.
+    if (!verificado) {
+      const confirma = window.confirm(
+        `Marcar a CRO de ${pro?.nome ?? "este dentista"} como REJEITADA / INATIVA?\n\n` +
+          `• O perfil deixa de ser exibido em qualquer lugar do site.\n` +
+          `• O dentista recebe um e-mail de suporte@curadentes.com.br pedindo a regularização do CRO.\n\n` +
+          `Para reativar depois, marque o CRO como "Verificado" (reexibe o perfil).`,
+      );
+      if (!confirma) return;
+    }
+
     setSalvando(true);
     setMsg(null);
     const { data, error } = await supabase.rpc("marcar_verificacao_cro", {
@@ -56,15 +92,29 @@ export default function VerificarCroDetalheCliente({ verificacao: inicial }: { v
       p_verificado: verificado,
       p_observacao: observacao || null,
     });
-    setSalvando(false);
     const ok = !error && (data as { success?: boolean } | null)?.success;
     if (!ok) {
+      setSalvando(false);
       const detalhe = (data as { error?: string } | null)?.error || error?.message || "Erro desconhecido";
       setMsg({ tipo: "erro", texto: `Erro ao salvar: ${detalhe}` });
       return;
     }
     setVerificacao((v) => ({ ...v, status: verificado ? "verificado" : "falhou" }));
-    setMsg({ tipo: "ok", texto: verificado ? "CRO verificado com sucesso!" : "Verificação marcada como falha." });
+
+    if (verificado) {
+      setMsg({ tipo: "ok", texto: "CRO verificado com sucesso!" });
+    } else {
+      // Perfil já foi ocultado pela RPC (deleted_at); agora avisamos o dentista.
+      const enviado = await notificarDentista();
+      setMsg({
+        // Rejeição é sempre exibida em VERMELHO (ação negativa), mesmo com o e-mail enviado.
+        tipo: "erro",
+        texto: enviado
+          ? "Perfil marcado como inativo e e-mail de regularização enviado ao dentista."
+          : "Perfil marcado como inativo, mas NÃO foi possível enviar o e-mail ao dentista. Avise o suporte manualmente.",
+      });
+    }
+    setSalvando(false);
     router.refresh();
   }
 
@@ -135,7 +185,12 @@ export default function VerificarCroDetalheCliente({ verificacao: inicial }: { v
       {/* Observação + ações (só quando ainda não verificado) */}
       {!jaVerificado && (
         <section className="rounded-2xl border border-black/8 bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-lg font-semibold text-brand-navy">Verificação</h2>
+          <h2 className="mb-1 text-lg font-semibold text-brand-navy">Verificação</h2>
+          <p className="mb-4 text-xs leading-relaxed text-ink-muted">
+            <strong>CRO Rejeitada / Inativa</strong> oculta o perfil em todo o site e envia ao dentista um
+            e-mail de <strong>suporte@curadentes.com.br</strong> pedindo a regularização do CRO. Para
+            reativar depois, marque o CRO como &ldquo;Verificado&rdquo;.
+          </p>
           <textarea
             value={observacao}
             onChange={(e) => setObservacao(e.target.value)}
@@ -149,7 +204,8 @@ export default function VerificarCroDetalheCliente({ verificacao: inicial }: { v
               {salvando ? "Salvando…" : "Marcar como Verificado"}
             </button>
             <button onClick={() => marcar(false)} disabled={salvando} className="flex w-full items-center justify-center gap-2 rounded-xl border border-danger/20 bg-danger/5 px-6 py-3 text-sm font-semibold text-danger hover:bg-danger/10 disabled:opacity-50">
-              <ShieldAlert size={16} /> Marcar como Não Verificado (falhou)
+              {salvando ? <Loader2 size={16} className="animate-spin" /> : <ShieldAlert size={16} />}
+              Marcar como CRO Rejeitada / Inativa
             </button>
             {verificacao.status === "falhou" && (
               <button onClick={reabrir} className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-blue/5 px-6 py-3 text-sm font-semibold text-brand-blue hover:bg-brand-blue/10">

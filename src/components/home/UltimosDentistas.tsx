@@ -34,6 +34,7 @@ interface DentistaRecente {
   bio: string;
   cro: string;
   cro_verificado?: boolean;
+  especialidade: string;
   especialidades: string[];
   criado_em: string;
 }
@@ -74,7 +75,7 @@ export default function UltimosDentistas() {
         // 2. Busca do Supabase se não houver cache válido
         const { data: pros, error } = await supabase
           .from("curadentespro")
-          .select("id, nome, tratamento, foto_url, bio, cro, cro_verificado, criado_em")
+          .select("id, nome, tratamento, foto_url, bio, cro, cro_verificado, especialidade, criado_em")
           .eq("lgpd_aceito", true)
           .is("deleted_at", null)
           .order("criado_em", { ascending: false })
@@ -109,6 +110,7 @@ export default function UltimosDentistas() {
                 bio: p.bio,
                 cro: p.cro,
                 cro_verificado: p.cro_verificado,
+                especialidade: p.especialidade || especialidades[0] || "Clínico Geral",
                 especialidades,
                 criado_em: p.criado_em
               };
@@ -213,6 +215,11 @@ export default function UltimosDentistas() {
                   <h3 className="font-bold text-[16px] text-[#1C1C1E] leading-tight line-clamp-1 group-hover:text-[#007AFF] transition-colors">
                     {dentista.tratamento ? dentista.tratamento + " " : ""}{dentista.nome}
                   </h3>
+                  {dentista.especialidade && (
+                    <p className="text-[12px] font-semibold mt-0.5 line-clamp-1" style={{ color: "#E6004C" }}>
+                      {nomeAmigavel(dentista.especialidade)}
+                    </p>
+                  )}
                   <div className="flex items-center gap-2 mt-0.5">
                     <p className="text-[12px] text-gray-400 font-medium">
                       {dentista.cro}
