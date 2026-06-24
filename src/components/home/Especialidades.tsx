@@ -53,15 +53,14 @@ const CanalIcon = ({ size = 22 }: { size?: number; color?: string }) => (
   <img src="/icons/tratamento-de-canal.svg" width={size} height={size} alt="" aria-hidden="true" />
 );
 
-const ImplantScrewIcon = ({ size = 22, color = "currentColor" }: { size?: number; color?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M8 3 C8 3 9.5 4.5 12 4.5 C14.5 4.5 16 3 16 3 C16 3 17 5 17 7.5 C17 10 15.5 12 12 12 C8.5 12 7 10 7 7.5 C7 5 8 3 8 3Z" />
-    <line x1="12" y1="12" x2="12" y2="14.5" />
-    <rect x="10.5" y="14.5" width="3" height="1.5" rx="0.4" />
-    <line x1="9.5" y1="17" x2="14.5" y2="17" />
-    <line x1="9.5" y1="18.5" x2="14.5" y2="18.5" />
-    <line x1="10" y1="20" x2="14" y2="20" />
-    <line x1="10.5" y1="21.5" x2="13.5" y2="21.5" />
+// Ícone próprio de "Prótese dentária" — dente com coroa (prótese), criado pelo
+// usuário. SVG de traço com `currentColor`, então RECOLORE na cor da especialidade
+// (igual aos demais ícones de linha). Inline para poder recolorir. strokeWidth 1.5
+// como no original.
+const ProteseIcon = ({ size = 22, color = "currentColor" }: { size?: number; color?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M21.298 6.995a5.554 5.554 0 0 0-5.364-5.723a5.2 5.2 0 0 0-3.935 1.857a5.19 5.19 0 0 0-3.933-1.857a5.55 5.55 0 0 0-5.363 5.723a11.9 11.9 0 0 0 2.168 6.113a1.46 1.46 0 0 1 .16 1.41a12.2 12.2 0 0 0-.897 4.634v1.788a1.788 1.788 0 0 0 3.575 0a4.443 4.443 0 0 1 4.061-4.642a4.308 4.308 0 0 1 4.521 4.642a1.788 1.788 0 0 0 3.576 0v-1.793a12.1 12.1 0 0 0-1.013-4.907a1.46 1.46 0 0 1 .112-1.48a10.84 10.84 0 0 0 2.331-5.765" />
+    <path d="M19.266 12.364h-4.55V8.401H9.218v3.963H4.375" />
   </svg>
 );
 
@@ -102,7 +101,7 @@ const ICON_MAP: Record<string, AnyIcon> = {
   "Ortodontia (aparelho)": AparelhoIcon,
   "Implante dentário": ImplanteIcon,
   "Tratamento de canal": CanalIcon,
-  "Prótese dentária": ImplantScrewIcon,
+  "Prótese dentária": ProteseIcon,
   "Cirurgia oral": DoctorMaskIcon,
   "Periodontia": ToothbrushIcon,
   "Odontopediatria": Baby,
