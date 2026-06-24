@@ -54,3 +54,12 @@ CuraDentes_Analise_Negocio_Precificacao.pptx
 CuraDentes_Analise2_Footprint_Geografico.pptx
 scripts/gerar_analise_negocio_pptx.py
 scripts/gerar_analise2_footprint_pptx.py
+
+# Scripts locais descartaveis: diagnostico/auditoria + reorganizacao de pastas.
+# Nao sao parte do produto. O reorganizar_curadentes.py em especial MAPEIA onde
+# ficam os segredos (pasta 0-Credenciais: RESEND_API_KEY.txt, chave secreta google),
+# entao NAO deve ser versionado. (Para versionar um intencionalmente: git add -f.)
+scripts/diag-*.mjs
+scripts/check-mobile.mjs
+scripts/shots-mobile.mjs
+scripts/reorganizar_curadentes.py
