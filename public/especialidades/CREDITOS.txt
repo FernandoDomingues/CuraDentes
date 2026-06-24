@@ -10,6 +10,7 @@ projeto de nunca depender de hotlink de dominio externo.
 Mapa imagem -> foto de origem (ID do Pexels):
   clareamento-dental.webp      -> pexels.com/photo/5622271  (clareamento com luz)
   lentes-de-contato-dental.webp-> pexels.com/photo/6627571  (aplicacao de faceta)
+  ortodontia.webp              -> pexels.com/photo/6311668  (sorriso com aparelho)
   tratamento-de-canal.webp     -> pexels.com/photo/12745979
   protese-dentaria.webp        -> pexels.com/photo/6627601
   periodontia.webp             -> pexels.com/photo/6627533
@@ -18,7 +19,7 @@ Mapa imagem -> foto de origem (ID do Pexels):
   implante-dentario.webp       -> pexels.com/photo/6502343
 
 Migradas do bucket Supabase "especialidades" (conteudo inalterado):
-  clinico-geral.webp, ortodontia.webp, cirurgia-oral.webp
+  clinico-geral.webp, cirurgia-oral.webp
 
   limpeza.webp -> reaproveita a antiga imagem de "clareamento" do bucket Supabase
                   (close-up de exame/profilaxia), a pedido.
