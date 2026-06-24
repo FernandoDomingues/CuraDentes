@@ -20,14 +20,12 @@ import {
 } from "lucide-react";
 
 // ── Custom SVG dental icons ──────────────────────────────────────────────────
-const BracesIcon = ({ size = 22, color = "currentColor" }: { size?: number; color?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 6 C4 4 6 3 8 3 C10 3 11 4 12 5 C13 4 14 3 16 3 C18 3 20 4 20 6 L20 18 C20 20 18 21 16 21 C14 21 13 20 12 19 C11 20 10 21 8 21 C6 21 4 20 4 18 Z" />
-    <line x1="7" y1="12" x2="17" y2="12" />
-    <circle cx="8" cy="12" r="1.5" fill={color} stroke="none" />
-    <circle cx="12" cy="12" r="1.5" fill={color} stroke="none" />
-    <circle cx="16" cy="12" r="1.5" fill={color} stroke="none" />
-  </svg>
+// Ícone próprio de "Ortodontia (aparelho)" — SVG da marca (rosa #d70050) em
+// public/icons/aparelho.svg. Já vem colorido, então ignora a prop `color`
+// (mesmo padrão do ClinicoGeralIcon). Criado pelo usuário.
+// eslint-disable-next-line @next/next/no-img-element
+const AparelhoIcon = ({ size = 22 }: { size?: number; color?: string }) => (
+  <img src="/icons/aparelho.svg" width={size} height={size} alt="" aria-hidden="true" />
 );
 
 // Escova de dente — ícone "toothbrush" do Material Design Icons (Pictogrammers),
@@ -105,7 +103,7 @@ const ICON_MAP: Record<string, AnyIcon> = {
   "Clareamento dental": Sparkles,
   "Lentes de contato dental": Sparkles,
   "Limpeza": ToothbrushIcon,
-  "Ortodontia (aparelho)": BracesIcon,
+  "Ortodontia (aparelho)": AparelhoIcon,
   "Implante dentário": SmileImplantIcon,
   "Tratamento de canal": DrillToothIcon,
   "Prótese dentária": ImplantScrewIcon,
@@ -120,7 +118,7 @@ const COLOR_MAP: Record<string, string> = {
   "Clareamento dental": "#007AFF",
   "Lentes de contato dental": "#FF9500",
   "Limpeza": "#34C759",
-  "Ortodontia (aparelho)": "#007AFF",
+  "Ortodontia (aparelho)": "#d70050",
   "Implante dentário": "#0A2A66",
   "Tratamento de canal": "#FF3B30",
   "Prótese dentária": "#0A2A66",
