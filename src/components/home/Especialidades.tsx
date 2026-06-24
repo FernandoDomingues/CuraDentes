@@ -45,14 +45,12 @@ const ImplanteIcon = ({ size = 22 }: { size?: number; color?: string }) => (
   <img src="/icons/implante-dentario.svg" width={size} height={size} alt="" aria-hidden="true" />
 );
 
-const DrillToothIcon = ({ size = 22, color = "currentColor" }: { size?: number; color?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M6 3.5 C6 3.5 7.5 4.5 9 5 C9 5 9.5 8 8.5 11 C7.5 14 7.5 17 9.5 19 C11 20.5 13 20.5 13 20.5 C13 20.5 13 17 12 14 C11 11 11 8 13 5 C14.5 4.5 16 3.5 16 3.5" />
-    <line x1="6" y1="3.5" x2="16" y2="3.5" />
-    <line x1="17" y1="5.5" x2="21" y2="3" />
-    <line x1="17.5" y1="7.5" x2="21.5" y2="6" />
-    <line x1="17" y1="9.5" x2="21" y2="9" />
-  </svg>
+// Ícone próprio de "Tratamento de canal" — SVG da marca (rosa #d70050) em
+// public/icons/tratamento-de-canal.svg. Já vem colorido (ignora a prop `color`),
+// mesmo padrão do ClinicoGeral/Aparelho/Implante. Criado pelo usuário.
+// eslint-disable-next-line @next/next/no-img-element
+const CanalIcon = ({ size = 22 }: { size?: number; color?: string }) => (
+  <img src="/icons/tratamento-de-canal.svg" width={size} height={size} alt="" aria-hidden="true" />
 );
 
 const ImplantScrewIcon = ({ size = 22, color = "currentColor" }: { size?: number; color?: string }) => (
@@ -103,7 +101,7 @@ const ICON_MAP: Record<string, AnyIcon> = {
   "Limpeza": ToothbrushIcon,
   "Ortodontia (aparelho)": AparelhoIcon,
   "Implante dentário": ImplanteIcon,
-  "Tratamento de canal": DrillToothIcon,
+  "Tratamento de canal": CanalIcon,
   "Prótese dentária": ImplantScrewIcon,
   "Cirurgia oral": DoctorMaskIcon,
   "Periodontia": ToothbrushIcon,
@@ -118,7 +116,7 @@ const COLOR_MAP: Record<string, string> = {
   "Limpeza": "#34C759",
   "Ortodontia (aparelho)": "#d70050",
   "Implante dentário": "#d70050",
-  "Tratamento de canal": "#FF3B30",
+  "Tratamento de canal": "#d70050",
   "Prótese dentária": "#0A2A66",
   "Cirurgia oral": "#FF9500",
   "Periodontia": "#34C759",
