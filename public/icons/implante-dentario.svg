@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="46.683876mm"
+   height="48.744717mm"
+   viewBox="0 0 46.683876 48.744717"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.4.2 (f4327f4, 2025-05-13)"
+   sodipodi:docname="implante-dentário.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#505050"
+     bordercolor="#ffffff"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="1"
+     inkscape:deskcolor="#505050"
+     inkscape:document-units="mm"
+     inkscape:zoom="1.0179639"
+     inkscape:cx="30.944122"
+     inkscape:cy="40.276476"
+     inkscape:window-width="1920"
+     inkscape:window-height="1010"
+     inkscape:window-x="-6"
+     inkscape:window-y="-6"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1" />
+  <g
+     inkscape:label="Camada 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-217.75208,-115.35833)">
+    <path
+       d="M 39.941563,41.529063 H 132.0376 V 133.6251 H 39.941563 Z"
+       fill="none"
+       id="path1"
+       style="stroke-width:1.91867" />
+    <g
+       id="g5"
+       transform="translate(-2.6475043e-4,2.5411298)">
+      <g
+         id="g11-6"
+         inkscape:label="Logo"
+         transform="matrix(0.26458333,0,0,0.26458333,406.13053,235.60599)"
+         inkscape:export-filename="CuraDentesPro\CuraDentesPro - 006.png"
+         inkscape:export-xdpi="266.66666"
+         inkscape:export-ydpi="266.66666">
+        <path
+           id="path1-1-7-4"
+           style="display:inline;fill:#d70050;fill-opacity:1;stroke-width:10;paint-order:stroke markers fill"
+           d="m -661.6339,-454.45591 c -22.46256,-0.34111 -50.56421,19.047 -50.3457,53.91211 0.15639,24.95322 22.44531,41.48579 42.93283,52.14002 l 30.36186,0.24559 c -27.0835,-15.49974 -56.51794,-30.6211 -57.25563,-52.83093 -1.04026,-31.31893 24.56533,-35.52881 32.52539,-36.98046 20.56198,-1.1366 38.76172,25.84179 38.76172,25.84179 0,0 20.76176,-27.76654 38.76172,-25.84179 31.86207,5.39027 33.84406,29.75375 33.91602,36.40429 -3.29702,28.80536 -35.47176,40.18452 -57.97342,53.86848 l 31.90469,-0.73677 c 22.43312,-11.52088 42.93575,-27.41527 42.50037,-53.44811 -0.66203,-39.58428 -31.68881,-52.78643 -49.00977,-52.57422 -21.41659,-0.73291 -39.20898,15.59375 -39.20898,15.59375 0,0 -15.40855,-15.25263 -37.8711,-15.59375 z"
+           sodipodi:nodetypes="cscccccccccsccc" />
+      </g>
+      <g
+         id="g4"
+         transform="matrix(0.85100101,0,0,0.83259312,34.982591,24.240766)"
+         style="fill:#d70050;fill-opacity:1">
+        <path
+           id="path2"
+           style="fill:#d70050;fill-opacity:1;stroke-width:1.47103"
+           d="m 228.38186,144.80149 c -0.1606,0.50472 -0.18162,1.04323 -0.0615,1.55908 l 0.0439,0.1912 4.04678,-1.45675 v -0.19534 z m 12.61939,0.30748 -0.61443,0.22582 c 0.0133,1.7e-4 0.0265,3.6e-4 0.0398,5.2e-4 l -11.39724,4.10414 0.58808,2.54507 18.60868,-6.69933 z" />
+        <path
+           d="m 255.57705,148.52299 -24.70603,8.89387 -0.58842,-2.54489 25.86815,-9.31165 q 0.0191,0.39277 -0.0736,0.80024 z m -23.65718,11.64324 22.87017,-8.23339 -0.69285,3.0068 -19.19701,6.91092 a 4.4131044,4.4131044 0 0 1 -2.98031,-1.68433 m 21.39031,-1.81673 -9.80444,3.53048 h 5.47813 a 4.4131044,4.4131044 0 0 0 4.3013,-3.42015 z"
+           id="path3"
+           style="fill:#d70050;fill-opacity:1;stroke-width:1.47103" />
+      </g>
+    </g>
+  </g>
+</svg>

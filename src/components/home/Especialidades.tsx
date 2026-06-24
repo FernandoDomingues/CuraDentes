@@ -37,14 +37,12 @@ const ToothbrushIcon = ({ size = 22, color = "currentColor" }: { size?: number; 
   </svg>
 );
 
-const SmileImplantIcon = ({ size = 22, color = "currentColor" }: { size?: number; color?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="9" />
-    <path d="M8 13.5 C8 13.5 9.5 16.5 12 16.5 C14.5 16.5 16 13.5 16 13.5" />
-    <rect x="7.5" y="9" width="2" height="3" rx="0.5" fill={color} stroke="none" />
-    <rect x="11" y="9" width="2" height="3" rx="0.5" fill={color} stroke="none" />
-    <rect x="14.5" y="9" width="2" height="3" rx="0.5" fill={color} stroke="none" />
-  </svg>
+// Ícone próprio de "Implante dentário" — SVG da marca (rosa #d70050) em
+// public/icons/implante-dentario.svg. Já vem colorido (ignora a prop `color`),
+// mesmo padrão do ClinicoGeral/Aparelho. Criado pelo usuário.
+// eslint-disable-next-line @next/next/no-img-element
+const ImplanteIcon = ({ size = 22 }: { size?: number; color?: string }) => (
+  <img src="/icons/implante-dentario.svg" width={size} height={size} alt="" aria-hidden="true" />
 );
 
 const DrillToothIcon = ({ size = 22, color = "currentColor" }: { size?: number; color?: string }) => (
@@ -104,7 +102,7 @@ const ICON_MAP: Record<string, AnyIcon> = {
   "Lentes de contato dental": Sparkles,
   "Limpeza": ToothbrushIcon,
   "Ortodontia (aparelho)": AparelhoIcon,
-  "Implante dentário": SmileImplantIcon,
+  "Implante dentário": ImplanteIcon,
   "Tratamento de canal": DrillToothIcon,
   "Prótese dentária": ImplantScrewIcon,
   "Cirurgia oral": DoctorMaskIcon,
@@ -119,7 +117,7 @@ const COLOR_MAP: Record<string, string> = {
   "Lentes de contato dental": "#FF9500",
   "Limpeza": "#34C759",
   "Ortodontia (aparelho)": "#d70050",
-  "Implante dentário": "#0A2A66",
+  "Implante dentário": "#d70050",
   "Tratamento de canal": "#FF3B30",
   "Prótese dentária": "#0A2A66",
   "Cirurgia oral": "#FF9500",
