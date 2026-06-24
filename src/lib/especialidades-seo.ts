@@ -10,8 +10,8 @@
 // Conteúdo portado do site-k11 (src/constants/especialidadesSEO.ts), sem alteração
 // de texto — só reorganizado para o site-R0.
 //
-// IMAGENS: as `heroImage` apontam para o Storage do PRÓPRIO Supabase do projeto
-// (bucket `especialidades`) — é o nosso back-end, não um domínio de terceiros.
+// IMAGENS: as `heroImage` são locais (public/especialidades/*.webp), auto-hospedadas
+// no próprio projeto — sem hotlink externo. Origem/licença em CREDITOS.txt na pasta.
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /** Uma pergunta+resposta da seção de perguntas frequentes. */
@@ -46,10 +46,9 @@ export interface EspecialidadeSEO {
   linksExternos: { label: string; url: string }[];
 }
 
-// Base do Storage de especialidades (Supabase do projeto). Centralizado para
-// não repetir a URL longa em cada entrada.
-const IMG =
-  "https://dsnzgxjuqlalysyfiion.supabase.co/storage/v1/object/public/especialidades";
+// Base das imagens de especialidade: auto-hospedadas em public/especialidades/
+// (servidas em /especialidades/*.webp). Sem hotlink externo; ver CREDITOS.txt.
+const IMG = "/especialidades";
 
 export const ESPECIALIDADES_SEO: Record<string, EspecialidadeSEO> = {
   "Clínico Geral": {
@@ -162,7 +161,7 @@ export const ESPECIALIDADES_SEO: Record<string, EspecialidadeSEO> = {
     description:
       "Faça limpeza dental regular com profissionais. Remoção de tártaro, placa bacteriana e polimento. Agende sua consulta de profilaxia.",
     keywords: ["limpeza dental", "profilaxia", "limpeza nos dentes", "remoção de tártaro", "raspagem dental"],
-    heroImage: `${IMG}/clinico-geral.webp`,
+    heroImage: `${IMG}/limpeza.webp`,
     introducao:
       "A limpeza dental profissional, também chamada de profilaxia, é um procedimento essencial para manter a saúde bucal. Remove placas bacterianas, tártaro e manchas superficiais que a escovação diária não elimina.",
     topicos: [
@@ -215,7 +214,7 @@ export const ESPECIALIDADES_SEO: Record<string, EspecialidadeSEO> = {
       { pergunta: "Qual o valor do aparelho ortodôntico?", resposta: "Os valores variam muito: aparelho fixo metálico de R$ 150 a R$ 400 mensais, estético de R$ 300 a R$ 700, e Invisalign de R$ 400 a R$ 1.200 mensais." },
     ],
     linksExternos: [
-      { label: "Sociedade Brasileira de Ortodontia", url: "https://www.sbornet.org.br/" },
+      { label: "ABOR - Associação Brasileira de Ortodontia e Ortopedia Facial", url: "https://abor.org.br/" },
     ],
   },
 
@@ -247,7 +246,7 @@ export const ESPECIALIDADES_SEO: Record<string, EspecialidadeSEO> = {
       { pergunta: "Qual o valor de um implante dentário?", resposta: "O valor por implante varia de R$ 1.500 a R$ 5.000, incluindo o pino, a coroa protética e a cirurgia." },
     ],
     linksExternos: [
-      { label: "Sociedade Brasileira de Implantodontia", url: "https://www.sobride.org.br/" },
+      { label: "CBI - Centro Brasileiro de Implantodontia", url: "https://cbi.com.br/" },
     ],
   },
 
@@ -258,7 +257,7 @@ export const ESPECIALIDADES_SEO: Record<string, EspecialidadeSEO> = {
     description:
       "Precisa de tratamento de canal? Encontre endodontistas perto de você. Veja preços, avaliações e agende sua consulta sem dor.",
     keywords: ["tratamento de canal", "endodontia", "canal dentário", "extrair canal", "dentista canal"],
-    heroImage: `${IMG}/implante-dentario.webp`,
+    heroImage: `${IMG}/tratamento-de-canal.webp`,
     introducao:
       "O tratamento de canal (endodontia) é o procedimento que remove a polpa infectada ou inflamada do interior do dente, limpando, desinfetando e selando o canal radicular para preservar o dente.",
     topicos: [
@@ -279,7 +278,7 @@ export const ESPECIALIDADES_SEO: Record<string, EspecialidadeSEO> = {
       { pergunta: "Qual o valor de um tratamento de canal?", resposta: "O valor varia conforme o dente (canal simples ou complexo): de R$ 400 a R$ 1.500 por dente." },
     ],
     linksExternos: [
-      { label: "Sociedade Brasileira de Endodontia", url: "https://www.sbendodontia.com.br/" },
+      { label: "SBEndo - Sociedade Brasileira de Endodontia", url: "https://www.sbendo.com.br/" },
     ],
   },
 
@@ -290,7 +289,7 @@ export const ESPECIALIDADES_SEO: Record<string, EspecialidadeSEO> = {
     description:
       "Recupere seu sorriso com próteses dentárias fixas ou removíveis. Encontre especialistas, compare preços e veja avaliações.",
     keywords: ["prótese dentária", "prótese dental", "prótese fixa", "prótese removível", "dentadura", "coroa dentária"],
-    heroImage: `${IMG}/implante-dentario.webp`,
+    heroImage: `${IMG}/protese-dentaria.webp`,
     introducao:
       "A prótese dentária é um dispositivo que substitui um ou mais dentes perdidos, restaurando a função mastigatória, a estética do sorriso e prevenindo problemas na articulação temporomandibular.",
     topicos: [
@@ -311,7 +310,7 @@ export const ESPECIALIDADES_SEO: Record<string, EspecialidadeSEO> = {
       { pergunta: "Prótese dentária doi para colocar?", resposta: "Não. O preparo dental é feito com anestesia. Pode haver sensibilidade nos dias seguintes, mas é temporária." },
     ],
     linksExternos: [
-      { label: "Sociedade Brasileira de Prótese Dentária", url: "https://www.sobepro.org.br/" },
+      { label: "ABO - Associação Brasileira de Odontologia", url: "https://www.abo.org.br/" },
     ],
   },
 
@@ -343,7 +342,7 @@ export const ESPECIALIDADES_SEO: Record<string, EspecialidadeSEO> = {
       { pergunta: "Precisa de repouso após extração de siso?", resposta: "Sim. Recomenda-se repouso de 24 a 48 horas, dieta pastosa, evitar bochechos fortes e não fumar nesse período." },
     ],
     linksExternos: [
-      { label: "Colégio Brasileiro de Cirurgia e Traumatologia Bucomaxilofacial", url: "https://www.bucomaxilofacial.com.br/" },
+      { label: "CBCTBMF - Colégio Brasileiro de Cirurgia e Traumatologia Bucomaxilofacial", url: "https://bucomaxilo.org.br/" },
     ],
   },
 
@@ -354,7 +353,7 @@ export const ESPECIALIDADES_SEO: Record<string, EspecialidadeSEO> = {
     description:
       "Trate doenças da gengiva com periodontistas. Gengivite, periodontite, retração gengival e mau hálito têm solução. Agende sua consulta.",
     keywords: ["periodontia", "doença gengival", "gengivite", "periodontite", "retração gengival", "mau hálito", "tratamento gengiva"],
-    heroImage: `${IMG}/clinico-geral.webp`,
+    heroImage: `${IMG}/periodontia.webp`,
     introducao:
       "A periodontia é a especialidade que cuida da saúde das gengivas e do osso que suporta os dentes. Previne, diagnostica e trata doenças como gengivite e periodontite, principais causas de perda dentária.",
     topicos: [
@@ -375,7 +374,7 @@ export const ESPECIALIDADES_SEO: Record<string, EspecialidadeSEO> = {
       { pergunta: "Doença periodontal afeta a saúde geral?", resposta: "Sim. Estudos associam periodontite a maior risco de doenças cardíacas, diabetes descompensado e parto prematuro." },
     ],
     linksExternos: [
-      { label: "Sociedade Brasileira de Periodontologia", url: "https://www.sobrape.com.br/" },
+      { label: "SOBRAPI - Sociedade Brasileira de Periodontia e Implantodontia", url: "https://sobrapi.org/" },
     ],
   },
 
@@ -386,7 +385,7 @@ export const ESPECIALIDADES_SEO: Record<string, EspecialidadeSEO> = {
     description:
       "Leve seu filho ao dentista infantil. Atendimento lúdico e acolhedor para crianças. Prevenção, cárie infantil e orientação para pais.",
     keywords: ["odontopediatria", "dentista infantil", "dentista para crianças", "cárie infantil", "primeira consulta odontopediatria"],
-    heroImage: `${IMG}/cirurgia-oral.webp`,
+    heroImage: `${IMG}/odontopediatria.webp`,
     introducao:
       "A odontopediatria é a especialidade dedicada à saúde bucal de bebês, crianças e adolescentes. Profissionais treinados para oferecer atendimento acolhedor, lúdico e adaptado a cada fase do desenvolvimento.",
     topicos: [
@@ -407,7 +406,7 @@ export const ESPECIALIDADES_SEO: Record<string, EspecialidadeSEO> = {
       { pergunta: "Como preparar a criança para a consulta?", resposta: "Evite palavras como 'agulha', 'dor' ou 'broca'. Diga que o dentista vai 'contar os dentes' e 'deixar o sorriso brilhando'." },
     ],
     linksExternos: [
-      { label: "Sociedade Brasileira de Odontopediatria", url: "https://www.sboped.com.br/" },
+      { label: "ABOPED - Associação Brasileira de Odontopediatria", url: "https://aboped.org/" },
     ],
   },
 
