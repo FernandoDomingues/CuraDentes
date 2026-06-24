@@ -64,15 +64,12 @@ const ProteseIcon = ({ size = 22, color = "currentColor" }: { size?: number; col
   </svg>
 );
 
-const DoctorMaskIcon = ({ size = 22, color = "currentColor" }: { size?: number; color?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="6" r="3" />
-    <path d="M7 10.5 C7 10.5 5 11.5 5 14.5 L5 21 L19 21 L19 14.5 C19 11.5 17 10.5 17 10.5" />
-    <path d="M9 13.5 L15 13.5 C15 13.5 15.5 14.5 15.5 16 C15.5 17.5 14.5 18.5 12 18.5 C9.5 18.5 8.5 17.5 8.5 16 C8.5 14.5 9 13.5 9 13.5Z" />
-    <line x1="9" y1="13.5" x2="7.5" y2="11.5" />
-    <line x1="15" y1="13.5" x2="16.5" y2="11.5" />
-    <line x1="10" y1="16" x2="14" y2="16" />
-  </svg>
+// Ícone próprio de "Cirurgia oral" — SVG da marca (rosa #d70050) em
+// public/icons/cirurgia-oral.svg (dente + bisturi). Já vem colorido (ignora a
+// prop `color`), mesmo padrão dos demais ícones de marca. Criado pelo usuário.
+// eslint-disable-next-line @next/next/no-img-element
+const CirurgiaIcon = ({ size = 22 }: { size?: number; color?: string }) => (
+  <img src="/icons/cirurgia-oral.svg" width={size} height={size} alt="" aria-hidden="true" />
 );
 
 const FaceSmileIcon = ({ size = 22, color = "currentColor" }: { size?: number; color?: string }) => (
@@ -102,7 +99,7 @@ const ICON_MAP: Record<string, AnyIcon> = {
   "Implante dentário": ImplanteIcon,
   "Tratamento de canal": CanalIcon,
   "Prótese dentária": ProteseIcon,
-  "Cirurgia oral": DoctorMaskIcon,
+  "Cirurgia oral": CirurgiaIcon,
   "Periodontia": ToothbrushIcon,
   "Odontopediatria": Baby,
   "Harmonização orofacial": FaceSmileIcon,
@@ -117,7 +114,7 @@ const COLOR_MAP: Record<string, string> = {
   "Implante dentário": "#d70050",
   "Tratamento de canal": "#d70050",
   "Prótese dentária": "#0A2A66",
-  "Cirurgia oral": "#FF9500",
+  "Cirurgia oral": "#d70050",
   "Periodontia": "#34C759",
   "Odontopediatria": "#34C759",
   "Harmonização orofacial": "#E6004C",
