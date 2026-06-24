@@ -11,7 +11,7 @@ Mapa imagem -> foto de origem (ID do Pexels):
   clareamento-dental.webp      -> pexels.com/photo/5622271  (clareamento com luz)
   lentes-de-contato-dental.webp-> pexels.com/photo/6627571  (aplicacao de faceta)
   ortodontia.webp              -> pexels.com/photo/6311668  (sorriso com aparelho)
-  tratamento-de-canal.webp     -> pexels.com/photo/12745979
+  tratamento-de-canal.webp     -> pexels.com/photo/8176917  (endodontia com microscopio)
   protese-dentaria.webp        -> pexels.com/photo/6627601
   periodontia.webp             -> pexels.com/photo/6627533
   odontopediatria.webp         -> pexels.com/photo/6502552
