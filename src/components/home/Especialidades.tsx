@@ -30,13 +30,19 @@ const BracesIcon = ({ size = 22, color = "currentColor" }: { size?: number; colo
   </svg>
 );
 
+// Escova de dente na vertical: cabo embaixo, cabeça mais larga em cima e cerdas
+// no topo. Desenho limpo e reconhecível no tamanho do card (22px). Validado por
+// render (Playwright) antes de subir — variante mais legível como "escova".
 const ToothbrushIcon = ({ size = 22, color = "currentColor" }: { size?: number; color?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="12" y1="21" x2="12" y2="10" />
-    <path d="M12 10 L12 7 C12 5.3 13.3 4 15 4 L19 4 C19.6 4 20 4.4 20 5 L20 7 C20 7.6 19.6 8 19 8 L12 8" />
-    <line x1="15" y1="5.5" x2="15" y2="8" />
-    <line x1="17" y1="5.5" x2="17" y2="8" />
-    <path d="M10 13 C10 13 8 14 8 16 C8 18 10 19 12 21 C14 19 16 18 16 16 C16 14 14 13 14 13" />
+    {/* cabo */}
+    <rect x="10.5" y="10" width="3" height="11" rx="1.5" />
+    {/* cabeça */}
+    <rect x="8.5" y="5" width="7" height="5" rx="1.3" />
+    {/* cerdas */}
+    <line x1="10" y1="5" x2="10" y2="1.5" />
+    <line x1="12" y1="5" x2="12" y2="1.5" />
+    <line x1="14" y1="5" x2="14" y2="1.5" />
   </svg>
 );
 
