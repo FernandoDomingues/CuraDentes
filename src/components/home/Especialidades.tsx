@@ -30,19 +30,12 @@ const BracesIcon = ({ size = 22, color = "currentColor" }: { size?: number; colo
   </svg>
 );
 
-// Escova de dente na vertical: cabo embaixo, cabeça mais larga em cima e cerdas
-// no topo. Desenho limpo e reconhecível no tamanho do card (22px). Validado por
-// render (Playwright) antes de subir — variante mais legível como "escova".
+// Escova de dente — ícone "toothbrush" do Material Design Icons (Pictogrammers),
+// licença Apache 2.0 (livre, sem exigência de atribuição). Preenchido com a cor
+// da especialidade, igual aos demais ícones que recolorem. Escolhido pelo usuário.
 const ToothbrushIcon = ({ size = 22, color = "currentColor" }: { size?: number; color?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    {/* cabo */}
-    <rect x="10.5" y="10" width="3" height="11" rx="1.5" />
-    {/* cabeça */}
-    <rect x="8.5" y="5" width="7" height="5" rx="1.3" />
-    {/* cerdas */}
-    <line x1="10" y1="5" x2="10" y2="1.5" />
-    <line x1="12" y1="5" x2="12" y2="1.5" />
-    <line x1="14" y1="5" x2="14" y2="1.5" />
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={color} aria-hidden="true">
+    <path d="m12.91 6.43l2.12 2.12l1.06-1.05l-1.06-1.07l2.83-2.83l1.06 1.06L20 3.6l-2.14-2.1M3 20.57L4.43 22L14.5 11.9l2.13-.71l4.77-4.76c.78-.78.78-2.05 0-2.83l-5.85 5.84l-2.12.71Z" />
   </svg>
 );
 
