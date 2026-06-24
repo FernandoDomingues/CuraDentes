@@ -1,14 +1,15 @@
 Imagens de destaque das paginas /especialidade/[slug].
 
-Origem: Pexels (https://www.pexels.com) — Licenca Pexels: uso gratuito,
+Origem principal: Pexels (https://www.pexels.com) — Licenca Pexels: uso gratuito,
 inclusive comercial, sem necessidade de atribuicao e com modificacao permitida.
-As imagens foram redimensionadas (1000x500) e convertidas para WebP.
+As fotos foram redimensionadas (1000x500) e convertidas para WebP.
 
 Auto-hospedadas neste repositorio (public/especialidades/), conforme a regra do
 projeto de nunca depender de hotlink de dominio externo.
 
 Mapa imagem -> foto de origem (ID do Pexels):
-  limpeza.webp                 -> pexels.com/photo/3845735
+  clareamento-dental.webp      -> pexels.com/photo/5622271  (clareamento com luz)
+  lentes-de-contato-dental.webp-> pexels.com/photo/6627571  (aplicacao de faceta)
   tratamento-de-canal.webp     -> pexels.com/photo/12745979
   protese-dentaria.webp        -> pexels.com/photo/6627601
   periodontia.webp             -> pexels.com/photo/6627533
@@ -16,6 +17,8 @@ Mapa imagem -> foto de origem (ID do Pexels):
   harmonizacao-orofacial.webp  -> pexels.com/photo/4586713
   implante-dentario.webp       -> pexels.com/photo/6502343
 
-As demais (clinico-geral, clareamento-dental, lentes-de-contato-dental,
-ortodontia, cirurgia-oral) foram migradas do bucket Supabase "especialidades"
-sem alteracao de conteudo.
+Migradas do bucket Supabase "especialidades" (conteudo inalterado):
+  clinico-geral.webp, ortodontia.webp, cirurgia-oral.webp
+
+  limpeza.webp -> reaproveita a antiga imagem de "clareamento" do bucket Supabase
+                  (close-up de exame/profilaxia), a pedido.
