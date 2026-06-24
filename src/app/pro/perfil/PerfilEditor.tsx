@@ -339,14 +339,23 @@ export default function PerfilEditor({
               </div>
               <div className="md:col-span-2">
                 <label className={labelCls}>Avaliações no Google (opcional)</label>
-                <input
-                  value={googleReviewUrl}
-                  onChange={(e) => setGoogleReviewUrl(e.target.value)}
-                  placeholder="Link de avaliação do seu Google Meu Negócio"
-                  className={inputCls}
-                />
+                <div className="flex items-stretch gap-2">
+                  <input
+                    value={googleReviewUrl}
+                    onChange={(e) => setGoogleReviewUrl(e.target.value)}
+                    placeholder="Link de avaliação do seu Google Meu Negócio"
+                    className={`${inputCls} flex-1 min-w-0`}
+                  />
+                  <Link
+                    href="/ajuda/avaliacoes-google"
+                    target="_blank"
+                    className="flex flex-shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[10px] border border-brand-blue/20 bg-brand-blue/5 px-3 text-[13px] font-semibold text-brand-blue"
+                  >
+                    Passo-a-Passo
+                  </Link>
+                </div>
                 <p className="mt-1 text-[11px] text-ink-muted">
-                  Após avaliarem você no CuraDentes, os pacientes veem um botão para avaliar também no Google. Pegue o link em: Google Meu Negócio → Peça avaliações.
+                  Após avaliarem você no CuraDentes, os pacientes veem um botão para avaliar também no Google. Não sabe pegar o link? Veja o <strong>Passo-a-Passo</strong>.
                 </p>
               </div>
               <div>

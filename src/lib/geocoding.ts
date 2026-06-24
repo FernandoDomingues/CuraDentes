@@ -61,8 +61,40 @@ export async function reverseGeocodeCidadeBairro(
 }
 
 /**
- * Geocodifica um endereço estruturado com fallback progressivo.
- * Tenta do mais específico ao mais geral até conseguir coordenadas.
+ * Coordenadas a partir do CEP (AwesomeAPI). No Brasil isso é MUITO mais confiável
+ * que geocodificar a rua no OSM (que muitas vezes não tem a rua e cai num centroide
+ * de cidade — origem de distâncias erradas na busca). Precisão ~nível de quadra.
+ * Retorna null se o CEP for inválido ou não tiver coordenada.
+ */
+export async function getCoordenadasPorCep(
+  cep: string | null | undefined,
+): Promise<{ latitude: number; longitude: number } | null> {
+  const c = (cep || "").replace(/\D/g, "");
+  if (c.length !== 8) return null;
+  try {
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), 5000);
+    const resp = await fetch(`https://cep.awesomeapi.com.br/json/${c}`, { signal: controller.signal });
+    clearTimeout(t);
+    if (!resp.ok) return null;
+    const d = (await resp.json()) as { lat?: string; lng?: string };
+    if (d.lat && d.lng) {
+      const latitude = parseFloat(d.lat);
+      const longitude = parseFloat(d.lng);
+      if (Number.isFinite(latitude) && Number.isFinite(longitude)) return { latitude, longitude };
+    }
+    return null;
+  } catch (err) {
+    console.warn("[geocoding] CEP falhou:", err);
+    return null;
+  }
+}
+
+/**
+ * Geocodifica um endereço estruturado.
+ * 1º tenta pelo CEP (AwesomeAPI — confiável no Brasil; evita o centroide de cidade
+ *    do OSM que gerava distâncias erradas). 2º cai no Nominatim com fallback
+ *    progressivo (rua→bairro→cidade) para CEPs sem coordenada.
  */
 export async function geocodeEnderecoComFallback(end: {
   logradouro?: string | null;
@@ -70,7 +102,13 @@ export async function geocodeEnderecoComFallback(end: {
   bairro?: string | null;
   cidade?: string | null;
   estado?: string | null;
+  cep?: string | null;
 }): Promise<{ latitude: number; longitude: number } | null> {
+  // 1) CEP primeiro — preciso e sem o risco do fallback de centroide do OSM.
+  const porCep = await getCoordenadasPorCep(end.cep);
+  if (porCep) return porCep;
+
+  // 2) Nominatim (OSM), do mais específico ao mais geral.
   const tentativas: (string | null | undefined)[][] = [
     [end.logradouro, end.numero, end.bairro, end.cidade, end.estado],
     [end.logradouro, end.bairro, end.cidade, end.estado],

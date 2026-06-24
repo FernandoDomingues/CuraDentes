@@ -118,7 +118,10 @@ export function saveToSearchCache(dentists: CacheableDentist[]) {
 }
 
 // ─── Cache por query (para restaurar resultados ao dar F5) ──────────────────
-const QUERY_CACHE_KEY = "curadentes_query_cache";
+// v2: a versão no nome da chave invalida caches antigos (ex.: distâncias gravadas
+// antes da correção das coordenadas das clínicas). Bump aqui = todo mundo recomeça
+// com cache limpo, sem ver distância velha nem no primeiro render.
+const QUERY_CACHE_KEY = "curadentes_query_cache_v2";
 const QUERY_CACHE_MAX_ENTRIES = 10;
 const QUERY_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutos
 

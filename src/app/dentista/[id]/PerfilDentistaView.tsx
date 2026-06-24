@@ -138,6 +138,7 @@ interface AvaliacaoIndividual {
   nota: number;
   paciente_nome: string;
   paciente_foto: string;
+  comentario: string | null;
   criado_em: string;
 }
 
@@ -670,6 +671,7 @@ function AvaliarDentista({
   const [formAberto, setFormAberto] = useState(false);
   const [nota, setNota] = useState(0);
   const [atividade, setAtividade] = useState("");
+  const [comentario, setComentario] = useState("");
 
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState("");
@@ -728,13 +730,13 @@ function AvaliarDentista({
       return;
     }
 
-    // Insert IDÊNTICO ao k11 — só { paciente_id, dentista_id, nota, atividade }.
-    // Sem coluna `comentario` (não existe no schema; enviá-la quebraria o insert).
+    // Salva a avaliação: nota + atividade (opcional) + comentário (opcional, máx 300).
     const { error: insertError } = await supabase.from("avaliacoes").insert({
       paciente_id: user.id,
       dentista_id: dentistaId,
       nota,
       atividade: atividade || null,
+      comentario: comentario.trim() || null,
     });
 
     if (insertError) {
@@ -767,6 +769,7 @@ function AvaliarDentista({
     setFormAberto(false);
     setNota(0);
     setAtividade("");
+    setComentario("");
   }
 
   return (
@@ -912,6 +915,23 @@ function AvaliarDentista({
             </select>
           </div>
 
+          {/* Comentário (opcional, máx. 300) */}
+          <div>
+            <label className="text-[12px] font-bold mb-2 block uppercase tracking-wider" style={{ color: "#8E8E93" }}>
+              Comentário <span style={{ fontWeight: 500, textTransform: "none" }}>(opcional)</span>
+            </label>
+            <textarea
+              value={comentario}
+              onChange={(e) => { if (e.target.value.length <= 300) setComentario(e.target.value); }}
+              rows={3}
+              maxLength={300}
+              placeholder="Conte como foi o seu atendimento…"
+              className="w-full rounded-xl px-4 py-3 outline-none border transition-all text-[14px]"
+              style={{ background: "#F2F2F7", color: "#1C1C1E", borderColor: "transparent", resize: "vertical", lineHeight: 1.6 }}
+            />
+            <p className="mt-1 text-right text-[12px]" style={{ color: "#8E8E93" }}>{comentario.length}/300</p>
+          </div>
+
           {/* Ações */}
           <div className="flex items-center gap-3 mt-1 border-t border-gray-100 pt-5">
             <button
@@ -1024,7 +1044,7 @@ export default function PerfilDentistaView({
         const supabase = criarClienteNavegador();
         const { data: avaliacoes, error } = await supabase
           .from("avaliacoes")
-          .select("paciente_id, nota, criado_em")
+          .select("paciente_id, nota, comentario, criado_em")
           .eq("dentista_id", perfil.id)
           .eq("atividade", atividade)
           .order("criado_em", { ascending: false });
@@ -1034,6 +1054,7 @@ export default function PerfilDentistaView({
         const lista = (avaliacoes ?? []) as {
           paciente_id: string;
           nota: number;
+          comentario: string | null;
           criado_em: string;
         }[];
 
@@ -1060,6 +1081,7 @@ export default function PerfilDentistaView({
             nota: r.nota,
             paciente_nome: mapaPacientes[r.paciente_id]?.nome || "Anônimo",
             paciente_foto: mapaPacientes[r.paciente_id]?.foto || "",
+            comentario: r.comentario,
             criado_em: r.criado_em,
           })),
         });
@@ -1371,8 +1393,9 @@ export default function PerfilDentistaView({
                 avaliacoesIndividuais.ratings.map((r, i) => (
                   <div
                     key={i}
-                    className="flex items-center gap-3 p-3 rounded-[12px]"
-                    style={{ background: "#F2F2F7" }}
+                    className="group relative flex items-center gap-3 p-3 rounded-[12px]"
+                    style={{ background: "#F2F2F7", cursor: r.comentario ? "help" : "default" }}
+                    title={r.comentario || undefined}
                   >
                     <img
                       src={r.paciente_foto || FOTO_FALLBACK}
@@ -1398,6 +1421,27 @@ export default function PerfilDentistaView({
                         ))}
                       </div>
                     </div>
+
+                    {/* Indicador de que há comentário (some sem comentário) */}
+                    {r.comentario && (
+                      <MessageCircle size={15} className="flex-shrink-0" style={{ color: "#007AFF" }} />
+                    )}
+
+                    {/* Balãozinho de conversa com o comentário (aparece ao passar o
+                        mouse na linha — foto, nota e ícone). title = fallback no toque. */}
+                    {r.comentario && (
+                      <div
+                        role="tooltip"
+                        className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-2 w-max max-w-[260px] -translate-x-1/2 rounded-[14px] px-3.5 py-2.5 text-left text-[12.5px] font-medium leading-snug text-white opacity-0 shadow-lg transition-opacity duration-200 group-hover:opacity-100"
+                        style={{ background: "rgba(10,42,102,0.96)" }}
+                      >
+                        &ldquo;{r.comentario}&rdquo;
+                        <span
+                          className="absolute left-1/2 top-full h-3 w-3 -translate-x-1/2 -translate-y-1.5 rotate-45"
+                          style={{ background: "rgba(10,42,102,0.96)" }}
+                        />
+                      </div>
+                    )}
                   </div>
                 ))
               )}

@@ -1044,14 +1044,24 @@ export default function CadastroPage() {
 
               <div>
                 <label style={{ ...labelStyle, marginBottom: "8px" }}>Avaliações no Google (opcional)</label>
-                <input
-                  value={googleReviewUrl}
-                  onChange={(e) => setGoogleReviewUrl(e.target.value)}
-                  placeholder="Cole o link de avaliação do seu Google Meu Negócio"
-                  style={inputStyle}
-                />
+                <div className="flex items-stretch gap-2">
+                  <input
+                    value={googleReviewUrl}
+                    onChange={(e) => setGoogleReviewUrl(e.target.value)}
+                    placeholder="Cole o link de avaliação do seu Google Meu Negócio"
+                    style={{ ...inputStyle, flex: 1, minWidth: 0 }}
+                  />
+                  <Link
+                    href="/ajuda/avaliacoes-google"
+                    target="_blank"
+                    className="flex flex-shrink-0 items-center gap-1.5 rounded-[12px] px-3 text-[13px] font-semibold whitespace-nowrap"
+                    style={{ background: "rgba(0,122,255,0.08)", color: "#007AFF", border: "0.5px solid rgba(0,122,255,0.20)" }}
+                  >
+                    <Info size={14} /> Passo-a-Passo
+                  </Link>
+                </div>
                 <p className="mt-1 text-[12px]" style={{ color: "#8E8E93", lineHeight: 1.5 }}>
-                  Depois de avaliarem você aqui, os pacientes verão um botão para avaliar também no Google. Pegue o link em: Google Meu Negócio → Peça avaliações.
+                  Depois de avaliarem você aqui, os pacientes verão um botão para avaliar também no Google. Não sabe pegar o link? Veja o <strong>Passo-a-Passo</strong>.
                 </p>
               </div>
 

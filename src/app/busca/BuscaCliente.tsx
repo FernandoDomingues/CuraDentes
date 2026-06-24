@@ -14,6 +14,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getCoordenadas, reverseGeocodeCidadeBairro } from "@/lib/geocoding";
+import { calcularDistanciaKm } from "@/lib/distancia";
 import { supabase } from "@/lib/supabase/public";
 import { Loader2, MapPin, Star, Building2, ChevronRight, Filter, SlidersHorizontal, X, Search } from "lucide-react";
 import CroVerificationBadge from "@/components/CroVerificationBadge";
@@ -25,18 +26,7 @@ import type { AddressSuggestion } from "@/lib/sugestoes";
 import { SuggestionItem } from "@/components/busca/SugestaoEndereco";
 import { useSessao } from "@/components/SessaoProvider";
 
-// Função utilitária para cálculo de distância Haversine em JS
-function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371; // Raio da Terra em km
-  const dLat = (lat2 - lat1) * (Math.PI / 180);
-  const dLon = (lon2 - lon1) * (Math.PI / 180);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
+// Haversine extraído para lib/distancia (calcularDistanciaKm) — função pura e testada.
 
 interface DentistaResultado {
   dentista_id: string;
@@ -116,7 +106,10 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
   const [usandoLocalizacao, setUsandoLocalizacao] = useState(false);
   const [geoErro, setGeoErro] = useState<string | null>(null);
 
-  const [raio] = useState(5);
+  // Raio da busca geográfica (RPC get_dentistas_proximos). 30 km cobre a cidade e
+  // o entorno — antes eram 5 km, restrito demais (deixava o paciente sem resultados
+  // mesmo havendo dentistas a poucos quilômetros). A RPC ordena por distância ASC.
+  const [raio] = useState(30);
 
   // Filtro de especialidade — declarado aqui (antes do efeito de sincronização)
   // porque o efeito de URL pré-seleciona a partir de ?atividade=.
@@ -149,7 +142,14 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
 
   const [loading, setLoading] = useState(true);
   const [resultadosBrutos, setResultadosBrutos] = useState<DentistaResultado[]>([]);
-  const [ordenacao, setOrdenacao] = useState<"distancia" | "avaliacao">("avaliacao");
+  // Ordenação padrão: por DISTÂNCIA quando a busca tem localização (lat/lng) — quem
+  // pesquisa "perto de mim" quer o mais próximo primeiro. Sem localização (busca
+  // textual pura) cai para "melhor avaliados", pois a distância seria 0 para todos.
+  // O componente remonta a cada nova busca (key={termo} na page), então este
+  // inicializador já reflete o tipo de busca corrente.
+  const [ordenacao, setOrdenacao] = useState<"distancia" | "avaliacao">(
+    paramLat && paramLng ? "distancia" : "avaliacao",
+  );
 
   // Autocomplete
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -351,7 +351,7 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
 
                 let dist = 0;
                 if (finalLat !== null && finalLng !== null && d.latitude && d.longitude) {
-                  dist = calculateDistance(finalLat, finalLng, d.latitude, d.longitude);
+                  dist = calcularDistanciaKm(finalLat, finalLng, d.latitude, d.longitude);
                 }
 
                 return {
@@ -419,7 +419,7 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
                     const pro = Array.isArray(d.curadentespro) ? d.curadentespro[0] : (d.curadentespro || { id: "", nome: "", foto_url: null, bio: null, cro: "", cro_verificado: false }) as { id: string; nome: string; foto_url: string | null; bio: string | null; cro: string; cro_verificado: boolean; };
                     let dist = 0;
                     if (finalLat !== null && finalLng !== null && d.latitude && d.longitude) {
-                      dist = calculateDistance(finalLat, finalLng, d.latitude, d.longitude);
+                      dist = calcularDistanciaKm(finalLat, finalLng, d.latitude, d.longitude);
                     }
                     return {
                       dentista_id: pro.id,
