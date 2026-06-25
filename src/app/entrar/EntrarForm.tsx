@@ -17,7 +17,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import { criarClienteNavegador } from "@/lib/supabase/client";
-import { resolveLoginEmail, isSuperuserEmail } from "@/lib/superuser";
+import { resolveLoginEmail } from "@/lib/superuser";
 
 type Modo = "paciente" | "dentista" | "recuperar";
 

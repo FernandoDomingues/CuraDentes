@@ -101,7 +101,7 @@ export default function Footer() {
             <div key={titulo}>
               <h3
                 className="text-[13px] font-semibold uppercase tracking-wider mb-4"
-                style={{ color: "rgba(255,255,255,0.5)" }}
+                style={{ color: "rgba(255,255,255,0.75)" }}
               >
                 {titulo}
               </h3>
@@ -130,10 +130,10 @@ export default function Footer() {
           className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-6"
           style={{ borderTop: "0.5px solid rgba(255,255,255,0.13)" }}
         >
-          <p className="text-[13px]" style={{ color: "rgba(255,255,255,0.45)" }}>
+          <p className="text-[13px]" style={{ color: "rgba(255,255,255,0.72)" }}>
             © {ANO} {SITE_NOME}. Todos os direitos reservados.
           </p>
-          <p className="text-[13px]" style={{ color: "rgba(255,255,255,0.35)" }}>
+          <p className="text-[13px]" style={{ color: "rgba(255,255,255,0.72)" }}>
             Feito com 🦷 no Brasil
           </p>
         </div>

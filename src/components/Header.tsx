@@ -129,7 +129,7 @@ export default function Header() {
           </div>
 
           {/* Hambúrguer — mobile */}
-          <button className="flex h-10 w-10 items-center justify-center rounded-xl lg:hidden" aria-label="Menu" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)} style={{ color: "#3A3A3C" }}>
+          <button className="flex h-10 w-10 items-center justify-center rounded-xl lg:hidden" aria-label={menuOpen ? "Fechar menu" : "Abrir menu"} aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)} style={{ color: "#3A3A3C" }}>
             {menuOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>

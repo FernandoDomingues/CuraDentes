@@ -79,14 +79,14 @@ export default function Privacidade() {
           <div className="bg-white rounded-[20px] p-6 md:p-10 flex flex-col gap-10" style={{ border: "0.5px solid rgba(60,60,67,0.08)" }}>
             <Secao id="introducao" titulo="1. Introdução">
               <p>
-                A <strong>CuraDentes</strong> ("nós", "nosso" ou "plataforma") está comprometida com a proteção da
+                A <strong>CuraDentes</strong> (&quot;nós&quot;, &quot;nosso&quot; ou &quot;plataforma&quot;) está comprometida com a proteção da
                 privacidade dos seus usuários. Esta Política de Privacidade descreve como coletamos, usamos,
                 armazenamos e compartilhamos suas informações pessoais quando você utiliza nossa plataforma,
                 em conformidade com a <strong>Lei Geral de Proteção de Dados Pessoais (LGPD — Lei nº 13.709/2018)</strong>.
               </p>
               <p>
                 Ao utilizar o CuraDentes, você declara estar ciente e de acordo com as práticas descritas neste documento.
-                Se você é um dentista cadastrado em nossa plataforma ("CuraDentes Pro"), a aceitação formal ocorre
+                Se você é um dentista cadastrado em nossa plataforma (&quot;CuraDentes Pro&quot;), a aceitação formal ocorre
                 na etapa de consentimento do cadastro.
               </p>
             </Secao>
@@ -261,7 +261,7 @@ export default function Privacidade() {
               </div>
               <p className="mt-4">
                 Para exercer seus direitos, entre em contato conosco através do e-mail ou formulário
-                indicados na seção "Contato" abaixo. Responderemos em até <strong>15 dias</strong>.
+                indicados na seção &quot;Contato&quot; abaixo. Responderemos em até <strong>15 dias</strong>.
               </p>
             </Secao>
 
@@ -277,7 +277,7 @@ export default function Privacidade() {
                   <strong>Pacientes:</strong> enquanto o usuário mantiver seu vínculo com a plataforma
                   (login social). Ao excluir a conta, sua <strong>geolocalização (latitude/longitude) é
                   eliminada imediatamente</strong> — não há retenção da localização precisa após o
-                  "esquecimento". Avaliações anônimas podem ser mantidas após o desligamento.
+                  &quot;esquecimento&quot;. Avaliações anônimas podem ser mantidas após o desligamento.
                 </li>
                 <li>
                   <strong>Dados de cache local:</strong> por até 7 dias (CEP) ou 30 minutos (localização),

@@ -1049,7 +1049,7 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
               {!query && temCoordenadas && "Dentistas próximos a você"}
             </h1>
             <p className="text-[14px] text-gray-500 mt-0.5">
-              {loading ? "Buscando..." : `${resultadosFiltrados.length} dentistas encontrados`}
+              {loading ? "Buscando..." : `${resultadosFiltrados.length} ${resultadosFiltrados.length === 1 ? "dentista encontrado" : "dentistas encontrados"}`}
               {temCoordenadas && raio > 0 && !loading && ` em até ${raio} km`}.
             </p>
           </div>

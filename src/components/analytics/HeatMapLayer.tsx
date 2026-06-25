@@ -46,7 +46,7 @@ export default function HeatMapLayer({
       heatLayerRef.current = null;
     }
     if (points.length > 0) {
-      const maxIntensidade = Math.max(...points.map((p) => p[2]), 1);
+      const maxIntensidade = points.reduce((m, p) => Math.max(m, p[2]), 1);
       const normalizados = points.map((p) => [p[0], p[1], p[2] / maxIntensidade] as [number, number, number]);
       heatLayerRef.current = L.heatLayer(normalizados, {
         radius: 25,

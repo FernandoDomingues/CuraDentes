@@ -96,8 +96,8 @@ export default function Sobre() {
                 <span className="text-[15px] font-semibold" style={{ color: "#0A2A66" }}>Nosso propósito</span>
               </div>
               <p className="text-[14px] leading-relaxed" style={{ color: "#3A3A3C" }}>
-                "Democratizar o acesso à saúde odontológica de qualidade no Brasil, conectando pacientes
-                a dentistas verificados de forma simples, transparente e digital."
+                &quot;Democratizar o acesso à saúde odontológica de qualidade no Brasil, conectando pacientes
+                a dentistas verificados de forma simples, transparente e digital.&quot;
               </p>
             </div>
           </div>
@@ -197,7 +197,7 @@ export default function Sobre() {
             </p>
             <div className="flex flex-wrap gap-4 justify-center">
               <a
-                href="/pesquisa"
+                href="/busca"
                 className="sobre-cta sobre-cta--azul inline-flex items-center px-7 py-3 rounded-[14px] text-white text-[15px] font-semibold transition-all duration-300"
                 style={{
                   background: "#007AFF",
@@ -207,7 +207,7 @@ export default function Sobre() {
                 Buscar dentista
               </a>
               <a
-                href="/pro/novo-cadastro"
+                href="/cadastro"
                 className="sobre-cta sobre-cta--magenta inline-flex items-center px-7 py-3 rounded-[14px] text-white text-[15px] font-semibold transition-all duration-300"
                 style={{
                   background: "#E6004C",

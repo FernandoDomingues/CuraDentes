@@ -11,8 +11,16 @@
 // Ler a sessão aqui torna /pro/* dinâmico — que é o correto para área logada.
 // ═══════════════════════════════════════════════════════════════════════════════
 
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getUsuario } from "@/lib/auth";
+
+// Área logada nunca deve ser indexada. O robots.ts já bloqueia o *crawl* de /pro,
+// mas isto impede a INDEXAÇÃO de URLs descobertas por links externos (o robots
+// sozinho não impede). Herda para todas as subrotas /pro/*.
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default async function ProLayout({ children }: { children: React.ReactNode }) {
   const usuario = await getUsuario();

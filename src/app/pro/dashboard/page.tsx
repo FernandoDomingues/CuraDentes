@@ -11,7 +11,7 @@ import Image from "next/image";
 import Link from "next/link";
 import Container from "@/components/Container";
 import Estrelas from "@/components/Estrelas";
-import { Eye, MessageCircle, Phone, Check, AlertCircle, Trophy, Zap, CalendarClock, Building2, MapPin, Settings } from "lucide-react";
+import { Eye, MessageCircle, Phone, Check, AlertCircle, Trophy, CalendarClock, Building2, MapPin, Settings } from "lucide-react";
 import { redirect } from "next/navigation";
 import { getUsuario } from "@/lib/auth";
 import { criarClienteServidor } from "@/lib/supabase/server";

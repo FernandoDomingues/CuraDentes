@@ -1,0 +1,38 @@
+# CuraDentes
+
+> CuraDentes é uma plataforma brasileira (diretório/marketplace) para encontrar dentistas perto de você por especialidade, localização e avaliações. Os perfis dos profissionais são verificados pelo número de registro no CRO (Conselho Regional de Odontologia), e o paciente entra em contato diretamente com o consultório (WhatsApp/telefone), sem intermediários.
+
+## O que é
+- **Para pacientes:** busca gratuita de dentistas por especialidade e proximidade geográfica, com avaliações reais e contato direto.
+- **Para dentistas (CuraDentes Pro):** cadastro de perfil profissional, endereços de atendimento, fotos e bio, com selo de verificação de CRO.
+- **Cobertura:** Brasil. Conteúdo em português (pt-BR).
+- **Site oficial:** https://curadentes.com.br
+
+## Páginas principais
+- [Início](https://curadentes.com.br/): busca de dentistas e visão geral do serviço.
+- [Buscar dentistas](https://curadentes.com.br/busca): busca por especialidade e localização, ordenada por distância e avaliação.
+- [Urgência odontológica](https://curadentes.com.br/urgencia): dentistas que atendem urgência/emergência mais próximos, com contato em um toque.
+- [Sobre](https://curadentes.com.br/sobre): propósito, missão e funcionamento da plataforma.
+- [Cadastro de dentistas](https://curadentes.com.br/cadastro): criação de perfil profissional (CuraDentes Pro).
+
+## Especialidades
+- [Clínico Geral](https://curadentes.com.br/especialidade/clinico-geral)
+- [Ortodontia (aparelho)](https://curadentes.com.br/especialidade/ortodontia)
+- [Implante dentário](https://curadentes.com.br/especialidade/implante-dentario)
+- [Tratamento de canal (endodontia)](https://curadentes.com.br/especialidade/tratamento-de-canal)
+- [Periodontia (tratamento de gengiva)](https://curadentes.com.br/especialidade/periodontia)
+- [Odontopediatria](https://curadentes.com.br/especialidade/odontopediatria)
+- [Prótese dentária](https://curadentes.com.br/especialidade/protese-dentaria)
+- [Cirurgia oral](https://curadentes.com.br/especialidade/cirurgia-oral)
+- [Harmonização orofacial](https://curadentes.com.br/especialidade/harmonizacao-orofacial)
+- [Clareamento dental](https://curadentes.com.br/especialidade/clareamento-dental)
+- [Lentes de contato dental](https://curadentes.com.br/especialidade/lentes-de-contato-dental)
+- [Limpeza dental](https://curadentes.com.br/especialidade/limpeza)
+
+## Legal
+- [Política de Privacidade](https://curadentes.com.br/privacidade)
+- [Termos de Uso](https://curadentes.com.br/termos)
+
+## Observações
+- CuraDentes não presta aconselhamento médico/odontológico; a plataforma conecta pacientes a profissionais para que o atendimento ocorra no consultório.
+- A verificação de CRO indica que o registro do profissional foi conferido junto ao Conselho Regional de Odontologia.

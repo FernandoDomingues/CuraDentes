@@ -13,6 +13,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import { useState, useCallback, useEffect, type CSSProperties } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/public";
 import { logarBusca } from "@/lib/log-busca";
@@ -150,7 +151,7 @@ export default function UrgenciaCliente() {
         {estado === "vazio" && (
           <div style={{ textAlign: "center", color: "#5c6b7a", fontSize: 14, lineHeight: 1.6 }}>
             <p>Ainda não encontramos dentistas de urgência perto de você. Tente a busca normal:</p>
-            <a href="/" style={{ color: PINK, fontWeight: 700, textDecoration: "none" }}>Voltar ao início</a>
+            <Link href="/" style={{ color: PINK, fontWeight: 700, textDecoration: "none" }}>Voltar ao início</Link>
           </div>
         )}
 

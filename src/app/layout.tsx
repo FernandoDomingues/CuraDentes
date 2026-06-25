@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { SITE_URL, SITE_NOME, SITE_DESCRICAO } from "@/lib/site";
 import { Toaster } from "sonner";
@@ -44,6 +44,15 @@ export const metadata: Metadata = {
   },
 };
 
+// Cor da barra do navegador (mobile/PWA) + viewportFit para habilitar as
+// safe-areas do iOS (notch). Sem viewportFit:"cover", o env(safe-area-*) não atua.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#0A2A66",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -52,10 +61,19 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className={`${inter.variable} h-full`}>
       <body className="min-h-full flex flex-col text-ink">
+        {/* Pular para o conteúdo — acessibilidade (WCAG 2.4.1). Fica oculto até
+            receber foco por teclado (Tab), quando aparece no topo. */}
+        <a
+          href="#conteudo"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[1000] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-[15px] focus:font-semibold focus:shadow-lg"
+          style={{ color: "#0A2A66" }}
+        >
+          Pular para o conteúdo
+        </a>
         <SessaoProvider>
           <AuthListener />
           <Header />
-          <main className="flex-1">{children}</main>
+          <main id="conteudo" className="flex-1">{children}</main>
           <Footer />
           {/* Notificações (toasts) — mesma lib do site antigo (sonner). */}
           <Toaster position="top-center" richColors />
