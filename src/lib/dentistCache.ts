@@ -111,7 +111,6 @@ export function saveToSearchCache(dentists: CacheableDentist[]) {
     }
 
     localStorage.setItem("curadentes_search_cache", JSON.stringify({ resultados: currentResults }));
-    console.log(`[dentistCache] Cache de busca atualizado. Total de dentistas no cache: ${currentResults.length}`);
   } catch (err) {
     console.error("[dentistCache] Erro ao salvar cache de busca:", err);
   }
@@ -162,7 +161,6 @@ export function saveQueryCache(key: string, results: CachedDentistResult[]): voi
       entries = entries.slice(0, QUERY_CACHE_MAX_ENTRIES);
     }
     localStorage.setItem(QUERY_CACHE_KEY, JSON.stringify(entries));
-    console.log(`[dentistCache] Query cache salvo para "${key}": ${results.length} resultados`);
   } catch (err) {
     console.warn("[dentistCache] Erro ao salvar query cache:", err);
   }
@@ -181,10 +179,8 @@ export function loadQueryCache(key: string): CachedDentistResult[] | null {
     const entry = entries.find(e => e.key === key);
     if (!entry) return null;
     if (Date.now() - entry.savedAt > QUERY_CACHE_TTL_MS) {
-      console.log("[dentistCache] Query cache expirado para:", key);
       return null;
     }
-    console.log(`[dentistCache] Query cache carregado para "${key}": ${entry.results.length} resultados`);
     return entry.results;
   } catch (err) {
     console.warn("[dentistCache] Erro ao carregar query cache:", err);

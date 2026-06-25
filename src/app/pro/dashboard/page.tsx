@@ -19,9 +19,7 @@ import { montarEndereco, nomeExibicao, type DentistaRow, type EnderecoRow } from
 import BioEditor from "./BioEditor";
 import AcoesConta from "./AcoesConta";
 import EnderecoCard from "./EnderecoCard";
-
-const AVATAR_PADRAO =
-  "https://dsnzgxjuqlalysyfiion.supabase.co/storage/v1/object/public/fotos-dentistas/default-avatar.webp";
+import { AVATAR_PADRAO } from "@/lib/site";
 
 // Sempre dinâmico (área logada lê cookies).
 export const dynamic = "force-dynamic";

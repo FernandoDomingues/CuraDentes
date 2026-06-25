@@ -151,18 +151,20 @@ export default async function PaginaEspecialidade({ params }: Props) {
                   <h2 className="text-xl lg:text-2xl font-bold mb-6" style={{ color: "#0A2A66", fontFamily: "Inter, sans-serif" }}>
                     Perguntas frequentes sobre {nomeExibicao.toLowerCase()}
                   </h2>
-                  <div className="flex flex-col gap-4" itemScope itemType="https://schema.org/FAQPage">
+                  {/* FAQ visual. Os dados estruturados (FAQPage) vêm do JSON-LD no
+                      topo da página (jsonLdFaq) — evitamos duplicar via microdata. */}
+                  <div className="flex flex-col gap-4">
                     {esp.faq.map((item, i) => (
-                      <details key={i} className="group rounded-xl overflow-hidden" style={{ border: "0.5px solid rgba(60,60,67,0.12)" }} itemScope itemType="https://schema.org/Question" itemProp="mainEntity">
+                      <details key={i} className="group rounded-xl overflow-hidden" style={{ border: "0.5px solid rgba(60,60,67,0.12)" }}>
                         <summary
                           className="flex items-center justify-between px-5 py-4 text-[14px] font-semibold cursor-pointer list-none transition-colors"
                           style={{ color: "#0A2A66" }}
                         >
-                          <span itemProp="name">{item.pergunta}</span>
+                          <span>{item.pergunta}</span>
                           <ChevronRight size={16} className="transition-transform group-open:rotate-90" style={{ color: "#8E8E93", flexShrink: 0 }} />
                         </summary>
-                        <div className="px-5 pb-4" itemScope itemType="https://schema.org/Answer" itemProp="acceptedAnswer">
-                          <p className="text-[14px] leading-relaxed" style={{ color: "#3A3A3C" }} itemProp="text">{item.resposta}</p>
+                        <div className="px-5 pb-4">
+                          <p className="text-[14px] leading-relaxed" style={{ color: "#3A3A3C" }}>{item.resposta}</p>
                         </div>
                       </details>
                     ))}

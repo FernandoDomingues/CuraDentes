@@ -244,10 +244,7 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
     const TIMEOUT_MS = 10_000;
 
     async function buscar() {
-      console.log("[Busca] 🔍 Iniciando busca. Params:", { query, latPesquisa, lngPesquisa, raio });
-
       if (!query && (!latPesquisa || !lngPesquisa)) {
-        console.log("[Busca] Sem query ou coordenadas. Parando busca.");
         if (!cancelled) setLoading(false);
         return;
       }
@@ -295,7 +292,6 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
         let textSearchPromise: Promise<{ data: EnderecoRow[] | null; error: SupabaseError | null }> = Promise.resolve({ data: null, error: null });
         if (query) {
           const q = query.trim();
-          console.log("[Busca] [Passo 1] Disparando busca textual por:", q);
 
           let queryBuilder = supabase
             .from("curadentespro_enderecos")
@@ -332,9 +328,7 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
         if (latPesquisa && lngPesquisa) {
           finalLat = parseFloat(latPesquisa);
           finalLng = parseFloat(lngPesquisa);
-          console.log("[Busca] [Passo 2] Coordenadas vindas da URL:", { finalLat, finalLng });
         } else if (query) {
-          console.log("[Busca] [Passo 2] Disparando geocodificação para obter lat/lng...");
           // Sem dica de localização do usuário (anônimo): passa só o termo.
           coordPromise = getCoordenadas(query);
         }
@@ -344,7 +338,6 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
           setTimeout(() => reject(new Error("TIMEOUT")), TIMEOUT_MS)
         );
 
-        console.log("[Busca] Aguardando Promise.all (busca textual + geocodificação)...");
         const [textResult, coordResult] = await Promise.race([
           Promise.all([textSearchPromise, coordPromise]),
           timeoutPromise,
@@ -352,12 +345,6 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
 
         // Descarta resultado se a busca foi cancelada enquanto aguardávamos
         if (cancelled) return;
-
-        console.log("[Busca] Promise.all resolvida!", {
-          temTextResult: !!textResult.data,
-          textError: textResult.error,
-          coordResult
-        });
 
         if (coordResult) {
           finalLat = coordResult.latitude;
@@ -367,7 +354,6 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
         // 3. Busca Geográfica pelo mapa (get_dentistas_proximos)
         let mapResults: DentistaResultado[] = [];
         if (finalLat !== null && finalLng !== null) {
-          console.log("[Busca] [Passo 3] Disparando RPC get_dentistas_proximos com coordenadas:", { finalLat, finalLng, raio });
           const { data, error } = await supabase.rpc("get_dentistas_proximos", {
             lat: finalLat,
             lng: finalLng,
@@ -377,7 +363,6 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
           if (cancelled) return;
 
           if (!error && data) {
-            console.log("[Busca] RPC get_dentistas_proximos retornou:", data.length, "dentistas");
             // A RPC mede a distância a partir da origem da BUSCA. Recomputamos a
             // partir da origem do USUÁRIO (lat/lng vêm no retorno da RPC). Se faltar
             // lat/lng (cache antigo), mantém o valor da RPC.
@@ -389,8 +374,6 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
           } else {
             console.error("[Busca] Erro na busca por raio RPC:", error);
           }
-        } else {
-          console.log("[Busca] [Passo 3] Pulando RPC geográfica porque lat/lng são nulos.");
         }
 
         // 4. Processa a Busca Textual que rodou lá no passo 1
@@ -399,7 +382,6 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
           const { data: textData, error: textError } = textResult;
 
           if (textData) {
-            console.log("[Busca] [Passo 4] Processando", textData.length, "registros textuais...");
             textResults = textData
               .filter((d) => {
                 const pro = Array.isArray(d.curadentespro) ? d.curadentespro[0] : d.curadentespro;
@@ -506,7 +488,6 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
                     };
                   });
                 textResults.push(...nomeResults);
-                console.log("[Busca] Adicionados", nomeResults.length, "resultado(s) da busca por nome.");
               }
             }
           } catch (err) {
@@ -621,8 +602,6 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
           }
         }
 
-        console.log("[Busca] 🏁 Busca finalizada com sucesso! Total de resultados combinados:", finalResults.length);
-
         if (query) {
           const primeiro = finalResults[0];
           void logarBusca({
@@ -676,7 +655,6 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
       } finally {
         // Só atualiza o loading se esta execução ainda for a "atual"
         if (!cancelled) {
-          console.log("[Busca] Definindo loading para false.");
           setLoading(false);
         }
       }

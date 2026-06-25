@@ -20,10 +20,10 @@ import { logarBusca } from "@/lib/log-busca";
 import { MapPin, Phone, MessageCircle, Loader2, Navigation } from "lucide-react";
 import CroVerificationBadge from "@/components/CroVerificationBadge";
 import { nomeAmigavel } from "@/lib/especialidades";
+import { AVATAR_PADRAO } from "@/lib/site";
 
 const PINK = "#E6004C";
-const AVATAR_FALLBACK =
-  "https://dsnzgxjuqlalysyfiion.supabase.co/storage/v1/object/public/fotos-dentistas/default-avatar.webp";
+const AVATAR_FALLBACK = AVATAR_PADRAO;
 
 interface DentistaUrgencia {
   dentista_id: string;

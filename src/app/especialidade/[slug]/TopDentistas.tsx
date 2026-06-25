@@ -26,10 +26,7 @@ import { nomeAmigavel } from "@/lib/especialidades";
 import CroVerificationBadge from "@/components/CroVerificationBadge";
 import CtaEspecialidade from "./CtaEspecialidade";
 import { MapPin, Star, ChevronRight, Navigation, Loader2 } from "lucide-react";
-
-// Avatar padrão (mesmo bucket público usado no k11).
-const AVATAR_PADRAO =
-  "https://dsnzgxjuqlalysyfiion.supabase.co/storage/v1/object/public/fotos-dentistas/default-avatar.webp";
+import { AVATAR_PADRAO } from "@/lib/site";
 
 // Linha bruta devolvida pela RPC.
 interface TopDentistaRpc {

@@ -14,15 +14,11 @@ import { notFound } from "next/navigation";
 import JsonLd from "@/components/JsonLd";
 import { buscarDentistaPorIdOuCro, nomeExibicao } from "@/lib/dentistas";
 import { jsonLdDentista, jsonLdBreadcrumb } from "@/lib/jsonld";
-import { SITE_NOME } from "@/lib/site";
+import { SITE_NOME, AVATAR_PADRAO } from "@/lib/site";
 import PerfilDentistaView from "./PerfilDentistaView";
 
 // Cache da página: regenera no máximo a cada 1 hora (ISR).
 export const revalidate = 3600;
-
-// Avatar padrão (Storage do nosso Supabase) quando o dentista não tem foto.
-const AVATAR_PADRAO =
-  "https://dsnzgxjuqlalysyfiion.supabase.co/storage/v1/object/public/fotos-dentistas/default-avatar.webp";
 
 type Props = { params: Promise<{ id: string }> };
 

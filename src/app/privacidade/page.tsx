@@ -219,7 +219,6 @@ export default function Privacidade() {
               </p>
               <Lista itens={[
                 "Rascunho de cadastro (para evitar perda de dados durante o registro)",
-                "Cache de consultas de CEP (para evitar reconsultas desnecessárias à API ViaCEP)",
                 "Cache de localização do usuário (para lembrar sua cidade por 30 minutos)",
                 "Cache de resultados de busca (para exibição offline-first)",
               ]} />
@@ -280,8 +279,8 @@ export default function Privacidade() {
                   &quot;esquecimento&quot;. Avaliações anônimas podem ser mantidas após o desligamento.
                 </li>
                 <li>
-                  <strong>Dados de cache local:</strong> por até 7 dias (CEP) ou 30 minutos (localização),
-                  ou até a limpeza manual do navegador.
+                  <strong>Dados de cache local:</strong> por até 30 minutos (localização e resultados
+                  de busca), ou até a limpeza manual do navegador.
                 </li>
               </ul>
             </Secao>

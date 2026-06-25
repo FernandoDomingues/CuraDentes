@@ -195,16 +195,6 @@ async function buscarDentista(
   );
 }
 
-/** Busca um dentista público pelo UUID (usado na URL /dentista/[id]). */
-export function buscarDentistaPorId(id: string): Promise<DentistaPerfil | null> {
-  return buscarDentista("id", id);
-}
-
-/** Busca um dentista público pelo CRO. */
-export function buscarDentistaPorCro(cro: string): Promise<DentistaPerfil | null> {
-  return buscarDentista("cro", cro);
-}
-
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
