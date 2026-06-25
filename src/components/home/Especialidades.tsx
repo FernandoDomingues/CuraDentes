@@ -90,6 +90,14 @@ const ClinicoGeralIcon = ({ size = 22 }: { size?: number; color?: string }) => (
 type IconComponent = ({ size, color }: { size?: number; color?: string }) => React.JSX.Element;
 type AnyIcon = LucideIcon | IconComponent;
 
+// Ícone próprio de "Periodontia" (tratamento de gengiva) — SVG da marca (rosa
+// #d70050) em public/icons/. Já vem colorido (ignora a prop `color`), mesmo padrão
+// dos demais ícones de marca. Criado pelo usuário.
+// eslint-disable-next-line @next/next/no-img-element
+const GengivaIcon = ({ size = 22 }: { size?: number; color?: string }) => (
+  <img src="/icons/tratamento-de-gengiva.svg" width={size} height={size} alt="" aria-hidden="true" />
+);
+
 const ICON_MAP: Record<string, AnyIcon> = {
   "Clínico Geral": ClinicoGeralIcon,
   "Clareamento dental": Sparkles,
@@ -100,7 +108,7 @@ const ICON_MAP: Record<string, AnyIcon> = {
   "Tratamento de canal": CanalIcon,
   "Prótese dentária": ProteseIcon,
   "Cirurgia oral": CirurgiaIcon,
-  "Periodontia": ToothbrushIcon,
+  "Periodontia": GengivaIcon,
   "Odontopediatria": Baby,
   "Harmonização orofacial": FaceSmileIcon,
 };
@@ -115,7 +123,7 @@ const COLOR_MAP: Record<string, string> = {
   "Tratamento de canal": "#d70050",
   "Prótese dentária": "#0A2A66",
   "Cirurgia oral": "#d70050",
-  "Periodontia": "#34C759",
+  "Periodontia": "#d70050",
   "Odontopediatria": "#34C759",
   "Harmonização orofacial": "#E6004C",
 };
