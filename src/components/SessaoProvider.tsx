@@ -133,15 +133,23 @@ export default function SessaoProvider({ children }: { children: ReactNode }) {
   // guarda em sessionStorage para o AuthListener salvar no perfil após o login.
   function capturarCoordsEntao(cb: () => void) {
     if (!navigator.geolocation) { cb(); return; }
+    // Best-effort: NUNCA pode bloquear o login. No Chrome o `timeout` do
+    // getCurrentPosition NÃO conta enquanto o prompt de permissão está aberto —
+    // se o usuário ignora/demora no prompt, o callback nunca dispara e o login
+    // travava (botão "Continuar com Google" preso em disabled). Por isso
+    // garantimos que `cb()` SEMPRE roda dentro de ~3,5s, com ou sem coordenadas.
+    let feito = false;
+    const seguir = () => { if (!feito) { feito = true; cb(); } };
+    const limite = setTimeout(seguir, 3500);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         try {
           sessionStorage.setItem("curadentes_login_coords", JSON.stringify({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }));
         } catch { /* ignore */ }
-        cb();
+        clearTimeout(limite); seguir();
       },
-      () => cb(),
-      { timeout: 6000, enableHighAccuracy: false },
+      () => { clearTimeout(limite); seguir(); },
+      { timeout: 3000, enableHighAccuracy: false },
     );
   }
 
