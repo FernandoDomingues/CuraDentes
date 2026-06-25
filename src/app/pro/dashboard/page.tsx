@@ -56,7 +56,7 @@ export default async function DashboardPage() {
   const [perfilRes, endsRes, resumoRes] = await Promise.all([
     supabase
       .from("curadentespro")
-      .select("id, nome, tratamento, nome_completo, cro, cro_verificado, foto_url, bio, instagram, telefone, lgpd_aceito, deleted_at")
+      .select("id, nome, tratamento, nome_completo, cro, cro_verificado, foto_url, bio, instagram, lgpd_aceito, deleted_at")
       .eq("id", usuario!.id)
       .is("deleted_at", null)
       .maybeSingle<DentistaRow & { nome_completo: string | null; lgpd_aceito: boolean | null }>(),

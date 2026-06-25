@@ -51,18 +51,19 @@ export default async function MeuPerfilPage() {
   const supabase = await criarClienteServidor();
   const id = usuario!.id;
 
-  const [perfilRes, cpfRes, endsRes, prefsRes] = await Promise.all([
+  const [perfilRes, cpfRes, telRes, endsRes, prefsRes] = await Promise.all([
     supabase
       .from("curadentespro")
-      .select("id, nome, tratamento, nome_completo, email, telefone, cro, ano_formacao, foto_url, bio, instagram, especialidade, google_review_url, lgpd_aceito")
+      .select("id, nome, tratamento, nome_completo, cro, ano_formacao, foto_url, bio, instagram, especialidade, google_review_url, lgpd_aceito")
       .eq("id", id)
       .is("deleted_at", null)
       .maybeSingle<{
         id: string; nome: string | null; tratamento: string | null; nome_completo: string | null;
-        email: string | null; telefone: string | null; cro: string | null; ano_formacao: number | null;
+        cro: string | null; ano_formacao: number | null;
         foto_url: string | null; bio: string | null; instagram: string | null; especialidade: string | null; google_review_url: string | null; lgpd_aceito: boolean | null;
       }>(),
     supabase.rpc("meu_cpf"),
+    supabase.rpc("meu_telefone"),
     supabase.from("curadentespro_enderecos").select("*").eq("curadentespro_id", id),
     supabase.from("curadentespro_email").select("prefs").eq("curadentespro_id", id).maybeSingle<{ prefs: { desempenho?: boolean; novidades?: boolean; parceiros?: boolean } | null }>(),
   ]);
@@ -75,8 +76,8 @@ export default async function MeuPerfilPage() {
     nome: pro!.nome ?? "",
     tratamento: pro!.tratamento ?? "",
     nomeCompleto: pro!.nome_completo ?? "",
-    email: pro!.email ?? usuario!.email,
-    telefone: pro!.telefone ?? "",
+    email: usuario!.email,
+    telefone: typeof telRes.data === "string" ? telRes.data : "",
     cpf: typeof cpfRes.data === "string" ? cpfRes.data : "",
     cro: pro!.cro ?? "",
     anoFormacao: pro!.ano_formacao ? String(pro!.ano_formacao) : "",

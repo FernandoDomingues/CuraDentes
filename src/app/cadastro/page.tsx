@@ -194,7 +194,7 @@ export default function CadastroPage() {
         setEmailVerificado(true);
         const { data: pro } = await supabase
           .from("curadentespro")
-          .select("nome, tratamento, nome_completo, telefone, cro, ano_formacao, foto_url, bio, instagram, especialidade, google_review_url, lgpd_aceito")
+          .select("nome, tratamento, nome_completo, cro, ano_formacao, foto_url, bio, instagram, especialidade, google_review_url, lgpd_aceito")
           .eq("id", user.id)
           .is("deleted_at", null)
           .maybeSingle();
@@ -206,7 +206,9 @@ export default function CadastroPage() {
           setNome(pro.nome ?? "");
           setTratamento(pro.tratamento ?? "");
           setNomeCompleto(pro.nome_completo ?? "");
-          setTelefone(pro.telefone ?? "");
+          // telefone vem por RPC (coluna não é mais legível via REST)
+          const { data: tel } = await supabase.rpc("meu_telefone");
+          setTelefone(typeof tel === "string" ? tel : "");
           setCro(pro.cro ?? "");
           setAnoFormacao(pro.ano_formacao ? String(pro.ano_formacao) : "");
           setEspecialidade(pro.especialidade ?? "");

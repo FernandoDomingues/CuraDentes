@@ -34,17 +34,22 @@ interface VerifDb {
 export default async function VerificarCroFilaPage() {
   const supabase = await criarClienteServidor();
 
-  const [dentistasRes, verifRes] = await Promise.all([
+  const [dentistasRes, verifRes, emailsRes] = await Promise.all([
     supabase
       .from("curadentespro")
-      .select("id, nome, email, cro, cro_verificado, deleted_at, criado_em")
+      .select("id, nome, cro, cro_verificado, deleted_at, criado_em")
       .not("cro", "is", null)
       .neq("cro", ""),
     supabase.from("cro_verificacoes").select("*"),
+    // email não é mais legível via REST; superuser lê por RPC (gated is_superuser)
+    supabase.rpc("emails_dentistas_cro"),
   ]);
 
   const verifMap = new Map<string, VerifDb>();
   for (const v of ((verifRes.data as VerifDb[]) ?? [])) verifMap.set(v.dentista_id, v);
+
+  const emailMap = new Map<string, string>();
+  for (const e of ((emailsRes.data as { id: string; email: string | null }[]) ?? [])) emailMap.set(e.id, e.email ?? "");
 
   const rows: VerificacaoRow[] = ((dentistasRes.data as DentistaDb[]) ?? []).map((pro) => {
     const v = verifMap.get(pro.id);
@@ -57,7 +62,7 @@ export default async function VerificarCroFilaPage() {
       erro: v?.erro ?? null,
       criado_em: v?.criado_em || pro.criado_em || "",
       nome: pro.nome ?? "",
-      email: pro.email ?? "",
+      email: emailMap.get(pro.id) ?? "",
       cro_verificado: !!pro.cro_verificado,
       deleted_at: pro.deleted_at ?? null,
     };

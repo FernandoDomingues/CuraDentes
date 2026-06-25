@@ -45,16 +45,18 @@ export async function getUsuario(): Promise<Usuario | null> {
   // 2) Dentista: existe em curadentespro (mesmo UUID do Auth) e não excluído.
   const { data: dent } = await supabase
     .from("curadentespro")
-    .select("id, nome, foto_url, email")
+    .select("id, nome, foto_url")
     .eq("id", user.id)
     .is("deleted_at", null)
-    .maybeSingle<{ id: string; nome: string | null; foto_url: string | null; email: string | null }>();
+    .maybeSingle<{ id: string; nome: string | null; foto_url: string | null }>();
 
   if (dent) {
     return {
       id: dent.id,
       nome: dent.nome ?? "",
-      email: dent.email ?? user.email ?? "",
+      // email vem da sessão (Auth), não de curadentespro — a coluna email não é
+      // mais legível via REST (protegida; ver proteger_contato_dentista).
+      email: user.email ?? "",
       foto: dent.foto_url ?? "",
       papel: "dentista",
     };
