@@ -98,10 +98,18 @@ const GengivaIcon = ({ size = 22 }: { size?: number; color?: string }) => (
   <img src="/icons/tratamento-de-gengiva.svg" width={size} height={size} alt="" aria-hidden="true" />
 );
 
+// Ícone próprio de "Lentes de contato dental" — SVG da marca (rosa #d70050) em
+// public/icons/. Já vem colorido (ignora a prop `color`), mesmo padrão dos demais
+// ícones de marca. Criado pelo usuário.
+// eslint-disable-next-line @next/next/no-img-element
+const LentesIcon = ({ size = 22 }: { size?: number; color?: string }) => (
+  <img src="/icons/lentes-de-contato-dental.svg" width={size} height={size} alt="" aria-hidden="true" />
+);
+
 const ICON_MAP: Record<string, AnyIcon> = {
   "Clínico Geral": ClinicoGeralIcon,
   "Clareamento dental": Sparkles,
-  "Lentes de contato dental": Sparkles,
+  "Lentes de contato dental": LentesIcon,
   "Limpeza": ToothbrushIcon,
   "Ortodontia (aparelho)": AparelhoIcon,
   "Implante dentário": ImplanteIcon,
@@ -116,7 +124,7 @@ const ICON_MAP: Record<string, AnyIcon> = {
 const COLOR_MAP: Record<string, string> = {
   "Clínico Geral": "#d70050",
   "Clareamento dental": "#007AFF",
-  "Lentes de contato dental": "#FF9500",
+  "Lentes de contato dental": "#d70050",
   "Limpeza": "#34C759",
   "Ortodontia (aparelho)": "#d70050",
   "Implante dentário": "#d70050",
