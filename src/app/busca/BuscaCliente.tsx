@@ -987,7 +987,7 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
             </h1>
             <p className="text-[14px] text-gray-500 mt-0.5">
               {loading ? "Buscando..." : `${resultadosFiltrados.length} dentistas encontrados`}
-              {raio > 0 && !loading && ` em até ${raio} km`}.
+              {temCoordenadas && raio > 0 && !loading && ` em até ${raio} km`}.
             </p>
           </div>
 
@@ -1125,9 +1125,17 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
                       </div>
 
                       <div className="flex items-center justify-between mt-2 pt-2 border-t border-blue-100/50">
-                        <span className="text-[11px] font-bold text-blue-600 bg-blue-100/80 px-2 py-1 rounded-[8px]">
-                          {end.distancia_km.toFixed(1)} km daqui
-                        </span>
+                        {/* Distância só faz sentido com a localização REAL do usuário
+                            (GPS via "usar localização"). Na busca textual a "origem" é
+                            o termo geocodificado — medir dele até a clínica dá ~0 km
+                            (ex.: buscar "Instituto Lucas Plens" mostrava 0 km). */}
+                        {temCoordenadas ? (
+                          <span className="text-[11px] font-bold text-blue-600 bg-blue-100/80 px-2 py-1 rounded-[8px]">
+                            {end.distancia_km.toFixed(1)} km daqui
+                          </span>
+                        ) : (
+                          <span />
+                        )}
                         <div className="flex items-center gap-1 text-[12px] font-bold text-[#007AFF] group-hover:translate-x-1 transition-transform">
                           Agendar <ChevronRight size={14} />
                         </div>
