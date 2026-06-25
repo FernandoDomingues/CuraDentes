@@ -48,6 +48,8 @@ interface DentistaResultado {
   convenios: string[];
   formas_pagamento: string[];
   distancia_km: number;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 interface EnderecoRow {
@@ -151,6 +153,20 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
     paramLat && paramLng ? "distancia" : "avaliacao",
   );
 
+  // A distância exibida é SEMPRE a partir da localização REAL do usuário: GPS da
+  // URL ("usar localização") ou, na falta, as coords capturadas no login
+  // (sessionStorage). Calculado no cliente (sessionStorage não existe no SSR) p/
+  // evitar mismatch de hidratação. Sem origem, o badge de distância não aparece.
+  const [temOrigemUsuario, setTemOrigemUsuario] = useState(false);
+  useEffect(() => {
+    if (paramLat && paramLng) { setTemOrigemUsuario(true); return; }
+    try {
+      const raw = sessionStorage.getItem("curadentes_login_coords");
+      const o = raw ? (JSON.parse(raw) as { latitude?: number; longitude?: number }) : null;
+      setTemOrigemUsuario(typeof o?.latitude === "number" && typeof o?.longitude === "number");
+    } catch { setTemOrigemUsuario(false); }
+  }, [paramLat, paramLng]);
+
   // Autocomplete
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [highlightedIdx, setHighlightedIdx] = useState(-1);
@@ -234,6 +250,24 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
       try {
         let finalLat: number | null = null;
         let finalLng: number | null = null;
+
+        // Origem do USUÁRIO para a distância (≠ origem da BUSCA): GPS da URL ou, na
+        // falta, as coords do login. A distância exibida é sempre a partir daqui —
+        // nunca do termo geocodificado (que daria ~0 km na busca por nome).
+        let origemLat: number | null = null;
+        let origemLng: number | null = null;
+        if (latPesquisa && lngPesquisa) {
+          origemLat = parseFloat(latPesquisa);
+          origemLng = parseFloat(lngPesquisa);
+        } else {
+          try {
+            const raw = sessionStorage.getItem("curadentes_login_coords");
+            const o = raw ? (JSON.parse(raw) as { latitude?: number; longitude?: number }) : null;
+            if (typeof o?.latitude === "number" && typeof o?.longitude === "number") {
+              origemLat = o.latitude; origemLng = o.longitude;
+            }
+          } catch { /* ignore */ }
+        }
 
         // 1. Inicia a Busca Textual no banco (roda em paralelo com a API de mapas)
         let textSearchPromise: Promise<{ data: EnderecoRow[] | null; error: SupabaseError | null }> = Promise.resolve({ data: null, error: null });
@@ -322,7 +356,14 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
 
           if (!error && data) {
             console.log("[Busca] RPC get_dentistas_proximos retornou:", data.length, "dentistas");
-            mapResults = data as DentistaResultado[];
+            // A RPC mede a distância a partir da origem da BUSCA. Recomputamos a
+            // partir da origem do USUÁRIO (lat/lng vêm no retorno da RPC). Se faltar
+            // lat/lng (cache antigo), mantém o valor da RPC.
+            mapResults = (data as DentistaResultado[]).map((r) =>
+              origemLat !== null && origemLng !== null && typeof r.latitude === "number" && typeof r.longitude === "number"
+                ? { ...r, distancia_km: calcularDistanciaKm(origemLat, origemLng, r.latitude, r.longitude) }
+                : r
+            );
           } else {
             console.error("[Busca] Erro na busca por raio RPC:", error);
           }
@@ -350,8 +391,8 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
                 const pro = Array.isArray(d.curadentespro) ? d.curadentespro[0] : (d.curadentespro || { id: "", nome: "", foto_url: null, bio: null, cro: "", cro_verificado: false }) as { id: string; nome: string; foto_url: string | null; bio: string | null; cro: string; cro_verificado: boolean; };
 
                 let dist = 0;
-                if (finalLat !== null && finalLng !== null && d.latitude && d.longitude) {
-                  dist = calcularDistanciaKm(finalLat, finalLng, d.latitude, d.longitude);
+                if (origemLat !== null && origemLng !== null && d.latitude && d.longitude) {
+                  dist = calcularDistanciaKm(origemLat, origemLng, d.latitude, d.longitude);
                 }
 
                 return {
@@ -418,8 +459,8 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
                   .map((d) => {
                     const pro = Array.isArray(d.curadentespro) ? d.curadentespro[0] : (d.curadentespro || { id: "", nome: "", foto_url: null, bio: null, cro: "", cro_verificado: false }) as { id: string; nome: string; foto_url: string | null; bio: string | null; cro: string; cro_verificado: boolean; };
                     let dist = 0;
-                    if (finalLat !== null && finalLng !== null && d.latitude && d.longitude) {
-                      dist = calcularDistanciaKm(finalLat, finalLng, d.latitude, d.longitude);
+                    if (origemLat !== null && origemLng !== null && d.latitude && d.longitude) {
+                      dist = calcularDistanciaKm(origemLat, origemLng, d.latitude, d.longitude);
                     }
                     return {
                       dentista_id: pro.id,
@@ -1129,7 +1170,7 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
                             (GPS via "usar localização"). Na busca textual a "origem" é
                             o termo geocodificado — medir dele até a clínica dá ~0 km
                             (ex.: buscar "Instituto Lucas Plens" mostrava 0 km). */}
-                        {temCoordenadas ? (
+                        {temOrigemUsuario ? (
                           <span className="text-[11px] font-bold text-blue-600 bg-blue-100/80 px-2 py-1 rounded-[8px]">
                             {end.distancia_km.toFixed(1)} km daqui
                           </span>
