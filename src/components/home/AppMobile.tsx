@@ -12,8 +12,11 @@
 
 import { Smartphone, Bell, MapPin } from "lucide-react";
 
-// Print da tela mobile (asset público; sem import de bundler no R0).
-const APP_PREVIEW_URL = "/images/celular-ref2.png";
+// Mockup do celular (asset público; sem import de bundler no R0).
+// PNG em perspectiva 3D com fundo transparente — por isso o <img> abaixo NÃO
+// aplica box-shadow nem border-radius via CSS (uma sombra retangular do CSS
+// ficaria errada atrás da imagem transparente/angulada).
+const APP_PREVIEW_URL = "/images/celular.png";
 
 // ─── Benefícios listados abaixo do texto principal ───────────────────────────
 const BENEFICIOS = [
@@ -126,13 +129,17 @@ export default function AppMobile() {
           {/*
            * A imagem é ocultada em mobile com a classe "hidden md:flex"
            * para não consumir espaço desnecessário em telas pequenas.
-           * Em desktop, aparece centralizada com bordas arredondadas e sombra.
+           * Em desktop, aparece centralizada. A PNG vem em perspectiva 3D com
+           * fundo transparente, então não recebe sombra nem cantos arredondados
+           * via CSS. Como o aparelho ocupa só ~59% da largura do arquivo (muita
+           * margem transparente em volta), o maxWidth é bem maior que o do asset
+           * frontal original (280px) para o celular não ficar pequeno.
            */}
           <div className="hidden md:flex justify-center order-1 md:order-2">
             <div
               style={{
                 width: "100%",
-                maxWidth: "280px",
+                maxWidth: "480px",
                 position: "relative",
               }}
             >
@@ -143,8 +150,6 @@ export default function AppMobile() {
                   width: "100%",
                   height: "auto",
                   display: "block",
-                  borderRadius: "36px",
-                  boxShadow: "0 32px 80px rgba(10,42,102,0.22)",
                 }}
               />
             </div>
