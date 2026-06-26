@@ -160,6 +160,10 @@ export default function EnderecosEditor({
             e.id === idAlvo ? { ...e, logradouro: d.logradouro, bairro: d.bairro, cidade: d.cidade, estado: d.estado } : e,
           ),
         );
+      } else {
+        // CEP inexistente, fora do ar ou timeout (buscarCep retorna null em todos):
+        // antes ficava em silêncio. Agora avisamos para o usuário preencher à mão.
+        toast.error("CEP não encontrado. Preencha o endereço manualmente.");
       }
     }
   }
@@ -245,11 +249,11 @@ export default function EnderecosEditor({
               </div>
               <div>
                 <label className={labelCls}>Telefone fixo</label>
-                <input value={end.telefone} onChange={(e) => atualizar(idx, "telefone", e.target.value)} className={inputCls} />
+                <input type="tel" inputMode="numeric" value={end.telefone} onChange={(e) => atualizar(idx, "telefone", e.target.value)} className={inputCls} />
               </div>
               <div>
                 <label className={labelCls}>WhatsApp</label>
-                <input value={end.whatsapp} onChange={(e) => atualizar(idx, "whatsapp", e.target.value)} placeholder="5511999999999" className={inputCls} />
+                <input type="tel" inputMode="numeric" value={end.whatsapp} onChange={(e) => atualizar(idx, "whatsapp", e.target.value)} placeholder="5511999999999" className={inputCls} />
               </div>
             </div>
 

@@ -17,8 +17,12 @@ export interface EnderecoCep {
 export async function buscarCep(cep: string): Promise<EnderecoCep | null> {
   const n = (cep ?? "").replace(/\D/g, "");
   if (n.length !== 8) return null;
+  // Timeout de 6s: sem isto, se o ViaCEP demorar/pendurar, a Promise nunca
+  // resolvia e o auto-preenchimento ficava preso para sempre.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 6000);
   try {
-    const resp = await fetch(`https://viacep.com.br/ws/${n}/json/`);
+    const resp = await fetch(`https://viacep.com.br/ws/${n}/json/`, { signal: controller.signal });
     if (!resp.ok) return null;
     const d = (await resp.json()) as {
       erro?: boolean;
@@ -35,7 +39,10 @@ export async function buscarCep(cep: string): Promise<EnderecoCep | null> {
       estado: d.uf ?? "",
     };
   } catch (err) {
+    // Inclui o AbortError do timeout — tratado como "não encontrado" pelo chamador.
     console.warn("[cep] falha ao consultar ViaCEP:", err);
     return null;
+  } finally {
+    clearTimeout(timer);
   }
 }

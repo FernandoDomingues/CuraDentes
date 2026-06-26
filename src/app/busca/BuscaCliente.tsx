@@ -158,32 +158,19 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
   // (sessionStorage). Calculado no cliente (sessionStorage não existe no SSR) p/
   // evitar mismatch de hidratação. Sem origem, o badge de distância não aparece.
   const [temOrigemUsuario, setTemOrigemUsuario] = useState(false);
-  // Tick que re-dispara a busca quando a localização chega de forma assíncrona
-  // (getCurrentPosition), para recomputar as distâncias.
-  const [origemPronta, setOrigemPronta] = useState(0);
   useEffect(() => {
     if (paramLat && paramLng) { setTemOrigemUsuario(true); return; }
-    let temLogin = false;
+    // Origem só a partir das coords do login (se o usuário JÁ compartilhou antes).
+    // NÃO pedimos a localização automaticamente — LGPD: a geolocalização só é
+    // solicitada no clique em "Usar minha localização" (usarLocalizacao). Sem
+    // origem, a busca segue SEM distância (em vez de mostrar "0 km" falso).
     try {
       const raw = sessionStorage.getItem("curadentes_login_coords");
       const o = raw ? (JSON.parse(raw) as { latitude?: number; longitude?: number }) : null;
-      temLogin = typeof o?.latitude === "number" && typeof o?.longitude === "number";
+      if (typeof o?.latitude === "number" && typeof o?.longitude === "number") {
+        setTemOrigemUsuario(true);
+      }
     } catch { /* ignore */ }
-    if (temLogin) { setTemOrigemUsuario(true); return; }
-    // Sem origem conhecida (sem ?lat/lng e sem coords do login): pede a localização
-    // (best-effort) para conseguir mostrar a distância. Se permitir, guarda e
-    // re-dispara a busca; se negar, segue SEM distância (em vez de "0 km" falso).
-    if (typeof navigator !== "undefined" && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          try { sessionStorage.setItem("curadentes_login_coords", JSON.stringify({ latitude: pos.coords.latitude, longitude: pos.coords.longitude })); } catch { /* ignore */ }
-          setTemOrigemUsuario(true);
-          setOrigemPronta((t) => t + 1);
-        },
-        () => setTemOrigemUsuario(false),
-        { timeout: 8000, enableHighAccuracy: false },
-      );
-    }
   }, [paramLat, paramLng]);
 
   // Autocomplete
@@ -252,10 +239,7 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
       // Aplica estado inicial correto para ESTA query:
       // - Se há cache: mostra imediatamente sem spinner, busca atualiza em background
       // - Se não há cache: limpa resultados antigos e mostra spinner
-      // No re-disparo por localização recém-obtida (origemPronta>0), ignora o cache
-      // (que tem as distâncias da 1ª passada, sem origem) e re-busca para recomputar
-      // — evita um flash de "0 km" no card.
-      const cached = origemPronta > 0 ? null : loadQueryCache(currentKey);
+      const cached = loadQueryCache(currentKey);
       if (!cancelled) {
         if (cached && cached.length > 0) {
           setResultadosBrutos(cached as DentistaResultado[]);
@@ -664,7 +648,7 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
 
     // ── (B) Cleanup: cancela esta execução quando o efeito re-rodar ──────────
     return () => { cancelled = true; };
-  }, [query, latPesquisa, lngPesquisa, raio, origemPronta]);
+  }, [query, latPesquisa, lngPesquisa, raio]);
 
   // Aplicação dos filtros locais
   const resultadosFiltrados = resultadosBrutos.filter((dentista) => {
@@ -1170,7 +1154,7 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
                             (GPS via "usar localização"). Na busca textual a "origem" é
                             o termo geocodificado — medir dele até a clínica dá ~0 km
                             (ex.: buscar "Instituto Lucas Plens" mostrava 0 km). */}
-                        {temOrigemUsuario ? (
+                        {temOrigemUsuario && end.distancia_km > 0 ? (
                           <span className="text-[11px] font-bold text-blue-600 bg-blue-100/80 px-2 py-1 rounded-[8px]">
                             {end.distancia_km.toFixed(1)} km daqui
                           </span>
