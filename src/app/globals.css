@@ -178,13 +178,3 @@ button:disabled {
     transition-duration: 0.001ms !important;
   }
 }
-
-/* Editor de fotos (react-image-crop): por padrão a lib limita a imagem a
-   max-width:100% do container. Como a imagem entra "encaixada" na largura, o
-   zoom (que aumenta a largura da <img>) era CORTADO e a imagem não ampliava —
-   só o recorte inchava. Liberamos a largura no contêiner da lib para o zoom
-   funcionar de verdade; o quem rola é o container externo (overflow-auto).
-   Escopado por .editor-zoom, que só existe nesse editor. */
-.ReactCrop.editor-zoom {
-  max-width: none;
-}

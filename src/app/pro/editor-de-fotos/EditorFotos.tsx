@@ -1,45 +1,100 @@
 "use client";
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// EDITOR DE FOTOS (cliente) — escolher → enquadrar (crop 1:1 + zoom) → salvar.
+// EDITOR DE FOTOS (cliente) — escolher → enquadrar (zoom + pan sob círculo fixo) → salvar.
 //
-// Usa react-image-crop para a seleção e um <canvas> para exportar a foto final em
-// 400×400 WebP (qualidade 0.85), enviada ao Storage por upload-foto.ts. Mesma
-// matemática de crop do site-k11.
+// Usa react-easy-crop: um VISOR de tamanho FIXO onde a imagem é ampliada/arrastada
+// por baixo de um círculo de recorte central fixo (o quadrado/visor NUNCA cresce; o
+// zoom só amplia a imagem). onCropComplete devolve a área recortada em PIXELS
+// NATURAIS da imagem (já considerando a rotação), que exportamos via <canvas> para
+// 400×400 WebP (qualidade 0.85) e enviamos ao Storage por upload-foto.ts.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { RotateCw } from "lucide-react";
-import ReactCrop, { type Crop, type PixelCrop } from "react-image-crop";
-import "react-image-crop/dist/ReactCrop.css";
+import Cropper, { type Area, type Point } from "react-easy-crop";
 import { uploadFotoDentista } from "@/lib/upload-foto";
 
 const TAMANHO_FINAL = 400; // px do lado da foto exportada
+const ZOOM_MIN = 1;
+const ZOOM_MAX = 3;
 
-/** Quadrado central (90%) em PIXELS, para o tamanho RENDERIZADO atual. */
-function quadradoCentral(larguraRender: number, alturaRender: number): PixelCrop {
-  const lado = Math.round(Math.min(larguraRender, alturaRender) * 0.9);
+// ─── Geração da foto final (canvas) ────────────────────────────────────────────
+
+function grausParaRadianos(graus: number): number {
+  return (graus * Math.PI) / 180;
+}
+
+/** Tamanho da caixa que envolve a imagem após rotacioná-la (mesma base do react-easy-crop). */
+function tamanhoRotacionado(w: number, h: number, rotacao: number): { width: number; height: number } {
+  const r = grausParaRadianos(rotacao);
   return {
-    unit: "px",
-    width: lado,
-    height: lado,
-    x: Math.round((larguraRender - lado) / 2),
-    y: Math.round((alturaRender - lado) / 2),
+    width: Math.abs(Math.cos(r) * w) + Math.abs(Math.sin(r) * h),
+    height: Math.abs(Math.sin(r) * w) + Math.abs(Math.cos(r) * h),
   };
+}
+
+function criarImagem(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    img.addEventListener("load", () => resolve(img));
+    img.addEventListener("error", (e) => reject(e));
+    img.src = url;
+  });
+}
+
+/**
+ * Desenha a `area` recortada (em pixels naturais, relativa à imagem JÁ rotacionada,
+ * exatamente como o react-easy-crop devolve) num canvas final de 400×400 e exporta WebP.
+ */
+async function gerarFotoBlob(imageSrc: string, area: Area, rotacao: number): Promise<Blob | null> {
+  const image = await criarImagem(imageSrc);
+  const rad = grausParaRadianos(rotacao);
+  const { width: bBoxW, height: bBoxH } = tamanhoRotacionado(image.naturalWidth, image.naturalHeight, rotacao);
+
+  // 1) Canvas temporário com a imagem inteira já rotacionada (mesmo espaço da `area`).
+  const tmp = document.createElement("canvas");
+  const tctx = tmp.getContext("2d");
+  if (!tctx) throw new Error("Não foi possível preparar a imagem.");
+  tmp.width = bBoxW;
+  tmp.height = bBoxH;
+  tctx.translate(bBoxW / 2, bBoxH / 2);
+  tctx.rotate(rad);
+  tctx.translate(-image.naturalWidth / 2, -image.naturalHeight / 2);
+  tctx.drawImage(image, 0, 0);
+
+  // 2) Canvas final 400×400: recorta a `area` e escala para o tamanho de saída.
+  const out = document.createElement("canvas");
+  out.width = TAMANHO_FINAL;
+  out.height = TAMANHO_FINAL;
+  const octx = out.getContext("2d");
+  if (!octx) throw new Error("Não foi possível preparar a imagem.");
+  octx.imageSmoothingEnabled = true;
+  octx.imageSmoothingQuality = "high";
+  octx.drawImage(
+    tmp,
+    area.x,
+    area.y,
+    area.width,
+    area.height,
+    0,
+    0,
+    TAMANHO_FINAL,
+    TAMANHO_FINAL,
+  );
+
+  return new Promise((resolve) => out.toBlob(resolve, "image/webp", 0.85));
 }
 
 export default function EditorFotos({ dentistaId }: { dentistaId: string }) {
   const router = useRouter();
-  const imgRef = useRef<HTMLImageElement | null>(null);
-  const scrollRef = useRef<HTMLDivElement | null>(null);
 
   const [srcImagem, setSrcImagem] = useState<string | null>(null);
-  const [base, setBase] = useState<{ w: number; h: number } | null>(null);
+  const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [rotacao, setRotacao] = useState(0); // graus, múltiplos de 90
-  const [crop, setCrop] = useState<Crop>();
-  const [completo, setCompleto] = useState<PixelCrop | null>(null);
+  const [areaPixels, setAreaPixels] = useState<Area | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
   const [ok, setOk] = useState(false);
@@ -47,7 +102,7 @@ export default function EditorFotos({ dentistaId }: { dentistaId: string }) {
   // Ao chegar do cadastro (Etapa 3), a foto escolhida foi gravada como dataURL em
   // sessionStorage. Lê a chave após o mount (não no init, para não divergir do HTML
   // do SSR e evitar hydration mismatch), carrega a imagem e limpa a chave — abrindo
-  // o editor JÁ com a foto pronta para enquadrar (paridade com o k11).
+  // o editor JÁ com a foto pronta para enquadrar.
   useEffect(() => {
     let pendente: string | null = null;
     try {
@@ -61,18 +116,6 @@ export default function EditorFotos({ dentistaId }: { dentistaId: string }) {
     if (pendente) setSrcImagem(pendente);
   }, []);
 
-  // Ao ampliar, a imagem cresce e transborda o container (overflow-auto). Como o
-  // recorte fica no CENTRO da imagem ampliada, rolamos a viewport para mantê-lo
-  // visível e centralizado — sem isto o recorte "escaparia" para fora ao dar zoom.
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el || !base) return;
-    const renderW = base.w * zoom;
-    const renderH = base.h * zoom;
-    el.scrollLeft = Math.max(0, renderW / 2 - el.clientWidth / 2);
-    el.scrollTop = Math.max(0, renderH / 2 - el.clientHeight / 2);
-  }, [zoom, base]);
-
   function escolherArquivo(e: React.ChangeEvent<HTMLInputElement>) {
     setErro("");
     const file = e.target.files?.[0];
@@ -83,94 +126,29 @@ export default function EditorFotos({ dentistaId }: { dentistaId: string }) {
     }
     const reader = new FileReader();
     reader.onload = () => {
-      setZoom(1);
-      setRotacao(0);
+      reenquadrarDoZero();
       setSrcImagem(reader.result as string);
     };
     reader.readAsDataURL(file);
   }
 
-  // Centraliza o recorte na imagem recém-carregada (zoom = 1 nesse momento).
-  function aoCarregarImagem(e: React.SyntheticEvent<HTMLImageElement>) {
-    const w = e.currentTarget.width;
-    const h = e.currentTarget.height;
-    setBase({ w, h });
-    const px = quadradoCentral(w, h);
-    setCrop(px);
-    setCompleto(px);
-  }
-
-  // Zoom amplia a IMAGEM (largura = base.w * z), mas o RECORTE mantém TAMANHO FIXO
-  // (90% do menor lado em z=1) e só é recentralizado sobre a imagem ampliada. Assim,
-  // ao aumentar o zoom, a janela do recorte passa a cobrir uma porção MENOR da foto
-  // (= zoom de verdade) em vez de crescer junto. O `completo` (em px do tamanho
-  // renderizado atual) continua coerente com o cálculo em salvar() (naturalWidth/width).
-  function mudarZoom(z: number) {
-    setZoom(z);
-    if (base) {
-      const lado = Math.round(Math.min(base.w, base.h) * 0.9); // FIXO: independe do zoom
-      const renderW = base.w * z;
-      const renderH = base.h * z;
-      const px: PixelCrop = {
-        unit: "px",
-        width: lado,
-        height: lado,
-        x: Math.round((renderW - lado) / 2),
-        y: Math.round((renderH - lado) / 2),
-      };
-      setCrop(px);
-      setCompleto(px);
-    }
+  // Zera o enquadramento (zoom/posição/rotação) — usado ao trocar de foto e no "Resetar".
+  function reenquadrarDoZero() {
+    setZoom(1);
+    setRotacao(0);
+    setCrop({ x: 0, y: 0 });
+    setAreaPixels(null);
   }
 
   async function salvar() {
-    if (!imgRef.current || !completo) {
+    if (!srcImagem || !areaPixels) {
       setErro("Selecione a área da foto antes de salvar.");
       return;
     }
     setSalvando(true);
     setErro("");
     try {
-      const image = imgRef.current;
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-      if (!ctx) throw new Error("Não foi possível preparar a imagem.");
-
-      canvas.width = TAMANHO_FINAL;
-      canvas.height = TAMANHO_FINAL;
-
-      // Escala dos pixels naturais em relação ao tamanho renderizado (com zoom).
-      const scaleX = image.naturalWidth / image.width;
-      const scaleY = image.naturalHeight / image.height;
-
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = "high";
-
-      // Rotação: gira o destino em torno do centro antes de desenhar, para a
-      // foto final sair girada igual ao preview (CSS transform). Como o recorte
-      // é sempre o quadrado central, basta rotacionar o canvas no seu centro.
-      const ang = ((rotacao % 360) + 360) % 360;
-      if (ang !== 0) {
-        ctx.translate(TAMANHO_FINAL / 2, TAMANHO_FINAL / 2);
-        ctx.rotate((ang * Math.PI) / 180);
-        ctx.translate(-TAMANHO_FINAL / 2, -TAMANHO_FINAL / 2);
-      }
-
-      ctx.drawImage(
-        image,
-        completo.x * scaleX,
-        completo.y * scaleY,
-        completo.width * scaleX,
-        completo.height * scaleY,
-        0,
-        0,
-        TAMANHO_FINAL,
-        TAMANHO_FINAL,
-      );
-
-      const blob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob(resolve, "image/webp", 0.85),
-      );
+      const blob = await gerarFotoBlob(srcImagem, areaPixels, rotacao);
       if (!blob) throw new Error("Falha ao gerar a imagem.");
 
       await uploadFotoDentista(blob, dentistaId);
@@ -193,8 +171,6 @@ export default function EditorFotos({ dentistaId }: { dentistaId: string }) {
     }
   }
 
-  const larguraRenderizada = base ? base.w * zoom : undefined;
-
   if (ok) {
     return (
       <div className="rounded-2xl bg-success/10 p-6 text-center text-success">
@@ -213,48 +189,38 @@ export default function EditorFotos({ dentistaId }: { dentistaId: string }) {
         </label>
       ) : (
         <>
-          <div ref={scrollRef} className="overflow-auto rounded-2xl border border-black/8 bg-black/3 p-3 max-h-[70vh]">
-            <ReactCrop
-              // A classe que libera a largura (max-width:none) só entra DEPOIS de
-              // medir a base no onLoad. Sem ela, a imagem entra encaixada no
-              // container (max-width:100% da lib) e medimos o tamanho "que cabe na
-              // tela" — senão a base sairia no tamanho natural e o zoom 1 já viria
-              // gigante. Com a base medida, ligamos o zoom real.
-              className={base ? "editor-zoom" : undefined}
+          {/* VISOR de tamanho FIXO: a imagem é ampliada/arrastada por baixo do círculo
+              central fixo. O quadrado nunca cresce; o zoom só amplia a imagem. */}
+          <div className="relative mx-auto aspect-square w-full max-w-[420px] overflow-hidden rounded-2xl border border-black/8 bg-black/80">
+            <Cropper
+              image={srcImagem}
               crop={crop}
-              onChange={(c) => setCrop(c)}
-              onComplete={(c) => setCompleto(c)}
+              zoom={zoom}
+              rotation={rotacao}
               aspect={1}
-              circularCrop
-              keepSelection
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                ref={imgRef}
-                src={srcImagem}
-                alt="Pré-visualização para recorte"
-                onLoad={aoCarregarImagem}
-                style={{
-                  // `maxWidth: none` derruba o max-width:100% da lib para a imagem
-                  // poder de fato ampliar com o zoom (só depois de medir a base, no
-                  // load — antes, deixamos a lib encaixar a imagem no container).
-                  ...(larguraRenderizada ? { width: larguraRenderizada, maxWidth: "none" } : {}),
-                  transform: rotacao ? `rotate(${rotacao}deg)` : undefined,
-                }}
-              />
-            </ReactCrop>
+              minZoom={ZOOM_MIN}
+              maxZoom={ZOOM_MAX}
+              cropShape="round"
+              showGrid={false}
+              onCropChange={setCrop}
+              onZoomChange={setZoom}
+              onRotationChange={setRotacao}
+              onCropComplete={(_, pixels) => setAreaPixels(pixels)}
+            />
           </div>
+
+          <p className="text-center text-xs text-ink-muted">Arraste para reposicionar e use o zoom para enquadrar.</p>
 
           {/* Zoom */}
           <div className="flex items-center gap-3">
             <span className="text-sm text-ink-muted">Zoom</span>
             <input
               type="range"
-              min={1}
-              max={3}
-              step={0.1}
+              min={ZOOM_MIN}
+              max={ZOOM_MAX}
+              step={0.05}
               value={zoom}
-              onChange={(e) => mudarZoom(Number(e.target.value))}
+              onChange={(e) => setZoom(Number(e.target.value))}
               className="flex-1"
               style={{ accentColor: "#007AFF" }}
               aria-label="Zoom da foto"
@@ -273,7 +239,7 @@ export default function EditorFotos({ dentistaId }: { dentistaId: string }) {
             </button>
             <button
               type="button"
-              onClick={() => { setRotacao(0); mudarZoom(1); }}
+              onClick={reenquadrarDoZero}
               className="rounded-[14px] border border-black/15 px-4 py-2 text-sm font-medium text-ink-soft hover:bg-black/5"
             >
               Resetar
@@ -292,15 +258,9 @@ export default function EditorFotos({ dentistaId }: { dentistaId: string }) {
             </button>
             <button
               onClick={() => {
-                // Zera TODO o estado de enquadramento ao trocar de foto — senão a
-                // base/recorte antigos vazam para a nova imagem (flash de tamanho
-                // errado até o novo onLoad remedir).
+                // Zera TODO o estado ao trocar de foto.
                 setSrcImagem(null);
-                setBase(null);
-                setCrop(undefined);
-                setCompleto(null);
-                setZoom(1);
-                setRotacao(0);
+                reenquadrarDoZero();
                 setErro("");
               }}
               disabled={salvando}
