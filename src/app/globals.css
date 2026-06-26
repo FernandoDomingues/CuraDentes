@@ -162,3 +162,19 @@ button:disabled {
 .animate-in {
   animation: enterFromTop 0.3s ease both;
 }
+
+/* Acessibilidade: respeita a preferência "reduzir movimento" do sistema
+   (WCAG 2.3.3). Zera animações/transições e desliga a rolagem suave para quem
+   tem sensibilidade vestibular. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
