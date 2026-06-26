@@ -10,6 +10,7 @@
 // sombra mais forte). O visual permanece fiel ao site antigo.
 // ═══════════════════════════════════════════════════════════════════════════════
 
+/* eslint-disable @next/next/no-img-element -- ícones SVG inline da marca; next/image é inadequado para esses SVGs */
 import Link from "next/link";
 import { ESPECIALIDADES, nomeAmigavel, slugDaEspecialidade } from "@/lib/especialidades";
 import {
@@ -23,7 +24,6 @@ import {
 // Ícone próprio de "Ortodontia (aparelho)" — SVG da marca (rosa #d70050) em
 // public/icons/aparelho.svg. Já vem colorido, então ignora a prop `color`
 // (mesmo padrão do ClinicoGeralIcon). Criado pelo usuário.
-// eslint-disable-next-line @next/next/no-img-element
 const AparelhoIcon = ({ size = 22 }: { size?: number; color?: string }) => (
   <img src="/icons/aparelho.svg" width={size} height={size} alt="" aria-hidden="true" />
 );
@@ -40,7 +40,6 @@ const ToothbrushIcon = ({ size = 22, color = "currentColor" }: { size?: number; 
 // Ícone próprio de "Implante dentário" — SVG da marca (rosa #d70050) em
 // public/icons/implante-dentario.svg. Já vem colorido (ignora a prop `color`),
 // mesmo padrão do ClinicoGeral/Aparelho. Criado pelo usuário.
-// eslint-disable-next-line @next/next/no-img-element
 const ImplanteIcon = ({ size = 22 }: { size?: number; color?: string }) => (
   <img src="/icons/implante-dentario.svg" width={size} height={size} alt="" aria-hidden="true" />
 );
@@ -48,7 +47,6 @@ const ImplanteIcon = ({ size = 22 }: { size?: number; color?: string }) => (
 // Ícone próprio de "Tratamento de canal" — SVG da marca (rosa #d70050) em
 // public/icons/tratamento-de-canal.svg. Já vem colorido (ignora a prop `color`),
 // mesmo padrão do ClinicoGeral/Aparelho/Implante. Criado pelo usuário.
-// eslint-disable-next-line @next/next/no-img-element
 const CanalIcon = ({ size = 22 }: { size?: number; color?: string }) => (
   <img src="/icons/tratamento-de-canal.svg" width={size} height={size} alt="" aria-hidden="true" />
 );
@@ -67,7 +65,6 @@ const ProteseIcon = ({ size = 22, color = "currentColor" }: { size?: number; col
 // Ícone próprio de "Cirurgia oral" — SVG da marca (rosa #d70050) em
 // public/icons/cirurgia-oral.svg (dente + bisturi). Já vem colorido (ignora a
 // prop `color`), mesmo padrão dos demais ícones de marca. Criado pelo usuário.
-// eslint-disable-next-line @next/next/no-img-element
 const CirurgiaIcon = ({ size = 22 }: { size?: number; color?: string }) => (
   <img src="/icons/cirurgia-oral.svg" width={size} height={size} alt="" aria-hidden="true" />
 );
@@ -93,7 +90,6 @@ type AnyIcon = LucideIcon | IconComponent;
 // Ícone próprio de "Periodontia" (tratamento de gengiva) — SVG da marca (rosa
 // #d70050) em public/icons/. Já vem colorido (ignora a prop `color`), mesmo padrão
 // dos demais ícones de marca. Criado pelo usuário.
-// eslint-disable-next-line @next/next/no-img-element
 const GengivaIcon = ({ size = 22 }: { size?: number; color?: string }) => (
   <img src="/icons/tratamento-de-gengiva.svg" width={size} height={size} alt="" aria-hidden="true" />
 );
@@ -101,7 +97,6 @@ const GengivaIcon = ({ size = 22 }: { size?: number; color?: string }) => (
 // Ícone próprio de "Lentes de contato dental" — SVG da marca (rosa #d70050) em
 // public/icons/. Já vem colorido (ignora a prop `color`), mesmo padrão dos demais
 // ícones de marca. Criado pelo usuário.
-// eslint-disable-next-line @next/next/no-img-element
 const LentesIcon = ({ size = 22 }: { size?: number; color?: string }) => (
   <img src="/icons/lentes-de-contato-dental.svg" width={size} height={size} alt="" aria-hidden="true" />
 );

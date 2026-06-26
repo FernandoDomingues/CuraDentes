@@ -281,7 +281,7 @@ export default function SessaoProvider({ children }: { children: ReactNode }) {
               <button onClick={fecharModal} className="flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-black/5" style={{ color: "#8E8E93" }} aria-label="Fechar"><X size={18} /></button>
             </div>
             <p className="text-[14px]" style={{ color: "#8E8E93", lineHeight: 1.6 }}>Acesse sua conta para buscar, favoritar e avaliar dentistas perto de você.</p>
-            {erro && <p className="rounded-lg bg-danger/10 px-3 py-2 text-center text-[13px] text-danger">{erro}</p>}
+            {erro && <p role="alert" className="rounded-lg bg-danger/10 px-3 py-2 text-center text-[13px] text-danger">{erro}</p>}
             <button onClick={entrarComGoogle} disabled={ocupado} className="flex min-h-[52px] w-full items-center justify-center gap-3 rounded-[14px] py-3.5 text-[15px] font-semibold transition-colors hover:bg-black/[0.03] disabled:opacity-60" style={{ background: "#fff", border: "1.5px solid rgba(60,60,67,0.18)", color: "#1C1C1E", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
               <GoogleIcon /> Continuar com Google
             </button>
@@ -300,14 +300,14 @@ export default function SessaoProvider({ children }: { children: ReactNode }) {
               <Image src="/logos/logo-pro.png" alt="CuraDentes Pro" width={2480} height={926} className="h-7 w-auto" />
               <button onClick={fecharModal} className="flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-black/5" style={{ color: "#8E8E93" }} aria-label="Fechar"><X size={18} /></button>
             </div>
-            {erro && <p className="rounded-lg bg-danger/10 px-3 py-2 text-center text-[13px] text-danger">{erro}</p>}
-            {aviso && <p className="rounded-lg bg-success/10 px-3 py-2 text-center text-[13px] text-success">{aviso}</p>}
+            {erro && <p role="alert" className="rounded-lg bg-danger/10 px-3 py-2 text-center text-[13px] text-danger">{erro}</p>}
+            {aviso && <p role="alert" className="rounded-lg bg-success/10 px-3 py-2 text-center text-[13px] text-success">{aviso}</p>}
             {modoRecovery ? (
               <form onSubmit={recuperarSenha} className="flex flex-col gap-3">
                 <p className="text-[14px]" style={{ color: "#8E8E93" }}>Digite seu e-mail cadastrado para receber um link de redefinição de senha.</p>
                 <div>
-                  <label className="mb-1.5 block text-[13px] font-semibold" style={{ color: "#3A3A3C" }}>E-mail</label>
-                  <input type="email" value={emailRecovery} onChange={(e) => setEmailRecovery(e.target.value)} placeholder="seu@email.com.br" className="w-full rounded-[12px] px-4 py-3 text-[15px] outline-none" style={{ border: "1px solid rgba(60,60,67,0.18)", color: "#1C1C1E" }} />
+                  <label htmlFor="recuperar-email" className="mb-1.5 block text-[13px] font-semibold" style={{ color: "#3A3A3C" }}>E-mail</label>
+                  <input id="recuperar-email" type="email" value={emailRecovery} onChange={(e) => setEmailRecovery(e.target.value)} placeholder="seu@email.com.br" className="w-full rounded-[12px] px-4 py-3 text-[15px] outline-none" style={{ border: "1px solid rgba(60,60,67,0.18)", color: "#1C1C1E" }} />
                 </div>
                 <button type="submit" disabled={ocupado} className="min-h-[48px] w-full rounded-[14px] py-3 text-[15px] font-semibold text-white transition-all hover:brightness-110 disabled:opacity-50" style={{ background: "#0A2A66", boxShadow: "0 4px 16px rgba(10,42,102,0.25)" }}>{ocupado ? "Enviando…" : "Enviar Link de Recuperação"}</button>
                 <button type="button" onClick={() => { setModoRecovery(false); setEmailRecovery(""); setErro(""); setAviso(""); }} className="mt-1 text-center text-[13px] font-semibold" style={{ color: "#007AFF" }}>Voltar para o Login</button>
@@ -316,13 +316,13 @@ export default function SessaoProvider({ children }: { children: ReactNode }) {
               <form onSubmit={loginDentista} className="flex flex-col gap-3">
                 <p className="text-[14px]" style={{ color: "#8E8E93" }}>Acesse o painel exclusivo para profissionais.</p>
                 <div>
-                  <label className="mb-1.5 block text-[13px] font-semibold" style={{ color: "#3A3A3C" }}>E-mail</label>
-                  <input type="email" value={emailLogin} onChange={(e) => setEmailLogin(e.target.value)} placeholder="seu@email.com.br" autoComplete="email" className="w-full rounded-[12px] px-4 py-3 text-[15px] outline-none" style={{ border: "1px solid rgba(60,60,67,0.18)", color: "#1C1C1E" }} />
+                  <label htmlFor="login-email" className="mb-1.5 block text-[13px] font-semibold" style={{ color: "#3A3A3C" }}>E-mail</label>
+                  <input id="login-email" type="email" value={emailLogin} onChange={(e) => setEmailLogin(e.target.value)} placeholder="seu@email.com.br" autoComplete="email" className="w-full rounded-[12px] px-4 py-3 text-[15px] outline-none" style={{ border: "1px solid rgba(60,60,67,0.18)", color: "#1C1C1E" }} />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-[13px] font-semibold" style={{ color: "#3A3A3C" }}>Senha</label>
+                  <label htmlFor="login-senha" className="mb-1.5 block text-[13px] font-semibold" style={{ color: "#3A3A3C" }}>Senha</label>
                   <div className="relative">
-                    <input type={mostrarSenha ? "text" : "password"} value={senhaLogin} onChange={(e) => setSenhaLogin(e.target.value)} placeholder="Sua senha" autoComplete="current-password" className="w-full rounded-[12px] px-4 py-3 text-[15px] outline-none" style={{ border: "1px solid rgba(60,60,67,0.18)", color: "#1C1C1E", paddingRight: "48px" }} />
+                    <input id="login-senha" type={mostrarSenha ? "text" : "password"} value={senhaLogin} onChange={(e) => setSenhaLogin(e.target.value)} placeholder="Sua senha" autoComplete="current-password" className="w-full rounded-[12px] px-4 py-3 text-[15px] outline-none" style={{ border: "1px solid rgba(60,60,67,0.18)", color: "#1C1C1E", paddingRight: "48px" }} />
                     <button type="button" onClick={() => setMostrarSenha(!mostrarSenha)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "#8E8E93" }} aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}>{mostrarSenha ? <EyeOff size={17} /> : <Eye size={17} />}</button>
                   </div>
                 </div>
