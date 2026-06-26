@@ -1355,6 +1355,9 @@ export default function PerfilDentistaView({
           }}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-avaliacoes-titulo"
             className="w-full max-w-[420px] max-h-[70vh] overflow-y-auto rounded-[24px] p-6 flex flex-col gap-4"
             style={{ background: "#fff", boxShadow: "0 24px 64px rgba(10,42,102,0.20)" }}
           >
@@ -1363,6 +1366,7 @@ export default function PerfilDentistaView({
               style={{ zIndex: 1 }}
             >
               <h2
+                id="modal-avaliacoes-titulo"
                 className="text-[16px] font-bold"
                 style={{ color: "#0A2A66", fontFamily: "Inter, sans-serif" }}
               >

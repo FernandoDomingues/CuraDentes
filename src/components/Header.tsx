@@ -15,6 +15,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X, Home, User, LogOut, BarChart2 } from "lucide-react";
 import { useSessao } from "./SessaoProvider";
+import { AVATAR_PADRAO } from "@/lib/site";
+
+// Fallback de avatar quebrado: troca a foto remota que falhou (404/Storage fora)
+// pelo avatar padrão, uma única vez (data-fb evita laço se o padrão também falhar).
+function aoFalharAvatar(e: React.SyntheticEvent<HTMLImageElement>) {
+  const img = e.currentTarget;
+  if (img.dataset.fb) return;
+  img.dataset.fb = "1";
+  img.src = AVATAR_PADRAO;
+}
 
 const NAV_LINKS = [
   { label: "Como funciona", href: "/#como-funciona" },
@@ -106,7 +116,7 @@ export default function Header() {
                 <summary className="flex min-h-[44px] cursor-pointer list-none items-center gap-2 rounded-xl px-3 py-1.5 hover:bg-black/5 [&::-webkit-details-marker]:hidden">
                   {user.foto ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={user.foto} alt={user.nome ?? ""} referrerPolicy="no-referrer" className="h-8 w-8 rounded-full border border-gray-200 object-cover" />
+                    <img src={user.foto} alt={user.nome ?? ""} referrerPolicy="no-referrer" onError={aoFalharAvatar} className="h-8 w-8 rounded-full border border-gray-200 object-cover" />
                   ) : (
                     <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-blue/10 text-sm font-bold text-brand-blue">{primeiroNome.charAt(0).toUpperCase()}</span>
                   )}
@@ -147,7 +157,7 @@ export default function Header() {
                 <div className="flex items-center gap-3">
                   {user.foto ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={user.foto} alt={user.nome ?? ""} referrerPolicy="no-referrer" className="h-10 w-10 rounded-full border border-gray-200 object-cover" />
+                    <img src={user.foto} alt={user.nome ?? ""} referrerPolicy="no-referrer" onError={aoFalharAvatar} className="h-10 w-10 rounded-full border border-gray-200 object-cover" />
                   ) : (
                     <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-blue/10 text-base font-bold text-brand-blue">{primeiroNome.charAt(0).toUpperCase()}</span>
                   )}
