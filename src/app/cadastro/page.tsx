@@ -311,11 +311,7 @@ export default function CadastroPage() {
         { id: userId, user_id: userId, nome, tratamento: tratamento || null, nome_completo: nomeCompleto },
         { onConflict: "id" },
       );
-      if (error) {
-        // Log detalhado temporário para diagnóstico no Preview (code/message/hint).
-        console.error("[cadastro] erro no upsert de curadentespro:", error);
-        throw error;
-      }
+      if (error) throw error;
       setEtapa(2);
     } catch (e) {
       setErro(traduzErro(e, "Não foi possível salvar a etapa."));

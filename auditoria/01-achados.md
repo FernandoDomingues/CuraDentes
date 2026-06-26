@@ -55,6 +55,21 @@
 
 ---
 
+### C3 — Cadastro de dentista 100% quebrado: INSERT em `curadentespro` com a coluna protegida `email` (403) 🔎 (pós-auditoria, 2026-06-26)
+- **Tipo:** bug crítico — nenhum dentista NOVO conseguia se cadastrar (travava no passo 1).
+- **Local:** [cadastro/page.tsx (avancar1)](../src/app/cadastro/page.tsx#L293)
+- **Evidência:** o `upsert` do passo 1 incluía a coluna `email` de `curadentespro`, **revogada via REST** (mesma proteção do C2). INSERT → **403 Forbidden** (confirmado em produção, com sessão autenticada válida). Decorrente da mesma proteção de PII que causou o C2.
+- **Impacto:** cadastro de novos profissionais **totalmente bloqueado** — provavelmente desde que a proteção do e-mail foi adicionada, sem ninguém notar.
+- **Correção (aplicada):** o cliente não grava mais `email` (vive em `auth.users`, lido por `getUsuario`); recomendado um **trigger `SECURITY DEFINER`** no banco para preencher a coluna a partir de `auth.users` no INSERT. Corrigido e publicado em 2026-06-26.
+
+### C4 — Cadastro: editor de fotos não retornava ao cadastro 🔎 (pós-auditoria, 2026-06-26)
+- **Tipo:** bug de fluxo (só alcançável após o C3 destravar o passo 1).
+- **Local:** [EditorFotos.tsx (salvar)](../src/app/pro/editor-de-fotos/EditorFotos.tsx#L152)
+- **Evidência:** ao salvar a foto, fazia `router.push("/pro/dashboard")` fixo — jogava o dentista para o painel ("cadastro incompleto") em vez de voltar ao cadastro.
+- **Correção (aplicada):** quando aberto pelo cadastro, o editor volta para `/cadastro`; a retomada posiciona na etapa correta. Corrigido e publicado em 2026-06-26.
+
+---
+
 ## 3. 🟠 ALTO
 
 ### A1 — Ausência total de cabeçalhos de segurança HTTP
