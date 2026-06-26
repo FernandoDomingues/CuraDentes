@@ -1180,16 +1180,27 @@ export default function PerfilDentistaView({
 
               {/* Rating geral em estrelas */}
               <div className="flex items-center gap-2 justify-center sm:justify-start">
-                <div className="flex items-center gap-1">
-                  {[1, 2, 3, 4, 5].map((s) => (
-                    <Star
-                      key={s}
-                      size={16}
-                      fill={s <= Math.round(rating) ? "#FFCC00" : "#E5E5EA"}
-                      stroke="none"
-                    />
-                  ))}
-                </div>
+                {/* Estrelas com preenchimento PROPORCIONAL à nota (igual ao card da
+                    busca): camada cinza embaixo + dourada por cima, cortada em (nota/5).
+                    Antes era cheia/vazia por arredondamento (4,3 mostrava 4 cheias). */}
+                <span className="relative inline-flex items-center" role="img" aria-label={`Avaliação ${rating.toFixed(1)} de 5`}>
+                  {/* Estrelas COLADAS (sem gap) para o corte ser linear/proporcional —
+                      qualquer espaço ENTRE elas quebraria a proporção do preenchimento. */}
+                  <span className="flex items-center" aria-hidden="true">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star key={s} size={16} className="shrink-0" fill="#E5E5EA" stroke="none" />
+                    ))}
+                  </span>
+                  <span
+                    className="absolute inset-y-0 left-0 flex items-center overflow-hidden"
+                    aria-hidden="true"
+                    style={{ width: `${(Math.max(0, Math.min(5, Number.isFinite(rating) ? rating : 0)) / 5) * 100}%` }}
+                  >
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star key={s} size={16} className="shrink-0" fill="#FFCC00" stroke="none" />
+                    ))}
+                  </span>
+                </span>
                 <span className="font-bold text-[16px]" style={{ color: "#0A2A66" }}>
                   {rating.toFixed(1)}
                 </span>

@@ -62,6 +62,17 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className={`${inter.variable} h-full`}>
       <body className="min-h-full flex flex-col text-ink">
+        {/* Preload da fonte da marca (CuraDentes Bold) — peso dos títulos h1/h2/h3
+            acima da dobra (ex.: o H1 do Hero). Reduz o "flash" antes do swap, sem
+            mexer no @font-face do globals.css. crossOrigin é obrigatório p/ fontes.
+            React 19 eleva este <link> para o <head>. */}
+        <link
+          rel="preload"
+          href="/fonts/curadentes/CuraDentes-Bold.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
         {/* Pular para o conteúdo — acessibilidade (WCAG 2.4.1). Fica oculto até
             receber foco por teclado (Tab), quando aparece no topo. */}
         <a
