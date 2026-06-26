@@ -192,7 +192,7 @@ export default function Hero({ contagemInicial = 0 }: { contagemInicial?: number
           )}
           <form
             onSubmit={handleSearchSubmit}
-            className="flex items-center gap-3 px-4"
+            className="flex items-center gap-2 pl-4 pr-1.5"
             style={{
               background: "#fff",
               borderRadius: showSuggestions && suggestions.length > 0 ? "14px 14px 0 0" : "14px",
@@ -210,10 +210,19 @@ export default function Hero({ contagemInicial = 0 }: { contagemInicial?: number
               onKeyDown={handleSearchKeyDown}
               placeholder="Bairro, Cidade"
               aria-label="O que você procura?"
-              className="flex-1 outline-none bg-transparent text-[16px]"
+              className="flex-1 min-w-0 outline-none bg-transparent text-[16px]"
               style={{ color: "#1C1C1E", minHeight: "48px", border: "none" }}
               autoComplete="off"
             />
+            {/* Botão "Buscar" — mesmo estilo da página /busca (antes não existia no
+                mobile, só no desktop). */}
+            <button
+              type="submit"
+              className="flex-shrink-0 rounded-[10px] px-4 py-2 text-[14px] font-semibold text-white transition-all"
+              style={{ background: "#007AFF", boxShadow: "0 4px 12px rgba(0,122,255,0.25)" }}
+            >
+              Buscar
+            </button>
           </form>
 
           {/* Dropdown de sugestões — mobile */}
