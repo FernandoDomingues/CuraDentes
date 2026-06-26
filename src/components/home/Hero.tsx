@@ -78,8 +78,9 @@ export default function Hero({ contagemInicial = 0 }: { contagemInicial?: number
     return () => document.removeEventListener("mousedown", aoClicarFora);
   }, []);
 
-  // Reseta o item destacado quando a lista de sugestões muda.
+  // Reseta o item destacado quando a lista de sugestões muda (sync com prop externa).
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHighlightedIdx(-1);
   }, [suggestions]);
 

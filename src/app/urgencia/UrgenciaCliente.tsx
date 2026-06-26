@@ -117,6 +117,8 @@ export default function UrgenciaCliente() {
     const params = new URLSearchParams(window.location.search);
     const lat = parseFloat(params.get("lat") || "");
     const lng = parseFloat(params.get("lng") || "");
+    // Dispara a busca no mount quando a home enviou as coords pela URL (sync externo).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!Number.isNaN(lat) && !Number.isNaN(lng)) buscar(lat, lng);
   }, [buscar]);
 

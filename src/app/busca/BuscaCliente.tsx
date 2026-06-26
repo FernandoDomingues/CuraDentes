@@ -128,6 +128,10 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
     const newQ = pQ || null;
     const newLat = pLat || null;
     const newLng = pLng || null;
+    // Sincroniza o estado a partir dos parâmetros da URL (?q/lat/lng) no mount e
+    // ao navegar — uso legítimo de setState em efeito (não dá para derivar no
+    // render por causa do SSR/hidratação).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setQuery(newQ);
     setLatPesquisa(newLat);
     setLngPesquisa(newLng);
@@ -159,6 +163,8 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
   // evitar mismatch de hidratação. Sem origem, o badge de distância não aparece.
   const [temOrigemUsuario, setTemOrigemUsuario] = useState(false);
   useEffect(() => {
+    // Marca "tem origem" a partir da URL/sessionStorage no mount (sync externo).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (paramLat && paramLng) { setTemOrigemUsuario(true); return; }
     // Origem só a partir das coords do login (se o usuário JÁ compartilhou antes).
     // NÃO pedimos a localização automaticamente — LGPD: a geolocalização só é

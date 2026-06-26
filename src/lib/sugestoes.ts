@@ -210,6 +210,7 @@ export function useAddressSuggestions(query: string, maxResults = 6): {
 
   // Carrega os candidatos do Supabase uma única vez
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     fetchLocations()
       .then((locs) => {
@@ -224,6 +225,7 @@ export function useAddressSuggestions(query: string, maxResults = 6): {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     if (!query || query.trim().length < 2) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSuggestions([]);
       return;
     }
