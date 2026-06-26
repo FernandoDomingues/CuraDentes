@@ -46,6 +46,15 @@
 
 ---
 
+### C2 — Verificação de CRO (detalhe) dá 404 para o superuser 🔎 (descoberto pós-auditoria, 2026-06-25)
+- **Tipo:** bug funcional (feature 100% quebrada) decorrente da proteção de PII.
+- **Local:** [verificar-cro/[id]/page.tsx:19](../src/app/pro/verificar-cro/[id]/page.tsx#L19)
+- **Evidência:** o `select` do join incluía a coluna `email` de `curadentespro`, **revogada via REST** (confirmado contra o Supabase de produção: `42501 permission denied`). A query do superuser falha → `if (error) notFound()` → **404**. A fila (`verificar-cro/page.tsx`) e o `auth.ts` já evitam a coluna (usam RPC/sessão); só o detalhe ficou para trás.
+- **Impacto:** clicar em "Verificar" (página com o iframe do CFO) **sempre** dava 404 — a verificação manual de CRO ficou inacessível.
+- **Correção (aplicada):** remover `email` do `select` e buscá-lo pela RPC `emails_dentistas_cro` (gated `is_superuser`), como a fila. Corrigido e publicado em 2026-06-25.
+
+---
+
 ## 3. 🟠 ALTO
 
 ### A1 — Ausência total de cabeçalhos de segurança HTTP
