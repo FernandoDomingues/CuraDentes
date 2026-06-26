@@ -1,10 +1,10 @@
 import type { NextConfig } from "next";
 
 // ─── Segurança: cabeçalhos HTTP (achados A1/C1) ──────────────────────────────
-// Passo 1: headers "simples" (sem allowlist) — risco baixo, valem para tudo.
-// Passo 2: CSP em modo **Report-Only** — NÃO bloqueia nada; apenas registra no
-// console do navegador o que *bloquearia*. Serve para descobrirmos a allowlist
-// real antes de "ligar" o bloqueio (Fase 2). Ver auditoria/02-plano-seguranca-c1-a1.md
+// Headers "simples" (HSTS, nosniff, etc.) + uma Content-Security-Policy em ENFORCE.
+// A allowlist da CSP foi derivada de TODAS as chamadas externas do app (Supabase,
+// ViaCEP, Nominatim, awesomeapi, tiles do OSM, avatar Google, iframe do CFO).
+// Ver auditoria/02-plano-seguranca-c1-a1.md
 const SUPABASE = "https://dsnzgxjuqlalysyfiion.supabase.co";
 
 // Allowlist derivada do código real:
@@ -14,7 +14,7 @@ const SUPABASE = "https://dsnzgxjuqlalysyfiion.supabase.co";
 //  • *.tile.openstreetmap.org (tiles do mapa Leaflet)  → img
 //  • *.googleusercontent.com (avatar do Google)        → img
 //  • busca-profissionais.cfo.org.br (iframe verificar-CRO) → frame
-const cspReportOnly = [
+const csp = [
   "default-src 'self'",
   // Next injeta scripts inline (hidratação) → 'unsafe-inline' por ora; evoluir
   // para nonce numa fase seguinte (CSP de script mais forte).
@@ -40,8 +40,11 @@ const securityHeaders = [
   { key: "X-Frame-Options", value: "SAMEORIGIN" },
   { key: "Permissions-Policy", value: "geolocation=(self), camera=(), microphone=()" },
   { key: "X-DNS-Prefetch-Control", value: "on" },
-  // CSP só observa (não bloqueia) — Passo 2 / Fase 1.
-  { key: "Content-Security-Policy-Report-Only", value: cspReportOnly },
+  // CSP em ENFORCE — bloqueia scripts/conexões/frames fora da allowlist. É a
+  // mitigação real do C1: mesmo com um XSS, o token não pode ser exfiltrado para
+  // um host não autorizado (connect-src), e o site não pode ser enquadrado nem
+  // carregar script externo. A allowlist foi derivada de TODAS as chamadas do app.
+  { key: "Content-Security-Policy", value: csp },
 ];
 
 const nextConfig: NextConfig = {
