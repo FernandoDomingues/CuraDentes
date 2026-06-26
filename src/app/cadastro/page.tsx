@@ -290,11 +290,21 @@ export default function CadastroPage() {
         if (sErr) throw sErr;
         setSenhaSincronizada(true);
       }
+      // NÃO gravamos `email` aqui: a coluna `email` de curadentespro é protegida
+      // via REST (privilégio revogado — mesma proteção do C2). O e-mail do dentista
+      // vive em auth.users e é lido de lá (getUsuario usa user.email). Tentar
+      // escrever a coluna protegida fazia o INSERT falhar com 403 (cadastro novo
+      // não salvava). Se o banco precisar do e-mail na coluna, um trigger
+      // (SECURITY DEFINER) deve copiá-lo de auth.users — não o cliente via REST.
       const { error } = await supabase.from("curadentespro").upsert(
-        { id: userId, user_id: userId, nome, tratamento: tratamento || null, nome_completo: nomeCompleto, email: email.trim() },
+        { id: userId, user_id: userId, nome, tratamento: tratamento || null, nome_completo: nomeCompleto },
         { onConflict: "id" },
       );
-      if (error) throw error;
+      if (error) {
+        // Log detalhado temporário para diagnóstico no Preview (code/message/hint).
+        console.error("[cadastro] erro no upsert de curadentespro:", error);
+        throw error;
+      }
       setEtapa(2);
     } catch (e) {
       setErro(traduzErro(e, "Não foi possível salvar a etapa."));
