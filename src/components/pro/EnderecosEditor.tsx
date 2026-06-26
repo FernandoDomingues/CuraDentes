@@ -15,7 +15,6 @@ import { toast } from "sonner";
 import { Check, Plus, Save, Trash2 } from "lucide-react";
 import { ESPECIALIDADES } from "@/lib/especialidades";
 import { buscarCep } from "@/lib/cep";
-import { formatarCep } from "@/lib/validacao";
 
 export interface AgendaDiaForm {
   dia: string;
@@ -146,7 +145,9 @@ export default function EnderecosEditor({
     onChange(n);
   }
   async function aplicarCep(idx: number, cepDigitado: string) {
-    const cep = formatarCep(cepDigitado);
+    // CEP só com dígitos: remove traço/espaços/letras ao digitar OU colar
+    // (ex.: colar "18016-400" guarda "18016400"). Máximo 8 dígitos.
+    const cep = (cepDigitado ?? "").replace(/\D/g, "").slice(0, 8);
     const idAlvo = enderecos[idx].id;
     // Aplica o CEP digitado sobre o estado mais recente (por id).
     onChange(enderecosRef.current.map((e) => (e.id === idAlvo ? { ...e, cep } : e)));
@@ -216,7 +217,7 @@ export default function EnderecosEditor({
               </div>
               <div>
                 <label className={labelCls}>CEP *</label>
-                <input inputMode="numeric" value={end.cep} onChange={(e) => aplicarCep(idx, e.target.value)} placeholder="00000-000" className={inputCls} style={mostrarPendencias && !end.cep.trim() ? pendenteStyle : undefined} />
+                <input inputMode="numeric" value={end.cep} onChange={(e) => aplicarCep(idx, e.target.value)} placeholder="00000000" maxLength={8} className={inputCls} style={mostrarPendencias && !end.cep.trim() ? pendenteStyle : undefined} />
                 {mostrarPendencias && !end.cep.trim() && <p className="mt-1 text-[11px] font-medium" style={{ color: "#FF9500" }}>Campo obrigatório pendente</p>}
               </div>
               <div className="md:col-span-2">
