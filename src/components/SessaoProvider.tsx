@@ -20,8 +20,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { X, Eye, EyeOff, ChevronRight } from "lucide-react";
 import { criarClienteNavegador } from "@/lib/supabase/client";
-import { isSuperuserEmail, resolveLoginEmail } from "@/lib/superuser";
-import { lerSessaoDoCookie, limparCookiesSessao } from "@/lib/sessao-cookie";
+import { resolveLoginEmail } from "@/lib/superuser";
+import { limparCookiesSessao } from "@/lib/sessao-cookie";
 
 interface UsuarioSessao {
   id: string;
@@ -79,39 +79,23 @@ export default function SessaoProvider({ children }: { children: ReactNode }) {
   const proximaUrlRef = useRef<string | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
-  // ── Detecta sessão LENDO O COOKIE ───────────────────────────────────────────
-  // (O getUser()/getSession() do supabase-js no navegador TRAVA — confirmado em
-  // /diag. Lemos a sessão direto do cookie, que funciona, e checamos "é dentista?"
-  // via REST cru, porque o .from() do supabase-js também depende do auth travado.)
+  // ── Estado de login VINDO DO SERVIDOR (/api/me) ─────────────────────────────
+  // Antes líamos o cookie de sessão direto no cliente (exigia httpOnly:false) e
+  // checávamos "é dentista?" por REST cru com o token. Agora pedimos ao servidor
+  // via /api/me, que lê a sessão httpOnly (cookies()) e devolve {nome,foto,ehPro,
+  // ehSuper} já resolvido — sem token no cliente e compatível com httpOnly:true.
   useEffect(() => {
     let ativo = true;
-    function sincronizar() {
-      const s = lerSessaoDoCookie();
-      if (!s) { setUser(null); setCarregando(false); return; }
-      const ehSuper = isSuperuserEmail(s.email);
-      const base: UsuarioSessao = {
-        id: s.userId,
-        email: s.email,
-        nome: ehSuper ? "SuperDom" : s.nome,
-        foto: s.foto,
-        ehPro: false,
-        ehSuper,
-      };
-      setUser(base);
-      setCarregando(false);
-      if (ehSuper) return;
-      // É dentista? (REST cru com o token do cookie — não trava)
-      const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-      const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-      fetch(`${url}/rest/v1/curadentespro?id=eq.${s.userId}&deleted_at=is.null&select=nome,foto_url`, {
-        headers: { apikey: key, Authorization: `Bearer ${s.accessToken}` },
-      })
-        .then((r) => (r.ok ? r.json() : []))
-        .then((rows: { nome?: string | null; foto_url?: string | null }[]) => {
-          if (!ativo || !rows?.[0]) return;
-          setUser({ ...base, nome: rows[0].nome || base.nome, foto: rows[0].foto_url || base.foto, ehPro: true });
-        })
-        .catch(() => {});
+    async function sincronizar() {
+      try {
+        const r = await fetch("/api/me", { cache: "no-store" });
+        const data = (await r.json()) as { user: UsuarioSessao | null };
+        if (ativo) setUser(data.user ?? null);
+      } catch {
+        if (ativo) setUser(null);
+      } finally {
+        if (ativo) setCarregando(false);
+      }
     }
     sincronizar();
     // Re-checa ao voltar o foco e quando login/logout dispara o evento.
