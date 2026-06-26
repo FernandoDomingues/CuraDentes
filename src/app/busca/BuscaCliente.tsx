@@ -822,7 +822,7 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
 
       {/* BARRA LATERAL DE FILTROS (Desktop) / MODAL (Mobile) */}
       <aside className={`lg:w-[280px] flex-shrink-0 ${showFilters ? 'block' : 'hidden lg:block'}`}>
-        <div className="bg-white rounded-[24px] p-6 border border-gray-100 shadow-sm sticky top-[100px] overflow-y-auto" style={{ maxHeight: 'calc(100vh - 120px)' }}>
+        <div className="bg-white rounded-[24px] p-6 border border-gray-100 shadow-sm sticky top-[100px] overflow-y-auto" style={{ maxHeight: 'calc(100dvh - 120px)' }}>
           <div className="flex items-center justify-between mb-6">
             <h3 className="font-bold text-[18px] text-[#0A2A66] flex items-center gap-2">
               <SlidersHorizontal size={18} /> Filtros
@@ -921,7 +921,7 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
                 onFocus={() => setShowSuggestions(true)}
                 onKeyDown={handleSearchKeyDown}
                 placeholder="Nome do dentista, cidade, bairro, especialidade..."
-                className="w-full bg-transparent text-[15px] text-[#1C1C1E] outline-none placeholder:text-gray-400 py-2.5"
+                className="w-full bg-transparent text-[16px] text-[#1C1C1E] outline-none placeholder:text-gray-400 py-2.5"
                 autoComplete="off"
               />
             </div>
@@ -1044,7 +1044,7 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
               <select
                 value={ordenacao}
                 onChange={(e) => setOrdenacao(e.target.value as "distancia" | "avaliacao")}
-                className="bg-transparent text-[13px] font-semibold text-[#1C1C1E] outline-none cursor-pointer w-full"
+                className="bg-transparent text-[16px] font-semibold text-[#1C1C1E] outline-none cursor-pointer w-full"
               >
                 <option value="avaliacao">Melhor avaliados</option>
                 <option value="distancia">Mais próximos</option>

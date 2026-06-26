@@ -111,7 +111,7 @@ export default function EntrarForm({ modoInicial = "paciente", erroInicial = "" 
   const ehDentista = modo === "dentista" || modo === "recuperar";
 
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center bg-gradient-to-b from-brand-soft to-white px-5 py-10">
+    <div className="flex min-h-[calc(100dvh-4rem)] flex-col items-center justify-center bg-gradient-to-b from-brand-soft to-white px-5 py-10">
       <div className="flex w-full max-w-[380px] flex-col items-center rounded-3xl border border-black/8 bg-white p-7 shadow-[0_16px_48px_rgba(10,42,102,0.10)]">
         <Image
           src={ehDentista ? "/logos/logo-pro.png" : "/logos/logo-com-nome.png"}
