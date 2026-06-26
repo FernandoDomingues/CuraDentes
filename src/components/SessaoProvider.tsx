@@ -125,6 +125,10 @@ export default function SessaoProvider({ children }: { children: ReactNode }) {
   function fecharModal() {
     setModal(null); setEmailLogin(""); setSenhaLogin(""); setMostrarSenha(false);
     setModoRecovery(false); setEmailRecovery(""); setErro(""); setAviso("");
+    // Reseta o estado de "Entrando..." — sem isto, após um login bem-sucedido
+    // (que chama fecharModal e navega) o ocupado ficava travado em true e o botão
+    // reaparecia desabilitado ("Entrando...") na próxima vez que o modal abrisse.
+    setOcupado(false);
   }
 
   // Acessibilidade dos modais de login: ao abrir, foca o diálogo; fecha no Esc;
