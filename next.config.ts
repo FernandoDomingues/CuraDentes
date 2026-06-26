@@ -27,9 +27,11 @@ const live = {
 
 const csp = [
   "default-src 'self'",
-  // Next injeta scripts inline (hidratação) → 'unsafe-inline' por ora; evoluir
-  // para nonce numa fase seguinte (CSP de script mais forte).
-  `script-src 'self' 'unsafe-inline'${live.script}`,
+  // Next injeta scripts inline (hidratação) → 'unsafe-inline'. O runtime do
+  // bundler (Turbopack) usa eval/Function → 'unsafe-eval'. Não enfraquece a
+  // mitigação do C1 (que é o connect-src); com 'unsafe-inline' já presente, o
+  // 'unsafe-eval' não adiciona risco prático. Evoluir para nonce numa fase futura.
+  `script-src 'self' 'unsafe-inline' 'unsafe-eval'${live.script}`,
   // O código usa muito style={{…}} inline.
   "style-src 'self' 'unsafe-inline'",
   `img-src 'self' data: blob: ${SUPABASE} https://*.googleusercontent.com https://*.tile.openstreetmap.org${live.img}`,
