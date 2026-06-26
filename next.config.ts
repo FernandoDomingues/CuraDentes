@@ -14,17 +14,28 @@ const SUPABASE = "https://dsnzgxjuqlalysyfiion.supabase.co";
 //  • *.tile.openstreetmap.org (tiles do mapa Leaflet)  → img
 //  • *.googleusercontent.com (avatar do Google)        → img
 //  • busca-profissionais.cfo.org.br (iframe verificar-CRO) → frame
+// O Vercel Live (barra de feedback/comentários) é injetado SÓ em deployments de
+// PREVIEW, nunca em produção. Liberamos seus domínios apenas no preview, para o
+// smoke-test não acusar falso-positivo — sem afrouxar a CSP de produção (tight).
+const ehPreview = process.env.VERCEL_ENV === "preview";
+const live = {
+  script: ehPreview ? " https://vercel.live" : "",
+  connect: ehPreview ? " https://vercel.live https://*.pusher.com wss://*.pusher.com" : "",
+  frame: ehPreview ? " https://vercel.live" : "",
+  img: ehPreview ? " https://vercel.live https://vercel.com" : "",
+};
+
 const csp = [
   "default-src 'self'",
   // Next injeta scripts inline (hidratação) → 'unsafe-inline' por ora; evoluir
   // para nonce numa fase seguinte (CSP de script mais forte).
-  "script-src 'self' 'unsafe-inline'",
+  `script-src 'self' 'unsafe-inline'${live.script}`,
   // O código usa muito style={{…}} inline.
   "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' data: blob: ${SUPABASE} https://*.googleusercontent.com https://*.tile.openstreetmap.org`,
+  `img-src 'self' data: blob: ${SUPABASE} https://*.googleusercontent.com https://*.tile.openstreetmap.org${live.img}`,
   "font-src 'self'",
-  `connect-src 'self' ${SUPABASE} wss://dsnzgxjuqlalysyfiion.supabase.co https://nominatim.openstreetmap.org https://viacep.com.br https://cep.awesomeapi.com.br`,
-  "frame-src https://busca-profissionais.cfo.org.br",
+  `connect-src 'self' ${SUPABASE} wss://dsnzgxjuqlalysyfiion.supabase.co https://nominatim.openstreetmap.org https://viacep.com.br https://cep.awesomeapi.com.br${live.connect}`,
+  `frame-src https://busca-profissionais.cfo.org.br${live.frame}`,
   "frame-ancestors 'self'",
   "base-uri 'self'",
   "form-action 'self'",
