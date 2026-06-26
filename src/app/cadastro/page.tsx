@@ -801,6 +801,8 @@ export default function CadastroPage() {
                   </span>
                 </label>
                 <input
+                  type="tel"
+                  inputMode="numeric"
                   value={telefone}
                   onChange={(e) => setTelefone(formatarTelefone(e.target.value))}
                   placeholder="(11) 99999-8888"

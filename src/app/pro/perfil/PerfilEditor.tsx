@@ -310,7 +310,7 @@ export default function PerfilEditor({
               </div>
               <div>
                 <label className={labelCls}>Telefone / Celular</label>
-                <input value={telefone} onChange={(e) => setTelefone(e.target.value)} className={inputCls} />
+                <input type="tel" inputMode="numeric" value={telefone} onChange={(e) => setTelefone(e.target.value)} className={inputCls} />
               </div>
               <div>
                 <label className={labelCls}>Ano de formação</label>
