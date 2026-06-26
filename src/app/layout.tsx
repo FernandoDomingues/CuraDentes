@@ -6,6 +6,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import AuthListener from "@/components/AuthListener";
 import SessaoProvider from "@/components/SessaoProvider";
+import CookieConsent from "@/components/CookieConsent";
 import "./globals.css";
 
 // Inter é a fonte do corpo/UI (mesma do site-k11). Exposta como variável CSS
@@ -75,6 +76,7 @@ export default function RootLayout({
           <Header />
           <main id="conteudo" className="flex-1">{children}</main>
           <Footer />
+          <CookieConsent />
           {/* Notificações (toasts) — mesma lib do site antigo (sonner). */}
           <Toaster position="top-center" richColors />
         </SessaoProvider>
