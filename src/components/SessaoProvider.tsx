@@ -77,6 +77,7 @@ export default function SessaoProvider({ children }: { children: ReactNode }) {
   // Página onde o usuário estava ao pedir login (para voltar exatamente pra ela
   // após o Google). Capturada no clique; usada no redirectTo do OAuth.
   const proximaUrlRef = useRef<string | null>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   // ── Detecta sessão LENDO O COOKIE ───────────────────────────────────────────
   // (O getUser()/getSession() do supabase-js no navegador TRAVA — confirmado em
@@ -128,6 +129,35 @@ export default function SessaoProvider({ children }: { children: ReactNode }) {
     setModal(null); setEmailLogin(""); setSenhaLogin(""); setMostrarSenha(false);
     setModoRecovery(false); setEmailRecovery(""); setErro(""); setAviso("");
   }
+
+  // Acessibilidade dos modais de login: ao abrir, foca o diálogo; fecha no Esc;
+  // aprisiona o Tab dentro do modal (não vaza para a página de trás); e devolve o
+  // foco ao elemento que estava ativo antes (WCAG 2.1.2 / 2.4.3 / 4.1.2).
+  useEffect(() => {
+    if (!modal) return;
+    const node = modalRef.current;
+    const anterior = document.activeElement as HTMLElement | null;
+    node?.focus();
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") { fecharModal(); return; }
+      if (e.key !== "Tab" || !node) return;
+      const foco = node.querySelectorAll<HTMLElement>(
+        'a[href],button:not([disabled]),input:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])',
+      );
+      if (foco.length === 0) return;
+      const primeiro = foco[0];
+      const ultimo = foco[foco.length - 1];
+      if (e.shiftKey && document.activeElement === primeiro) { e.preventDefault(); ultimo.focus(); }
+      else if (!e.shiftKey && document.activeElement === ultimo) { e.preventDefault(); primeiro.focus(); }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      anterior?.focus?.();
+    };
+    // Deps só [modal]: re-rodar a cada render re-focaria o diálogo. fecharModal só
+    // chama setters (estáveis), então o closure capturado na abertura é suficiente.
+  }, [modal]);
 
   // Captura a geolocalização (best-effort) ANTES de abrir o Google, igual ao k11 —
   // guarda em sessionStorage para o AuthListener salvar no perfil após o login.
@@ -245,9 +275,9 @@ export default function SessaoProvider({ children }: { children: ReactNode }) {
       {/* ── Modal paciente (Google) ── */}
       {modal === "paciente" && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center px-4" style={{ background: "rgba(10,42,102,0.45)", backdropFilter: "blur(6px)" }} onClick={(e) => { if (e.target === e.currentTarget) fecharModal(); }}>
-          <div className="flex w-full max-w-[400px] flex-col gap-5 rounded-[24px] p-7" style={{ background: "#fff", boxShadow: "0 24px 64px rgba(10,42,102,0.20)" }}>
+          <div ref={modalRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="modal-paciente-titulo" className="flex w-full max-w-[400px] flex-col gap-5 rounded-[24px] p-7 outline-none" style={{ background: "#fff", boxShadow: "0 24px 64px rgba(10,42,102,0.20)" }}>
             <div className="flex items-center justify-between">
-              <h2 className="text-[20px] font-bold" style={{ color: "#0A2A66", fontFamily: "Inter, sans-serif" }}>Entrar</h2>
+              <h2 id="modal-paciente-titulo" className="text-[20px] font-bold" style={{ color: "#0A2A66", fontFamily: "Inter, sans-serif" }}>Entrar</h2>
               <button onClick={fecharModal} className="flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-black/5" style={{ color: "#8E8E93" }} aria-label="Fechar"><X size={18} /></button>
             </div>
             <p className="text-[14px]" style={{ color: "#8E8E93", lineHeight: 1.6 }}>Acesse sua conta para buscar, favoritar e avaliar dentistas perto de você.</p>
@@ -265,7 +295,7 @@ export default function SessaoProvider({ children }: { children: ReactNode }) {
       {/* ── Modal dentista ── */}
       {modal === "dentista" && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center px-4" style={{ background: "rgba(10,42,102,0.45)", backdropFilter: "blur(6px)" }} onClick={(e) => { if (e.target === e.currentTarget) fecharModal(); }}>
-          <div className="flex w-full max-w-[420px] flex-col gap-5 rounded-[24px] p-7" style={{ background: "#fff", boxShadow: "0 24px 64px rgba(10,42,102,0.20)" }}>
+          <div ref={modalRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Acesso do dentista" className="flex w-full max-w-[420px] flex-col gap-5 rounded-[24px] p-7 outline-none" style={{ background: "#fff", boxShadow: "0 24px 64px rgba(10,42,102,0.20)" }}>
             <div className="flex items-center justify-between">
               <Image src="/logos/logo-pro.png" alt="CuraDentes Pro" width={2480} height={926} className="h-7 w-auto" />
               <button onClick={fecharModal} className="flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-black/5" style={{ color: "#8E8E93" }} aria-label="Fechar"><X size={18} /></button>
