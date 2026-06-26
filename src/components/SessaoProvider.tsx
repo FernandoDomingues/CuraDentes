@@ -86,11 +86,24 @@ export default function SessaoProvider({ children }: { children: ReactNode }) {
   // ehSuper} já resolvido — sem token no cliente e compatível com httpOnly:true.
   useEffect(() => {
     let ativo = true;
+    // Otimista: mostra o último login conhecido (só nome/foto/papel — NUNCA o token)
+    // para não piscar "Entrar" enquanto /api/me responde; /api/me confirma/corrige.
+    try {
+      const cache = localStorage.getItem("cd_user");
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (cache) setUser(JSON.parse(cache) as UsuarioSessao);
+    } catch { /* ignore */ }
+
     async function sincronizar() {
       try {
         const r = await fetch("/api/me", { cache: "no-store" });
         const data = (await r.json()) as { user: UsuarioSessao | null };
-        if (ativo) setUser(data.user ?? null);
+        if (!ativo) return;
+        setUser(data.user ?? null);
+        try {
+          if (data.user) localStorage.setItem("cd_user", JSON.stringify(data.user));
+          else localStorage.removeItem("cd_user");
+        } catch { /* ignore */ }
       } catch {
         if (ativo) setUser(null);
       } finally {
