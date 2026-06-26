@@ -32,6 +32,7 @@ function quadradoCentral(larguraRender: number, alturaRender: number): PixelCrop
 export default function EditorFotos({ dentistaId }: { dentistaId: string }) {
   const router = useRouter();
   const imgRef = useRef<HTMLImageElement | null>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
 
   const [srcImagem, setSrcImagem] = useState<string | null>(null);
   const [base, setBase] = useState<{ w: number; h: number } | null>(null);
@@ -60,6 +61,18 @@ export default function EditorFotos({ dentistaId }: { dentistaId: string }) {
     if (pendente) setSrcImagem(pendente);
   }, []);
 
+  // Ao ampliar, a imagem cresce e transborda o container (overflow-auto). Como o
+  // recorte fica no CENTRO da imagem ampliada, rolamos a viewport para mantê-lo
+  // visível e centralizado — sem isto o recorte "escaparia" para fora ao dar zoom.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || !base) return;
+    const renderW = base.w * zoom;
+    const renderH = base.h * zoom;
+    el.scrollLeft = Math.max(0, renderW / 2 - el.clientWidth / 2);
+    el.scrollTop = Math.max(0, renderH / 2 - el.clientHeight / 2);
+  }, [zoom, base]);
+
   function escolherArquivo(e: React.ChangeEvent<HTMLInputElement>) {
     setErro("");
     const file = e.target.files?.[0];
@@ -87,13 +100,24 @@ export default function EditorFotos({ dentistaId }: { dentistaId: string }) {
     setCompleto(px);
   }
 
-  // Ao mudar o zoom, recentraliza o recorte sobre o novo tamanho renderizado —
-  // sem isto o `completo` (em px) ficaria defasado e a foto exportada sairia da
-  // região errada (bug pego no review). Feito no handler (não em efeito).
+  // Zoom amplia a IMAGEM (largura = base.w * z), mas o RECORTE mantém TAMANHO FIXO
+  // (90% do menor lado em z=1) e só é recentralizado sobre a imagem ampliada. Assim,
+  // ao aumentar o zoom, a janela do recorte passa a cobrir uma porção MENOR da foto
+  // (= zoom de verdade) em vez de crescer junto. O `completo` (em px do tamanho
+  // renderizado atual) continua coerente com o cálculo em salvar() (naturalWidth/width).
   function mudarZoom(z: number) {
     setZoom(z);
     if (base) {
-      const px = quadradoCentral(base.w * z, base.h * z);
+      const lado = Math.round(Math.min(base.w, base.h) * 0.9); // FIXO: independe do zoom
+      const renderW = base.w * z;
+      const renderH = base.h * z;
+      const px: PixelCrop = {
+        unit: "px",
+        width: lado,
+        height: lado,
+        x: Math.round((renderW - lado) / 2),
+        y: Math.round((renderH - lado) / 2),
+      };
       setCrop(px);
       setCompleto(px);
     }
@@ -189,8 +213,14 @@ export default function EditorFotos({ dentistaId }: { dentistaId: string }) {
         </label>
       ) : (
         <>
-          <div className="overflow-auto rounded-2xl border border-black/8 bg-black/3 p-3">
+          <div ref={scrollRef} className="overflow-auto rounded-2xl border border-black/8 bg-black/3 p-3 max-h-[70vh]">
             <ReactCrop
+              // A classe que libera a largura (max-width:none) só entra DEPOIS de
+              // medir a base no onLoad. Sem ela, a imagem entra encaixada no
+              // container (max-width:100% da lib) e medimos o tamanho "que cabe na
+              // tela" — senão a base sairia no tamanho natural e o zoom 1 já viria
+              // gigante. Com a base medida, ligamos o zoom real.
+              className={base ? "editor-zoom" : undefined}
               crop={crop}
               onChange={(c) => setCrop(c)}
               onComplete={(c) => setCompleto(c)}
@@ -205,7 +235,10 @@ export default function EditorFotos({ dentistaId }: { dentistaId: string }) {
                 alt="Pré-visualização para recorte"
                 onLoad={aoCarregarImagem}
                 style={{
-                  ...(larguraRenderizada ? { width: larguraRenderizada } : {}),
+                  // `maxWidth: none` derruba o max-width:100% da lib para a imagem
+                  // poder de fato ampliar com o zoom (só depois de medir a base, no
+                  // load — antes, deixamos a lib encaixar a imagem no container).
+                  ...(larguraRenderizada ? { width: larguraRenderizada, maxWidth: "none" } : {}),
                   transform: rotacao ? `rotate(${rotacao}deg)` : undefined,
                 }}
               />
@@ -258,7 +291,18 @@ export default function EditorFotos({ dentistaId }: { dentistaId: string }) {
               {salvando ? "Salvando…" : "Salvar foto"}
             </button>
             <button
-              onClick={() => { setSrcImagem(null); setErro(""); }}
+              onClick={() => {
+                // Zera TODO o estado de enquadramento ao trocar de foto — senão a
+                // base/recorte antigos vazam para a nova imagem (flash de tamanho
+                // errado até o novo onLoad remedir).
+                setSrcImagem(null);
+                setBase(null);
+                setCrop(undefined);
+                setCompleto(null);
+                setZoom(1);
+                setRotacao(0);
+                setErro("");
+              }}
               disabled={salvando}
               className="rounded-[14px] border border-black/15 px-6 py-2.5 font-medium text-ink-soft hover:bg-black/5"
             >
