@@ -16,7 +16,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Search, MapPin } from "lucide-react";
 import { ESPECIALIDADES, nomeAmigavel } from "@/lib/especialidades";
-import { reverseGeocodeCidadeBairro } from "@/lib/geocoding";
+import { reverseGeocodeCidadeBairro, GEOLOC_TIMEOUT_MS } from "@/lib/geocoding";
 import { urlBusca } from "@/lib/busca-filtro";
 import { useSessao } from "@/components/SessaoProvider";
 import { useAddressSuggestions, type AddressSuggestion } from "@/lib/sugestoes";
@@ -157,7 +157,7 @@ export default function Hero({ contagemInicial = 0 }: { contagemInicial?: number
         router.push(`/busca?${params.toString()}`);
       },
       () => setLocationLoading(false),
-      { timeout: 8000 },
+      { timeout: GEOLOC_TIMEOUT_MS },
     );
   };
 
@@ -170,7 +170,7 @@ export default function Hero({ contagemInicial = 0 }: { contagemInicial?: number
     navigator.geolocation.getCurrentPosition(
       (pos) => router.push(`/urgencia?lat=${pos.coords.latitude.toFixed(5)}&lng=${pos.coords.longitude.toFixed(5)}`),
       () => router.push("/urgencia"),
-      { timeout: 8000, enableHighAccuracy: true },
+      { timeout: GEOLOC_TIMEOUT_MS, enableHighAccuracy: true },
     );
   };
 

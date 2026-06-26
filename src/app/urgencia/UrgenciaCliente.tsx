@@ -23,6 +23,7 @@ import { nomeAmigavel } from "@/lib/especialidades";
 import { AVATAR_PADRAO } from "@/lib/site";
 import { nomeExibicao } from "@/lib/dentistas";
 import { formatarDistancia } from "@/lib/distancia";
+import { GEOLOC_TIMEOUT_MS } from "@/lib/geocoding";
 
 const PINK = "#E6004C";
 const AVATAR_FALLBACK = AVATAR_PADRAO;
@@ -107,7 +108,7 @@ export default function UrgenciaCliente() {
         setErroMsg("Precisamos da sua localização para achar o dentista mais perto. Permita o acesso e tente de novo.");
         setEstado("erro");
       },
-      { timeout: 8000, enableHighAccuracy: true },
+      { timeout: GEOLOC_TIMEOUT_MS, enableHighAccuracy: true },
     );
   };
 

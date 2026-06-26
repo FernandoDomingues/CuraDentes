@@ -7,6 +7,12 @@
 // Portado do site-k11 (parte de escrita; o reverse-geocode da busca fica para depois).
 // ═══════════════════════════════════════════════════════════════════════════════
 
+/** Timeout (ms) das chamadas HTTP de geocodificação/CEP (Nominatim/AwesomeAPI). */
+export const GEOCODE_TIMEOUT_MS = 5000;
+
+/** Timeout (ms) do navigator.geolocation.getCurrentPosition (pedido de localização). */
+export const GEOLOC_TIMEOUT_MS = 8000;
+
 /** Busca coordenadas de um endereço textual. Retorna null se não achar/timeout. */
 export async function getCoordenadas(
   enderecoTexto: string,
@@ -15,7 +21,7 @@ export async function getCoordenadas(
   try {
     const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(enderecoTexto)}&countrycodes=br&limit=1`;
     const controller = new AbortController();
-    const t = setTimeout(() => controller.abort(), 5000);
+    const t = setTimeout(() => controller.abort(), GEOCODE_TIMEOUT_MS);
     const resp = await fetch(url, {
       signal: controller.signal,
       headers: { "Accept-Language": "pt-BR,pt;q=0.9" },
@@ -45,7 +51,7 @@ export async function reverseGeocodeCidadeBairro(
   try {
     const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
     const controller = new AbortController();
-    const t = setTimeout(() => controller.abort(), 5000);
+    const t = setTimeout(() => controller.abort(), GEOCODE_TIMEOUT_MS);
     const resp = await fetch(url, { signal: controller.signal, headers: { "Accept-Language": "pt-BR,pt;q=0.9" } });
     clearTimeout(t);
     if (!resp.ok) return { cidade: null, bairro: null };
@@ -73,7 +79,7 @@ export async function getCoordenadasPorCep(
   if (c.length !== 8) return null;
   try {
     const controller = new AbortController();
-    const t = setTimeout(() => controller.abort(), 5000);
+    const t = setTimeout(() => controller.abort(), GEOCODE_TIMEOUT_MS);
     const resp = await fetch(`https://cep.awesomeapi.com.br/json/${c}`, { signal: controller.signal });
     clearTimeout(t);
     if (!resp.ok) return null;

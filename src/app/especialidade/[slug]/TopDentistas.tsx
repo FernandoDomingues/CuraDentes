@@ -21,7 +21,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/public";
-import { reverseGeocodeCidadeBairro } from "@/lib/geocoding";
+import { reverseGeocodeCidadeBairro, GEOLOC_TIMEOUT_MS } from "@/lib/geocoding";
 import { nomeAmigavel } from "@/lib/especialidades";
 import CroVerificationBadge from "@/components/CroVerificationBadge";
 import CtaEspecialidade from "./CtaEspecialidade";
@@ -160,7 +160,7 @@ export default function TopDentistas({ especialidade }: { especialidade: string 
         setLocalizando(false);
         setErroLocal("Permissão de localização negada.");
       },
-      { timeout: 8000 },
+      { timeout: GEOLOC_TIMEOUT_MS },
     );
   };
 

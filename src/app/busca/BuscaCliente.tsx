@@ -13,7 +13,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useRouter, useSearchParams } from "next/navigation";
-import { getCoordenadas, reverseGeocodeCidadeBairro } from "@/lib/geocoding";
+import { getCoordenadas, reverseGeocodeCidadeBairro, GEOLOC_TIMEOUT_MS } from "@/lib/geocoding";
 import { calcularDistanciaKm, formatarDistancia } from "@/lib/distancia";
 import { supabase } from "@/lib/supabase/public";
 import { Loader2, MapPin, Star, Building2, ChevronRight, Filter, SlidersHorizontal, X, Search } from "lucide-react";
@@ -809,7 +809,7 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
         toast.error("Não foi possível obter sua localização. Verifique as permissões do navegador.");
         setUsandoLocalizacao(false);
       },
-      { enableHighAccuracy: true, timeout: 8000 }
+      { enableHighAccuracy: true, timeout: GEOLOC_TIMEOUT_MS }
     );
   }
 

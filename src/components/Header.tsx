@@ -51,6 +51,10 @@ export default function Header() {
           background: "rgba(255,255,255,0.92)",
           backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
           borderBottom: "0.5px solid rgba(60,60,67,0.10)",
+          // Safe-area iOS (notch/landscape e PWA standalone). env()=0 sem recorte → sem efeito no desktop.
+          paddingTop: "env(safe-area-inset-top)",
+          paddingLeft: "env(safe-area-inset-left)",
+          paddingRight: "env(safe-area-inset-right)",
         }}
       >
         <div className="container mx-auto px-4 md:px-8">
@@ -87,6 +91,10 @@ export default function Header() {
         backdropFilter: "blur(24px) saturate(120%)",
         WebkitBackdropFilter: "blur(24px) saturate(120%)",
         borderBottom: "0.5px solid rgba(60,60,67,0.10)",
+        // Safe-area iOS (notch/landscape e PWA standalone). env()=0 sem recorte → sem efeito no desktop.
+        paddingTop: "env(safe-area-inset-top)",
+        paddingLeft: "env(safe-area-inset-left)",
+        paddingRight: "env(safe-area-inset-right)",
       }}
     >
       <div className="container mx-auto px-5 md:px-8 lg:px-16">
