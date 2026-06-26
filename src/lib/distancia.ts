@@ -22,3 +22,14 @@ export function calcularDistanciaKm(
     Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
+
+/**
+ * Formata a distância para exibição em pt-BR: abaixo de 1 km mostra em METROS
+ * ("850 m"); de 1 km pra cima usa 1 casa decimal com VÍRGULA ("2,4 km").
+ * Retorna "" para valores inválidos/negativos (não exibir badge nesse caso).
+ */
+export function formatarDistancia(km: number): string {
+  if (!Number.isFinite(km) || km < 0) return "";
+  if (km < 1) return `${Math.round(km * 1000)} m`;
+  return `${km.toFixed(1).replace(".", ",")} km`;
+}

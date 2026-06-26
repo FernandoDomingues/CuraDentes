@@ -27,6 +27,7 @@ import CroVerificationBadge from "@/components/CroVerificationBadge";
 import CtaEspecialidade from "./CtaEspecialidade";
 import { MapPin, Star, ChevronRight, Navigation, Loader2 } from "lucide-react";
 import { AVATAR_PADRAO } from "@/lib/site";
+import { nomeExibicao as nomeExibicaoDentista } from "@/lib/dentistas";
 
 // Linha bruta devolvida pela RPC.
 interface TopDentistaRpc {
@@ -100,11 +101,7 @@ export default function TopDentistas({ especialidade }: { especialidade: string 
           const mapa = new Map(pros.map((p) => [p.id, p]));
           enriquecidos = top.map((d) => {
             const p = mapa.get(d.dentista_id);
-            const trat = p?.tratamento?.trim();
-            const nome =
-              trat && !d.dentista_nome.startsWith(trat)
-                ? `${trat} ${d.dentista_nome}`
-                : d.dentista_nome;
+            const nome = nomeExibicaoDentista({ nome: d.dentista_nome, tratamento: p?.tratamento ?? null });
             return {
               ...d,
               dentista_nome: nome,

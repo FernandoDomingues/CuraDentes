@@ -3,6 +3,8 @@
 // Tudo PURO (sem rede). Reutilizado no perfil, na urgência e na busca.
 // ═══════════════════════════════════════════════════════════════════════════════
 
+import { formatarInstagram } from "./instagram";
+
 /** Mantém só os dígitos de um texto. */
 function digitos(s: string): string {
   return s.replace(/\D/g, "");
@@ -27,13 +29,14 @@ export function telLimpo(numero: string | null | undefined): string | null {
   return d ? `tel:${d}` : null;
 }
 
-/** URL do perfil de Instagram a partir do handle (com ou sem @) ou URL pronta. */
+/**
+ * URL do perfil de Instagram a partir do handle (com ou sem @) ou URL pronta.
+ * Delega para `formatarInstagram` (instagram.ts) — fonte ÚNICA, sempre com `www`.
+ * (Antes esta função gerava sem `www`, divergindo da forma gravada no banco.)
+ */
 export function urlInstagram(handle: string | null | undefined): string | null {
   if (!handle) return null;
-  const h = handle.trim();
-  if (!h) return null;
-  if (h.startsWith("http")) return h;
-  return `https://instagram.com/${h.replace(/^@/, "")}`;
+  return formatarInstagram(handle);
 }
 
 /** Partes do endereço usadas para montar a busca no mapa. */

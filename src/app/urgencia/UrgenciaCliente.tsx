@@ -22,6 +22,7 @@ import CroVerificationBadge from "@/components/CroVerificationBadge";
 import { nomeAmigavel } from "@/lib/especialidades";
 import { AVATAR_PADRAO } from "@/lib/site";
 import { nomeExibicao } from "@/lib/dentistas";
+import { formatarDistancia } from "@/lib/distancia";
 
 const PINK = "#E6004C";
 const AVATAR_FALLBACK = AVATAR_PADRAO;
@@ -196,7 +197,7 @@ export default function UrgenciaCliente() {
                       </div>
                     </div>
                     <span style={{ flexShrink: 0, fontSize: 12, fontWeight: 700, color: PINK, background: `${PINK}12`, borderRadius: 999, padding: "4px 10px" }}>
-                      {d.distancia_km.toFixed(1)} km
+                      {formatarDistancia(d.distancia_km)}
                     </span>
                   </div>
                   <div style={{ display: "flex", gap: 8, marginTop: 12 }}>

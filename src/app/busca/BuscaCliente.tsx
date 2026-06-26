@@ -14,7 +14,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getCoordenadas, reverseGeocodeCidadeBairro } from "@/lib/geocoding";
-import { calcularDistanciaKm } from "@/lib/distancia";
+import { calcularDistanciaKm, formatarDistancia } from "@/lib/distancia";
 import { supabase } from "@/lib/supabase/public";
 import { Loader2, MapPin, Star, Building2, ChevronRight, Filter, SlidersHorizontal, X, Search } from "lucide-react";
 import CroVerificationBadge from "@/components/CroVerificationBadge";
@@ -22,6 +22,7 @@ import { ESPECIALIDADES, nomeAmigavel } from "@/lib/especialidades";
 import { logarBusca } from "@/lib/log-busca";
 import { saveToSearchCache, saveQueryCache, loadQueryCache, buildQueryCacheKey } from "@/lib/dentistCache";
 import { construirFiltrosEndereco, termoBuscaNome, urlBusca } from "@/lib/busca-filtro";
+import { nomeExibicao } from "@/lib/dentistas";
 import { useAddressSuggestions } from "@/lib/sugestoes";
 import type { AddressSuggestion } from "@/lib/sugestoes";
 import { SuggestionItem } from "@/components/busca/SugestaoEndereco";
@@ -566,8 +567,8 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
               });
               finalResults.forEach(r => {
                 const t = tratMap[r.dentista_id];
-                if (t && !r.dentista_nome.startsWith(t)) {
-                  r.dentista_nome = `${t} ${r.dentista_nome}`;
+                if (t) {
+                  r.dentista_nome = nomeExibicao({ nome: r.dentista_nome, tratamento: t });
                 }
                 if (r.dentista_id in verifMap) {
                   r.dentista_cro_verificado = verifMap[r.dentista_id];
@@ -1152,7 +1153,7 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
                             (ex.: buscar "Instituto Lucas Plens" mostrava 0 km). */}
                         {temOrigemUsuario && end.distancia_km > 0 ? (
                           <span className="text-[11px] font-bold text-blue-600 bg-blue-100/80 px-2 py-1 rounded-[8px]">
-                            {end.distancia_km.toFixed(1)} km daqui
+                            {formatarDistancia(end.distancia_km)} daqui
                           </span>
                         ) : (
                           <span />

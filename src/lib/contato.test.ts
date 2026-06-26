@@ -35,15 +35,18 @@ describe("urlAvaliarGoogle", () => {
 });
 
 describe("urlInstagram", () => {
-  it("monta a URL a partir do handle, ignorando @", () => {
-    expect(urlInstagram("@ana.dentista")).toBe("https://instagram.com/ana.dentista");
-    expect(urlInstagram("ana.dentista")).toBe("https://instagram.com/ana.dentista");
+  it("monta a URL canônica (com www) a partir do handle, ignorando @", () => {
+    expect(urlInstagram("@ana.dentista")).toBe("https://www.instagram.com/ana.dentista");
+    expect(urlInstagram("ana.dentista")).toBe("https://www.instagram.com/ana.dentista");
   });
-  it("aceita URL completa já pronta", () => {
-    expect(urlInstagram("https://instagram.com/ana")).toBe("https://instagram.com/ana");
+  it("normaliza URL pronta para a forma com www", () => {
+    expect(urlInstagram("https://instagram.com/ana")).toBe("https://www.instagram.com/ana");
+    expect(urlInstagram("https://www.instagram.com/ana")).toBe("https://www.instagram.com/ana");
   });
-  it("retorna null sem handle", () => {
+  it("retorna null sem handle ou para entrada não-Instagram", () => {
     expect(urlInstagram(null)).toBeNull();
+    expect(urlInstagram("")).toBeNull();
+    expect(urlInstagram("https://linktr.ee/ana")).toBeNull();
   });
 });
 
