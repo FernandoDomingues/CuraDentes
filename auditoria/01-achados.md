@@ -2,11 +2,21 @@
 
 > Resultado do pente-fino sobre a [checklist de 260 itens](00-CHECKLIST.md). Stack: Next.js 16 (App Router) · React 19 · Supabase · Leaflet · Tailwind 4 · Vitest.
 >
-> **Modo:** apenas relato. **Nenhum arquivo de código foi alterado.** Aguardando sua aprovação por item antes de corrigir.
->
 > **Método:** verificações automáticas (lint/type-check/testes/`npm audit`) + 6 auditorias de leitura especializadas (segurança, SEO/GEO/AEO, performance, arquitetura/TS, a11y/responsividade/cross-browser, formulários/busca/analytics/legal). Achados de maior gravidade verificados manualmente por leitura direta do código (citados com 🔎).
 >
-> Data: 2026-06-25
+> Data do relatório: 2026-06-25
+
+---
+
+## 0. Status (atualizado em 2026-06-26)
+
+A maior parte já foi **corrigida e publicada** em lotes pequenos e verificados (build + testes + lint a cada lote). Mapa de status conferido contra o código atual:
+
+- ✅ **Corrigidos e no ar (~38):** C2, C3, C4, A2, A3, A4, A6, A7, A8, A9, A10, A12, A14, M3, M4, M5, M6, M8, M9, M10, M12, M14, M15, M16, M17, M18, M19, M23, M24, M25, M27, M28, B4, B9, B12, B13, B14, B19. (Inclui também: busca por nome do dentista + autocomplete, e o editor de fotos migrado para `react-easy-crop`.)
+- 🟡 **Abertos e seguros de fazer (sem decisão sua):** A11 (fonte→next/font), A13 (a11y modal de avaliações), M7 (sitemap lastmod), M11 (estrelas do perfil), M13, M20, M21, M22 (ARIA combobox), M26, B1, B2, B3, B5, B6, B7, B8, B10, B11, B15, B18.
+- 🙋 **Dependem de você (decisão ou dado):** **A1** (ligar a CSP em *enforce* — exige QA no Preview de mapa/iframe-CFO/upload), **A5** (imagem OG 1200×630), **M1/M2** (otimização de imagens — *deferida por custo Vercel até começar o lucro*), **B16** (endereço da empresa + foro jurídico), **C1** (sessão HttpOnly — mudança de arquitetura, recomendo discutir).
+
+> Modo atual: aplicando as correções 🟡 em lotes verificados. Os itens 🙋 aguardam você.
 
 ---
 
