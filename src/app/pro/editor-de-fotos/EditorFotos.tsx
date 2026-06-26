@@ -151,8 +151,16 @@ export default function EditorFotos({ dentistaId }: { dentistaId: string }) {
 
       await uploadFotoDentista(blob, dentistaId);
       setOk(true);
+      // Se a foto veio do CADASTRO, volta para o cadastro (a retomada posiciona na
+      // etapa correta); caso contrário, vai para o painel (fluxo normal do editor).
+      let destino = "/pro/dashboard";
+      try {
+        if (sessionStorage.getItem("curadentes_foto_retorno")) destino = "/cadastro";
+      } catch {
+        /* ignore */
+      }
       setTimeout(() => {
-        router.push("/pro/dashboard");
+        router.push(destino);
         router.refresh();
       }, 1200);
     } catch (err) {
@@ -166,7 +174,7 @@ export default function EditorFotos({ dentistaId }: { dentistaId: string }) {
   if (ok) {
     return (
       <div className="rounded-2xl bg-success/10 p-6 text-center text-success">
-        Foto atualizada! Voltando ao painel…
+        Foto atualizada! Voltando…
       </div>
     );
   }

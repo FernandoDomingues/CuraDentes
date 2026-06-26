@@ -152,6 +152,9 @@ export default function CadastroPage() {
     reader.onload = () => {
       try {
         sessionStorage.setItem("curadentes_foto_pendente", reader.result as string);
+        // Marca que a foto veio do CADASTRO e em qual etapa, para o editor voltar
+        // ao /cadastro nessa etapa (em vez de ir para /pro/dashboard).
+        sessionStorage.setItem("curadentes_foto_retorno", String(etapa));
       } catch {
         toast.error("Imagem muito grande para abrir no editor. Escolha um arquivo menor.");
         return;
@@ -242,7 +245,15 @@ export default function CadastroPage() {
           setPrefNovidades(!!prefs.novidades);
           setPrefParceiros(!!prefs.parceiros);
 
-          setEtapa(2);
+          // Se voltou do editor de fotos (que foi aberto a partir do cadastro),
+          // retoma na etapa em que estava; senão, posiciona na 2 (dados básicos já
+          // existem). A foto recém-salva é carregada acima via pro.foto_url.
+          let etapaRetomar = 2;
+          try {
+            const r = sessionStorage.getItem("curadentes_foto_retorno");
+            if (r) { etapaRetomar = Number(r) || 2; sessionStorage.removeItem("curadentes_foto_retorno"); }
+          } catch { /* ignore */ }
+          setEtapa(etapaRetomar);
         }
       }
       setCarregando(false);
