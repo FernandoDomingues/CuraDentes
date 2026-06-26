@@ -21,6 +21,7 @@ import { MapPin, Phone, MessageCircle, Loader2, Navigation } from "lucide-react"
 import CroVerificationBadge from "@/components/CroVerificationBadge";
 import { nomeAmigavel } from "@/lib/especialidades";
 import { AVATAR_PADRAO } from "@/lib/site";
+import { nomeExibicao } from "@/lib/dentistas";
 
 const PINK = "#E6004C";
 const AVATAR_FALLBACK = AVATAR_PADRAO;
@@ -158,10 +159,7 @@ export default function UrgenciaCliente() {
         {estado === "ok" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {dentistas.map((d) => {
-              const nome =
-                d.dentista_tratamento && !d.dentista_nome.startsWith(d.dentista_tratamento)
-                  ? `${d.dentista_tratamento} ${d.dentista_nome}`
-                  : d.dentista_nome;
+              const nome = nomeExibicao({ nome: d.dentista_nome, tratamento: d.dentista_tratamento });
               const wpp = (d.whatsapp || "").replace(/\D/g, "");
               const tel = (d.telefone || "").replace(/\D/g, "");
               return (

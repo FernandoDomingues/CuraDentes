@@ -1056,6 +1056,7 @@ export default function CadastroPage() {
                   <Link
                     href="/ajuda/avaliacoes-google"
                     target="_blank"
+                    rel="noopener noreferrer"
                     className="flex flex-shrink-0 items-center gap-1.5 rounded-[12px] px-3 text-[13px] font-semibold whitespace-nowrap"
                     style={{ background: "rgba(0,122,255,0.08)", color: "#007AFF", border: "0.5px solid rgba(0,122,255,0.20)" }}
                   >
@@ -1116,9 +1117,9 @@ export default function CadastroPage() {
                 <input type="checkbox" checked={lgpd} onChange={(e) => setLgpd(e.target.checked)} className="mt-0.5 h-5 w-5 flex-shrink-0 cursor-pointer accent-[#34C759]" />
                 <span className="text-[14px]" style={{ color: "#3A3A3C", lineHeight: 1.7 }}>
                   Li e concordo com a{" "}
-                  <Link href="/privacidade" target="_blank" className="font-semibold underline" style={{ color: "#007AFF" }}>Política de Privacidade</Link>{" "}
+                  <Link href="/privacidade" target="_blank" rel="noopener noreferrer" className="font-semibold underline" style={{ color: "#007AFF" }}>Política de Privacidade</Link>{" "}
                   e os{" "}
-                  <Link href="/termos" target="_blank" className="font-semibold underline" style={{ color: "#007AFF" }}>Termos de Uso</Link>{" "}
+                  <Link href="/termos" target="_blank" rel="noopener noreferrer" className="font-semibold underline" style={{ color: "#007AFF" }}>Termos de Uso</Link>{" "}
                   do CuraDentes Pro, incluindo o tratamento dos meus dados conforme a LGPD (Lei nº 13.709/2018).{" "}
                   <span className="font-semibold" style={{ color: "#E6004C" }}>*</span>
                 </span>
@@ -1138,7 +1139,7 @@ export default function CadastroPage() {
                   <strong>1º de julho de 2027</strong>, passará a ter um plano mensal de{" "}
                   <strong>R$ 49,99 por mês</strong> por dentista. Serei avisado por e-mail com antecedência
                   e nenhum valor será cobrado sem o meu aceite expresso, conforme a seção 5 dos{" "}
-                  <Link href="/termos" target="_blank" className="font-semibold underline" style={{ color: "#007AFF" }}>Termos de Uso</Link>.{" "}
+                  <Link href="/termos" target="_blank" rel="noopener noreferrer" className="font-semibold underline" style={{ color: "#007AFF" }}>Termos de Uso</Link>.{" "}
                   <span className="font-semibold" style={{ color: "#E6004C" }}>*</span>
                 </span>
               </label>

@@ -1115,8 +1115,8 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
                           <CroVerificationBadge verificado={dentista.dentista_cro_verificado} size="sm" />
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 bg-yellow-50 px-2 py-0.5 rounded-full shrink-0">
-                        <Star size={12} className="text-yellow-500 fill-yellow-500" />
+                      <div className="flex items-center gap-1 bg-yellow-50 px-2 py-0.5 rounded-full shrink-0" role="img" aria-label={`Avaliação ${dentista.dentista_avaliacao} de 5`}>
+                        <Star size={12} className="text-yellow-500 fill-yellow-500" aria-hidden="true" />
                         <span className="text-[12px] font-bold text-yellow-700">{dentista.dentista_avaliacao}</span>
                       </div>
                     </div>
