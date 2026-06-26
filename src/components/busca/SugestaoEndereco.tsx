@@ -1,16 +1,16 @@
 "use client";
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// AUTOCOMPLETE DE ENDEREÇO — item de sugestão (cidade / bairro / clínica).
+// AUTOCOMPLETE DA BUSCA — item de sugestão (dentista / cidade / bairro / clínica).
 //
 // Componente COMPARTILHADO pela barra de busca da home (Hero) e pela página de
 // busca (/busca), para o dropdown de autocomplete ficar idêntico nos dois lugares.
 // Os dados vêm do hook useAddressSuggestions (lib/sugestoes), que sugere com base
-// nos endereços e clínicas já CADASTRADOS no site (porte fiel do k11).
+// nos dentistas, endereços e clínicas já CADASTRADOS no site.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-import { MapPin, Building2 } from "lucide-react";
-import type { AddressSuggestion } from "@/lib/sugestoes";
+import { MapPin, Building2, User, type LucideIcon } from "lucide-react";
+import type { AddressSuggestion, SuggestionType } from "@/lib/sugestoes";
 
 /** Destaca em azul/negrito o trecho do texto que casa com o que foi digitado. */
 export function HighlightMatch({ text, query }: { text: string; query: string }) {
@@ -26,10 +26,13 @@ export function HighlightMatch({ text, query }: { text: string; query: string })
   );
 }
 
-const TYPE_LABELS: Record<string, string> = {
-  cidade: "Cidade",
-  bairro: "Bairro",
-  clinica: "Clínica",
+// Config por tipo: rótulo do selo, cor da marca e ícone. As cores de fundo são a
+// própria cor com transparência (sufixo hex de alpha: 1A ≈ 10%, 14 ≈ 8%).
+const TYPE_CONFIG: Record<SuggestionType, { label: string; color: string; Icon: LucideIcon }> = {
+  dentista: { label: "Dentista", color: "#5856D6", Icon: User },
+  cidade: { label: "Cidade", color: "#007AFF", Icon: MapPin },
+  bairro: { label: "Bairro", color: "#34C759", Icon: MapPin },
+  clinica: { label: "Clínica", color: "#FF9500", Icon: Building2 },
 };
 
 /** Uma linha do dropdown: ícone por tipo + texto destacado + selo do tipo. */
@@ -44,6 +47,8 @@ export function SuggestionItem({
   query: string;
   onSelect: (s: AddressSuggestion) => void;
 }) {
+  const { label, color, Icon } = TYPE_CONFIG[suggestion.type] ?? TYPE_CONFIG.cidade;
+
   return (
     <button
       type="button"
@@ -61,18 +66,10 @@ export function SuggestionItem({
           width: "32px",
           height: "32px",
           borderRadius: "10px",
-          background: suggestion.type === "cidade"
-            ? "rgba(0,122,255,0.10)"
-            : suggestion.type === "bairro"
-            ? "rgba(52,199,89,0.10)"
-            : "rgba(255,149,0,0.10)",
+          background: `${color}1A`,
         }}
       >
-        {suggestion.type === "clinica" ? (
-          <Building2 size={15} style={{ color: "#FF9500" }} />
-        ) : (
-          <MapPin size={15} style={{ color: suggestion.type === "cidade" ? "#007AFF" : "#34C759" }} />
-        )}
+        <Icon size={15} style={{ color }} />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-[14px] font-medium truncate" style={{ color: "#1C1C1E" }}>
@@ -81,16 +78,9 @@ export function SuggestionItem({
       </div>
       <span
         className="flex-shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full"
-        style={{
-          background: suggestion.type === "cidade"
-            ? "rgba(0,122,255,0.08)"
-            : suggestion.type === "bairro"
-            ? "rgba(52,199,89,0.08)"
-            : "rgba(255,149,0,0.08)",
-          color: suggestion.type === "cidade" ? "#007AFF" : suggestion.type === "bairro" ? "#34C759" : "#FF9500",
-        }}
+        style={{ background: `${color}14`, color }}
       >
-        {TYPE_LABELS[suggestion.type]}
+        {label}
       </span>
     </button>
   );
