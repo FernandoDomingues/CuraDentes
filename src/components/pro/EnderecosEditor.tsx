@@ -216,7 +216,7 @@ export default function EnderecosEditor({
               </div>
               <div>
                 <label className={labelCls}>CEP *</label>
-                <input value={end.cep} onChange={(e) => aplicarCep(idx, e.target.value)} placeholder="00000-000" className={inputCls} style={mostrarPendencias && !end.cep.trim() ? pendenteStyle : undefined} />
+                <input inputMode="numeric" value={end.cep} onChange={(e) => aplicarCep(idx, e.target.value)} placeholder="00000-000" className={inputCls} style={mostrarPendencias && !end.cep.trim() ? pendenteStyle : undefined} />
                 {mostrarPendencias && !end.cep.trim() && <p className="mt-1 text-[11px] font-medium" style={{ color: "#FF9500" }}>Campo obrigatório pendente</p>}
               </div>
               <div className="md:col-span-2">
@@ -226,7 +226,7 @@ export default function EnderecosEditor({
               </div>
               <div>
                 <label className={labelCls}>Número *</label>
-                <input value={end.numero} onChange={(e) => atualizar(idx, "numero", e.target.value)} className={inputCls} />
+                <input inputMode="numeric" value={end.numero} onChange={(e) => atualizar(idx, "numero", e.target.value)} className={inputCls} />
               </div>
               <div>
                 <label className={labelCls}>Complemento</label>
