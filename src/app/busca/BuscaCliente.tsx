@@ -21,6 +21,7 @@ import CroVerificationBadge from "@/components/CroVerificationBadge";
 import { ESPECIALIDADES, nomeAmigavel } from "@/lib/especialidades";
 import { logarBusca } from "@/lib/log-busca";
 import { saveToSearchCache, saveQueryCache, loadQueryCache, buildQueryCacheKey } from "@/lib/dentistCache";
+import { construirFiltrosEndereco, termoBuscaNome, urlBusca } from "@/lib/busca-filtro";
 import { useAddressSuggestions } from "@/lib/sugestoes";
 import type { AddressSuggestion } from "@/lib/sugestoes";
 import { SuggestionItem } from "@/components/busca/SugestaoEndereco";
@@ -280,33 +281,21 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
 
         // 1. Inicia a Busca Textual no banco (roda em paralelo com a API de mapas)
         let textSearchPromise: Promise<{ data: EnderecoRow[] | null; error: SupabaseError | null }> = Promise.resolve({ data: null, error: null });
-        if (query) {
-          const q = query.trim();
-
+        // Busca textual por LOCAL/clínica. Filtros .or() SANITIZADOS (lib/busca-filtro):
+        // fecha a brecha de injeção no filtro do PostgREST — antes o termo CRU ia direto
+        // ao .or(), permitindo burlar o lgpd_aceito e expor perfis não públicos. Mesmo
+        // comportamento de antes: "bairro, cidade" vira 2 filtros encadeados (AND).
+        const filtrosEndereco = construirFiltrosEndereco(query);
+        if (filtrosEndereco.length > 0) {
           let queryBuilder = supabase
             .from("curadentespro_enderecos")
             .select(`
               id, nome_clinica, logradouro, numero, bairro, cidade, estado, atividades, convenios, formas_pagamento, latitude, longitude,
               curadentespro!inner ( id, nome, foto_url, bio, cro, cro_verificado, lgpd_aceito )
             `);
-
-          const partes = q.split(",").map(p => p.trim()).filter(Boolean);
-          if (partes.length > 1) {
-            const p1 = partes[0];
-            const p2 = partes[1];
-            queryBuilder = queryBuilder
-              .or(`bairro.ilike.%${p1}%,cidade.ilike.%${p1}%,nome_clinica.ilike.%${p1}%,logradouro.ilike.%${p1}%`)
-              .or(`cidade.ilike.%${p2}%,estado.ilike.%${p2}%`);
-          } else {
-            queryBuilder = queryBuilder.or([
-              `bairro.ilike.%${q}%`,
-              `cidade.ilike.%${q}%`,
-              `estado.ilike.%${q}%`,
-              `logradouro.ilike.%${q}%`,
-              `nome_clinica.ilike.%${q}%`
-            ].join(','));
+          for (const filtro of filtrosEndereco) {
+            queryBuilder = queryBuilder.or(filtro);
           }
-
           queryBuilder = queryBuilder
             .eq('curadentespro.lgpd_aceito', true)
             .is('curadentespro.deleted_at', null);
@@ -424,13 +413,14 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
         if (cancelled) return;
 
         // ─── Busca por nome do dentista (query separada: or() não suporta coluna embedded) ────
-        if (query) {
+        // Busca por NOME do dentista (termo sanitizado; o ilike é parametrizado).
+        const qNome = termoBuscaNome(query);
+        if (qNome) {
           try {
-            const q = query.trim();
             const { data: dentistasPorNome } = await supabase
               .from("curadentespro")
               .select("id")
-              .ilike("nome", `%${q}%`)
+              .ilike("nome", `%${qNome}%`)
               .eq("lgpd_aceito", true)
               .is("deleted_at", null);
 
@@ -772,7 +762,7 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
     }
     const termo = searchInput.trim();
     if (!termo) return;
-    router.push(`/busca?q=${encodeURIComponent(termo)}`);
+    router.push(urlBusca(termo));
   }
 
   // "Usar minha localização": geolocalização opt-in (só dispara no clique),
@@ -929,7 +919,7 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
                 onChange={(e) => { setSearchInput(e.target.value); setShowSuggestions(true); setHighlightedIdx(-1); }}
                 onFocus={() => setShowSuggestions(true)}
                 onKeyDown={handleSearchKeyDown}
-                placeholder="Buscar por cidade, bairro, especialidade..."
+                placeholder="Nome do dentista, cidade, bairro, especialidade..."
                 className="w-full bg-transparent text-[15px] text-[#1C1C1E] outline-none placeholder:text-gray-400 py-2.5"
                 autoComplete="off"
               />

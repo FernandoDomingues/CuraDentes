@@ -17,6 +17,7 @@ import { useRouter } from "next/navigation";
 import { Search, MapPin } from "lucide-react";
 import { ESPECIALIDADES, nomeAmigavel } from "@/lib/especialidades";
 import { reverseGeocodeCidadeBairro } from "@/lib/geocoding";
+import { urlBusca } from "@/lib/busca-filtro";
 import { useSessao } from "@/components/SessaoProvider";
 import { useAddressSuggestions, type AddressSuggestion } from "@/lib/sugestoes";
 import { SuggestionItem } from "@/components/busca/SugestaoEndereco";
@@ -91,10 +92,7 @@ export default function Hero({ contagemInicial = 0 }: { contagemInicial?: number
       if (!pedirLoginPaciente()) return; // abre o modal de login se não estiver logado
       const v = valor.trim();
       if (!v && !activeChip) return;
-      const params = new URLSearchParams();
-      if (v) params.set("q", v);
-      if (activeChip) params.set("atividade", activeChip);
-      router.push(`/busca?${params.toString()}`);
+      router.push(urlBusca(v, activeChip));
     },
     [pedirLoginPaciente, activeChip, router],
   );
@@ -208,7 +206,7 @@ export default function Hero({ contagemInicial = 0 }: { contagemInicial?: number
               onChange={(e) => { setSearchValue(e.target.value); setShowSuggestions(true); }}
               onFocus={() => setShowSuggestions(true)}
               onKeyDown={handleSearchKeyDown}
-              placeholder="Bairro, Cidade"
+              placeholder="Nome do dentista, bairro ou cidade"
               aria-label="O que você procura?"
               className="flex-1 min-w-0 outline-none bg-transparent text-[16px]"
               style={{ color: "#1C1C1E", minHeight: "48px", border: "none" }}
@@ -370,7 +368,7 @@ export default function Hero({ contagemInicial = 0 }: { contagemInicial?: number
                     onChange={(e) => { setSearchValue(e.target.value); setShowSuggestions(true); }}
                     onFocus={() => setShowSuggestions(true)}
                     onKeyDown={handleSearchKeyDown}
-                    placeholder="Bairro, Cidade"
+                    placeholder="Nome do dentista, bairro ou cidade"
                     aria-label="O que você procura?"
                     className="flex-1 min-w-0 outline-none bg-transparent"
                     style={{ fontFamily: "Inter, sans-serif", fontSize: "16px", color: "#1C1C1E", minHeight: "44px", border: "none" }}
