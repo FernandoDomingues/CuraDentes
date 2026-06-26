@@ -1,5 +1,3 @@
-"use client";
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // COMPONENTE: ComoFunciona — Seção "Como funciona"
 //
@@ -14,9 +12,8 @@
 //   - DESKTOP (≥ lg): grid de 3 colunas com cards "glass" que sobem levemente
 //     no hover.
 //
-// Observação: embora os dados sejam estáticos, os cards do desktop usam
-// onMouseEnter/onMouseLeave manipulando o DOM (e.currentTarget.style) para o
-// efeito de hover — por isso o componente precisa ser Client Component ("use client").
+// Observação: é um Server Component (zero JS no cliente). O efeito de hover dos
+// cards do desktop é puro CSS (classes hover: do Tailwind), sem JS.
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import { MapPin, SlidersHorizontal, CalendarCheck } from "lucide-react";
@@ -163,7 +160,7 @@ export default function ComoFunciona() {
               return (
                 <div
                   key={step.number}
-                  className="group"
+                  className="group shadow-[var(--shadow-md)] transition duration-[250ms] hover:-translate-y-1 hover:shadow-[var(--shadow-lg)]"
                   style={{
                     background: "var(--glass-fill-strong)",
                     backdropFilter: "blur(24px) saturate(120%)",
@@ -171,16 +168,6 @@ export default function ComoFunciona() {
                     border: "0.5px solid rgba(255,255,255,0.40)",
                     borderRadius: "20px",
                     padding: "32px 24px",
-                    boxShadow: "var(--shadow-md)",
-                    transition: "transform 0.25s ease, box-shadow 0.25s ease",
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLDivElement).style.transform = "translateY(-4px)";
-                    (e.currentTarget as HTMLDivElement).style.boxShadow = "var(--shadow-lg)";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
-                    (e.currentTarget as HTMLDivElement).style.boxShadow = "var(--shadow-md)";
                   }}
                 >
                   <div

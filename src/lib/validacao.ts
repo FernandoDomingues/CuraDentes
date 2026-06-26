@@ -6,10 +6,11 @@
 // Tudo PURO e testável — reutilizado no cadastro (wizard) e no "Meu perfil".
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const UFS_VALIDAS = [
-  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG",
-  "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO",
-];
+import { UF_MAP } from "./cro";
+
+// Fonte única das 27 UFs: derivada do UF_MAP (sigla→nome) de cro.ts, para não
+// manter duas listas separadas que poderiam divergir.
+const UFS_VALIDAS = Object.keys(UF_MAP);
 
 /** Só os dígitos de um texto. */
 function digitos(s: string): string {
