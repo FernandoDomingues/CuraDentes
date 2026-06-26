@@ -53,11 +53,11 @@ const securityHeaders = [
   { key: "X-Frame-Options", value: "SAMEORIGIN" },
   { key: "Permissions-Policy", value: "geolocation=(self), camera=(), microphone=()" },
   { key: "X-DNS-Prefetch-Control", value: "on" },
-  // CSP em ENFORCE — bloqueia scripts/conexões/frames fora da allowlist. É a
-  // mitigação real do C1: mesmo com um XSS, o token não pode ser exfiltrado para
-  // um host não autorizado (connect-src), e o site não pode ser enquadrado nem
-  // carregar script externo. A allowlist foi derivada de TODAS as chamadas do app.
-  { key: "Content-Security-Policy", value: csp },
+  // CSP em Report-Only POR ORA (não bloqueia; só observa). A allowlist já foi
+  // validada no smoke-test; falta só re-testar o enforce no Preview (mapa/iframe/
+  // upload) antes de bloquear de verdade em produção. Trocar a chave por
+  // "Content-Security-Policy" liga o enforce.
+  { key: "Content-Security-Policy-Report-Only", value: csp },
 ];
 
 const nextConfig: NextConfig = {
