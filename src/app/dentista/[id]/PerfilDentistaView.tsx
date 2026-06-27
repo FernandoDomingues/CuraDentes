@@ -41,6 +41,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { criarClienteNavegador } from "@/lib/supabase/client";
+import { registrarContato, registrarVisualizacao } from "./acoes";
 import { useSessao } from "@/components/SessaoProvider";
 
 /** Ícone do Instagram (inline — lucide-react ^1.x não exporta `Instagram`). */
@@ -1006,16 +1007,7 @@ export default function PerfilDentistaView({
     (url: string, tipo: "whatsapp" | "telefone") => {
       if (!pedirLoginPaciente()) return;
       window.open(url, "_blank", "noopener,noreferrer");
-      if (user) {
-        const supabase = criarClienteNavegador();
-        supabase
-          .from("perfil_contatos")
-          .upsert(
-            { dentista_id: perfil.id, viewer_id: user.id, tipo },
-            { onConflict: "dentista_id,viewer_id,tipo,data_visita", ignoreDuplicates: true },
-          )
-          .then(undefined, () => {});
-      }
+      if (user) void registrarContato(perfil.id, tipo);
     },
     [pedirLoginPaciente, user, perfil.id],
   );
@@ -1026,14 +1018,7 @@ export default function PerfilDentistaView({
   // Espelha o padrão do perfil_contatos (upsert idempotente, best-effort).
   useEffect(() => {
     if (!user || user.id === perfil.id) return;
-    const supabase = criarClienteNavegador();
-    supabase
-      .from("perfil_visualizacoes")
-      .upsert(
-        { dentista_id: perfil.id, viewer_id: user.id },
-        { onConflict: "dentista_id,viewer_id,data_visita", ignoreDuplicates: true },
-      )
-      .then(undefined, () => {});
+    void registrarVisualizacao(perfil.id);
   }, [user, perfil.id]);
 
   // ── Busca as avaliações individuais de uma atividade (modal "Ver", k11) ───────
