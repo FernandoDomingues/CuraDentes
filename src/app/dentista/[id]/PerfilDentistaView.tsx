@@ -948,6 +948,9 @@ export default function PerfilDentistaView({
     atividade: string;
     ratings: AvaliacaoIndividual[];
   } | null>(null);
+  // Comentário "aberto" por TOQUE (mobile não tem hover): índice do card cujo
+  // balãozinho está aberto; tocar alterna. No desktop o hover continua funcionando.
+  const [comentarioAbertoIdx, setComentarioAbertoIdx] = useState<number | null>(null);
 
   // Procedimentos do dentista (todos os endereços) para o select de avaliação.
   const todasAtividades = Array.from(
@@ -982,6 +985,7 @@ export default function PerfilDentistaView({
     async (atividade: string) => {
       const ratings = await lerAvaliacoesAtividade(perfil.id, atividade);
       setAvaliacoesIndividuais({ atividade, ratings });
+      setComentarioAbertoIdx(null);
     },
     [perfil.id],
   );
@@ -1302,8 +1306,21 @@ export default function PerfilDentistaView({
                   <div
                     key={i}
                     className="group relative flex items-center gap-3 p-3 rounded-[12px]"
-                    style={{ background: "#F2F2F7", cursor: r.comentario ? "help" : "default" }}
-                    title={r.comentario || undefined}
+                    style={{ background: "#F2F2F7", cursor: r.comentario ? "pointer" : "default" }}
+                    onClick={r.comentario ? () => setComentarioAbertoIdx((cur) => (cur === i ? null : i)) : undefined}
+                    role={r.comentario ? "button" : undefined}
+                    tabIndex={r.comentario ? 0 : undefined}
+                    aria-expanded={r.comentario ? comentarioAbertoIdx === i : undefined}
+                    onKeyDown={
+                      r.comentario
+                        ? (e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              setComentarioAbertoIdx((cur) => (cur === i ? null : i));
+                            }
+                          }
+                        : undefined
+                    }
                   >
                     <img
                       src={r.paciente_foto || FOTO_FALLBACK}
@@ -1340,7 +1357,7 @@ export default function PerfilDentistaView({
                     {r.comentario && (
                       <div
                         role="tooltip"
-                        className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-2 w-max max-w-[260px] -translate-x-1/2 rounded-[14px] px-3.5 py-2.5 text-left text-[12.5px] font-medium leading-snug text-white opacity-0 shadow-lg transition-opacity duration-200 group-hover:opacity-100"
+                        className={`pointer-events-none absolute bottom-full left-1/2 z-30 mb-2 w-max max-w-[260px] -translate-x-1/2 rounded-[14px] px-3.5 py-2.5 text-left text-[12.5px] font-medium leading-snug text-white shadow-lg transition-opacity duration-200 ${comentarioAbertoIdx === i ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
                         style={{ background: "rgba(10,42,102,0.96)" }}
                       >
                         &ldquo;{r.comentario}&rdquo;
