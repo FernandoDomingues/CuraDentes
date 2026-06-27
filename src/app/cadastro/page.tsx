@@ -25,7 +25,10 @@ import EnderecosEditor, { novoEndereco, DIAS_SEMANA, POLITICA_PADRAO, type Ender
 import type { EnderecoRow } from "@/lib/dentistas";
 import { ESPECIALIDADES, nomeAmigavel } from "@/lib/especialidades";
 import { criarClienteNavegador } from "@/lib/supabase/client";
-import { isSuperuserEmail } from "@/lib/superuser";
+import {
+  carregarCadastro, salvarEtapaConta, definirSenha, salvarCampos,
+  salvarIdentidade, salvarEnderecosCadastro, finalizarCadastro,
+} from "./acoes";
 import { extrairUserInstagram, formatarInstagram, INSTAGRAM_BASE } from "@/lib/instagram";
 import { geocodeEnderecoComFallback } from "@/lib/geocoding";
 import {
@@ -186,75 +189,54 @@ export default function CadastroPage() {
   // ─── Retomada: se já há sessão, carrega o que existe e posiciona na etapa ──────
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        if (isSuperuserEmail(user.email)) {
-          router.replace("/pro/dashboard");
-          return;
+      // Retomada lida NO SERVIDOR (sessão por cookies httpOnly): perfil + telefone/cpf
+      // (RPC) + endereços + prefs já vêm prontos da Server Action carregarCadastro.
+      const res = await carregarCadastro();
+      if (res.ehSuper || res.jaCompleto) {
+        router.replace("/pro/dashboard");
+        return;
+      }
+      if (res.semSessao) {
+        setCarregando(false);
+        return;
+      }
+      // Há sessão (e-mail já verificado).
+      setUserId(res.userId ?? null);
+      setEmail(res.email ?? "");
+      setEmailVerificado(true);
+
+      if (res.temPerfil && res.perfil) {
+        const p = res.perfil;
+        setNome(p.nome);
+        setTratamento(p.tratamento);
+        setNomeCompleto(p.nome_completo);
+        setTelefone(res.telefone ?? "");
+        setCro(p.cro);
+        setAnoFormacao(p.ano_formacao ? String(p.ano_formacao) : "");
+        setEspecialidade(p.especialidade);
+        setFotoUrl(p.foto_url);
+        setBio(p.bio);
+        setInstagram(extrairUserInstagram(p.instagram));
+        setGoogleReviewUrl(p.google_review_url);
+        setSenhaSincronizada(true);
+        if (res.cpf) setCpf(res.cpf);
+        // IMPORTANTE: recarregar os endereços já salvos (senão o save delete-all+reinsert
+        // apagaria os existentes — bug de perda de dados pego no review).
+        if (res.enderecos && res.enderecos.length > 0) {
+          setEnderecos(res.enderecos.map(rowParaEndereco));
         }
-        setUserId(user.id);
-        setEmail(user.email ?? "");
-        setEmailVerificado(true);
-        const { data: pro } = await supabase
-          .from("curadentespro")
-          .select("nome, tratamento, nome_completo, cro, ano_formacao, foto_url, bio, instagram, especialidade, google_review_url, lgpd_aceito")
-          .eq("id", user.id)
-          .is("deleted_at", null)
-          .maybeSingle();
-        if (pro) {
-          if (pro.lgpd_aceito) {
-            router.replace("/pro/dashboard");
-            return;
-          }
-          setNome(pro.nome ?? "");
-          setTratamento(pro.tratamento ?? "");
-          setNomeCompleto(pro.nome_completo ?? "");
-          // telefone vem por RPC (coluna não é mais legível via REST)
-          const { data: tel } = await supabase.rpc("meu_telefone");
-          setTelefone(typeof tel === "string" ? tel : "");
-          setCro(pro.cro ?? "");
-          setAnoFormacao(pro.ano_formacao ? String(pro.ano_formacao) : "");
-          setEspecialidade(pro.especialidade ?? "");
-          setFotoUrl(pro.foto_url ?? "");
-          setBio(pro.bio ?? "");
-          setInstagram(extrairUserInstagram(pro.instagram ?? ""));
-          setGoogleReviewUrl(pro.google_review_url ?? "");
-          setSenhaSincronizada(true);
-          const { data: cpfData } = await supabase.rpc("meu_cpf");
-          if (typeof cpfData === "string") setCpf(cpfData);
-
-          // IMPORTANTE: recarregar os endereços já salvos. Sem isso, o estado fica
-          // num endereço vazio e o save (delete-all + reinsert) APAGARIA os endereços
-          // existentes — bug de perda de dados pego no review.
-          const { data: ends } = await supabase
-            .from("curadentespro_enderecos")
-            .select("*")
-            .eq("curadentespro_id", user.id);
-          if (ends && ends.length > 0) {
-            setEnderecos((ends as EnderecoRow[]).map(rowParaEndereco));
-          }
-
-          // Preferências de e-mail (para não sobrescrever com tudo desmarcado).
-          const { data: prefRow } = await supabase
-            .from("curadentespro_email")
-            .select("prefs")
-            .eq("curadentespro_id", user.id)
-            .maybeSingle();
-          const prefs = (prefRow?.prefs ?? {}) as { desempenho?: boolean; novidades?: boolean; parceiros?: boolean };
-          setPrefDesempenho(!!prefs.desempenho);
-          setPrefNovidades(!!prefs.novidades);
-          setPrefParceiros(!!prefs.parceiros);
-
-          // Se voltou do editor de fotos (que foi aberto a partir do cadastro),
-          // retoma na etapa em que estava; senão, posiciona na 2 (dados básicos já
-          // existem). A foto recém-salva é carregada acima via pro.foto_url.
-          let etapaRetomar = 2;
-          try {
-            const r = sessionStorage.getItem("curadentes_foto_retorno");
-            if (r) { etapaRetomar = Number(r) || 2; sessionStorage.removeItem("curadentes_foto_retorno"); }
-          } catch { /* ignore */ }
-          setEtapa(etapaRetomar);
+        if (res.prefs) {
+          setPrefDesempenho(res.prefs.desempenho);
+          setPrefNovidades(res.prefs.novidades);
+          setPrefParceiros(res.prefs.parceiros);
         }
+        // Se voltou do editor de fotos, retoma na etapa em que estava; senão, etapa 2.
+        let etapaRetomar = 2;
+        try {
+          const r = sessionStorage.getItem("curadentes_foto_retorno");
+          if (r) { etapaRetomar = Number(r) || 2; sessionStorage.removeItem("curadentes_foto_retorno"); }
+        } catch { /* ignore */ }
+        setEtapa(etapaRetomar);
       }
       setCarregando(false);
     })();
@@ -276,11 +258,23 @@ export default function CadastroPage() {
     setErro("");
     if (codigo.trim().length !== 8) { setErro("O código tem 8 dígitos."); return; }
     setOcupado(true);
-    const { data, error } = await supabase.auth.verifyOtp({ email: email.trim(), token: codigo.trim(), type: "email" });
-    setOcupado(false);
-    if (error || !data.user) { setErro("Código inválido ou expirado."); return; }
-    setUserId(data.user.id);
-    setEmailVerificado(true);
+    try {
+      // verifyOtp ESTABELECE a sessão (grava cookies httpOnly) → tem de rodar no
+      // servidor. A route /auth/cadastro-otp verifica e devolve o userId.
+      const r = await fetch("/auth/cadastro-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), codigo: codigo.trim() }),
+      });
+      const data = (await r.json().catch(() => ({}))) as { ok?: boolean; userId?: string; erro?: string };
+      if (!r.ok || !data.ok || !data.userId) { setErro(data.erro || "Código inválido ou expirado."); return; }
+      setUserId(data.userId);
+      setEmailVerificado(true);
+    } catch {
+      setErro("Não foi possível verificar agora. Tente novamente.");
+    } finally {
+      setOcupado(false);
+    }
   }
 
   async function avancar1() {
@@ -297,21 +291,14 @@ export default function CadastroPage() {
     setOcupado(true);
     try {
       if (trocandoSenha && senha) {
-        const { error: sErr } = await supabase.auth.updateUser({ password: senha });
-        if (sErr) throw sErr;
+        const rs = await definirSenha(senha);
+        if (!rs.ok) throw new Error(rs.erro || "Não foi possível definir a senha.");
         setSenhaSincronizada(true);
       }
-      // NÃO gravamos `email` aqui: a coluna `email` de curadentespro é protegida
-      // via REST (privilégio revogado — mesma proteção do C2). O e-mail do dentista
-      // vive em auth.users e é lido de lá (getUsuario usa user.email). Tentar
-      // escrever a coluna protegida fazia o INSERT falhar com 403 (cadastro novo
-      // não salvava). Se o banco precisar do e-mail na coluna, um trigger
-      // (SECURITY DEFINER) deve copiá-lo de auth.users — não o cliente via REST.
-      const { error } = await supabase.from("curadentespro").upsert(
-        { id: userId, user_id: userId, nome, tratamento: tratamento || null, nome_completo: nomeCompleto },
-        { onConflict: "id" },
-      );
-      if (error) throw error;
+      // NÃO gravamos `email`: a coluna `email` de curadentespro é protegida via REST
+      // (mesma proteção do C2). O e-mail vive em auth.users (getUsuario usa user.email).
+      const r = await salvarEtapaConta({ nome, tratamento: tratamento || null, nomeCompleto });
+      if (!r.ok) throw new Error(r.erro || "Não foi possível salvar a etapa.");
       setEtapa(2);
     } catch (e) {
       setErro(traduzErro(e, "Não foi possível salvar a etapa."));
@@ -335,10 +322,13 @@ export default function CadastroPage() {
     if (!especialidade) { setErro("Escolha sua especialidade principal."); return; }
     setOcupado(true);
     try {
-      const { error } = await supabase.from("curadentespro").update({ cro, ano_formacao: anoFormacao ? parseInt(anoFormacao, 10) : null, especialidade }).eq("id", userId!);
-      if (error) throw error;
-      const { error: cpfErr } = await supabase.from("curadentespro_cpf").upsert({ curadentespro_id: userId, cpf: cpf.replace(/\D/g, "") }, { onConflict: "curadentespro_id" });
-      if (cpfErr) throw cpfErr;
+      const r = await salvarIdentidade({
+        cro,
+        anoFormacao: anoFormacao ? parseInt(anoFormacao, 10) : null,
+        especialidade,
+        cpf,
+      });
+      if (!r.ok) throw new Error(r.erro || "Não foi possível salvar a identidade.");
       setEtapa(4);
     } catch (e) {
       setErro(traduzErro(e, "Não foi possível salvar a identidade."));
@@ -373,15 +363,19 @@ export default function CadastroPage() {
     setOcupado(true);
     try {
       if (etapa === 2 && validarTelefone(telefone)) {
-        await supabase.from("curadentespro").update({ telefone }).eq("id", userId!);
+        await salvarCampos({ telefone });
       } else if (etapa === 3 && validarCpf(cpf) && validarCro(cro) && validarAnoFormacao(anoFormacao)) {
-        await supabase.from("curadentespro").update({ cro, ano_formacao: anoFormacao ? parseInt(anoFormacao, 10) : null, especialidade: especialidade || null }).eq("id", userId!);
-        await supabase.from("curadentespro_cpf").upsert({ curadentespro_id: userId, cpf: cpf.replace(/\D/g, "") }, { onConflict: "curadentespro_id" });
+        await salvarIdentidade({
+          cro,
+          anoFormacao: anoFormacao ? parseInt(anoFormacao, 10) : null,
+          especialidade: especialidade || null,
+          cpf,
+        });
       } else if (etapa === 4 && validarEnderecos(enderecos).valido) {
         await persistirEnderecos(false);
       } else if (etapa === 5) {
         const url = formatarInstagram(instagram);
-        if (!instagram || url) await supabase.from("curadentespro").update({ bio, instagram: url, google_review_url: googleReviewUrl.trim() || null }).eq("id", userId!);
+        if (!instagram || url) await salvarCampos({ bio, instagram: url, google_review_url: googleReviewUrl.trim() || null });
       }
     } catch (e) {
       console.warn("[cadastro] salvar parcial:", e);
@@ -389,12 +383,12 @@ export default function CadastroPage() {
     router.push("/pro/dashboard");
   }
 
-  // Update genérico + avanço.
+  // Update genérico + avanço (via Server Action).
   async function salvar(campos: Record<string, unknown>, proxima: number) {
     setOcupado(true);
     try {
-      const { error } = await supabase.from("curadentespro").update(campos).eq("id", userId!);
-      if (error) throw error;
+      const r = await salvarCampos(campos);
+      if (!r.ok) throw new Error(r.erro || "Não foi possível salvar a etapa.");
       setEtapa(proxima);
     } catch (e) {
       setErro(traduzErro(e, "Não foi possível salvar a etapa."));
@@ -403,10 +397,10 @@ export default function CadastroPage() {
     }
   }
 
-  // Endereços: apaga todos e reinsere (geocodifica só na conclusão).
+  // Endereços: geocodifica NO CLIENTE (quando comGeo) e grava via Server Action
+  // (apaga todos e reinsere). O servidor recebe lat/lng já resolvidos.
   async function persistirEnderecos(comGeo: boolean) {
-    const { error: delErr } = await supabase.from("curadentespro_enderecos").delete().eq("curadentespro_id", userId!);
-    if (delErr) throw delErr; // não seguir para o insert se o delete falhou (evita duplicar)
+    const comCoord: (EnderecoForm & { latitude: number | null; longitude: number | null })[] = [];
     for (const end of enderecos) {
       let latitude: number | null = null;
       let longitude: number | null = null;
@@ -414,18 +408,10 @@ export default function CadastroPage() {
         const coord = await geocodeEnderecoComFallback(end);
         if (coord) { latitude = coord.latitude; longitude = coord.longitude; }
       }
-      const { error } = await supabase.from("curadentespro_enderecos").insert({
-        curadentespro_id: userId,
-        nome_clinica: end.nome_clinica, logradouro: end.logradouro, numero: end.numero,
-        complemento: end.complemento, bairro: end.bairro, cidade: end.cidade, estado: end.estado,
-        cep: end.cep, telefone: end.telefone, whatsapp: end.whatsapp,
-        atende_urgencias: end.atende_urgencias, aceita_urgencia_termo: end.aceita_urgencia_termo,
-        estacionamento: end.estacionamento, atividades: end.atividades, convenios: end.convenios,
-        formas_pagamento: end.formas_pagamento, politica_cancelamento: end.politica_cancelamento,
-        observacoes: end.observacoes, agenda: end.agenda, latitude, longitude,
-      });
-      if (error) throw error;
+      comCoord.push({ ...end, latitude, longitude });
     }
+    const r = await salvarEnderecosCadastro(comCoord);
+    if (!r.ok) throw new Error(r.erro || "Não foi possível salvar os endereços.");
   }
 
   // Lista de campos obrigatórios pendentes (portado do k11). Telefone é OPCIONAL —
@@ -467,18 +453,9 @@ export default function CadastroPage() {
       // apareceria na busca sem nenhum endereço.
       await persistirEnderecos(true);
 
-      const { error: prefErr } = await supabase.from("curadentespro_email").upsert(
-        { curadentespro_id: userId, prefs: { desempenho: prefDesempenho, novidades: prefNovidades, parceiros: prefParceiros } },
-        { onConflict: "curadentespro_id" },
-      );
-      if (prefErr) console.warn("[cadastro] prefs e-mail:", prefErr.message);
-
-      // Por último: marca o cadastro como completo (passa a ser público).
-      const { error } = await supabase
-        .from("curadentespro")
-        .update({ lgpd_aceito: true, cobranca_aviso_aceita: true, cobranca_aviso_aceita_em: new Date().toISOString() })
-        .eq("id", userId!);
-      if (error) throw error;
+      // prefs de e-mail + marca o cadastro como completo (passa a ser público).
+      const r = await finalizarCadastro({ desempenho: prefDesempenho, novidades: prefNovidades, parceiros: prefParceiros });
+      if (!r.ok) throw new Error(r.erro || "Não foi possível concluir o cadastro.");
 
       router.replace("/pro/dashboard");
       router.refresh();
