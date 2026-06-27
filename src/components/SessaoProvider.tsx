@@ -213,13 +213,14 @@ export default function SessaoProvider({ children }: { children: ReactNode }) {
       proximaUrlRef.current = window.location.pathname + window.location.search;
     }
     setErro("");
+    setOcupado(false); // garante o botão clicável ao (re)abrir o modal
     setModal("paciente");
     return false;
   }
   function abrirModalDentista() {
     if (user?.ehSuper) { router.push("/pro/dashboard-analytics"); return; }
     if (user?.ehPro) { router.push("/pro/dashboard"); return; }
-    setErro(""); setModal("dentista");
+    setErro(""); setOcupado(false); setModal("dentista"); // ocupado=false: botão sempre clicável ao abrir
   }
 
   async function loginDentista(e?: FormEvent) {
