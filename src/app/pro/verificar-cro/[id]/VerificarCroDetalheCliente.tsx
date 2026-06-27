@@ -8,8 +8,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Container from "@/components/Container";
-import { criarClienteNavegador } from "@/lib/supabase/client";
-import { lerSessaoDoCookie } from "@/lib/sessao-cookie";
+import { marcarVerificacaoCro, notificarCroInativa, reabrirVerificacao } from "./acoes";
 import { numeroDoCro, ufDoCro, nomeUf } from "@/lib/cro";
 import {
   ArrowLeft, ExternalLink, RefreshCw, ShieldAlert, CheckCircle, Copy, Loader2,
@@ -30,7 +29,6 @@ export interface VerificacaoDetalhe {
 
 export default function VerificarCroDetalheCliente({ verificacao: inicial }: { verificacao: VerificacaoDetalhe }) {
   const router = useRouter();
-  const supabase = criarClienteNavegador();
   const [verificacao, setVerificacao] = useState(inicial);
   const [observacao, setObservacao] = useState(inicial.observacao ?? "");
   const [salvando, setSalvando] = useState(false);
@@ -49,28 +47,11 @@ export default function VerificarCroDetalheCliente({ verificacao: inicial }: { v
     setTimeout(() => setCopiado(""), 2000);
   }
 
-  // Dispara o e-mail oficial de regularização (suporte@) via edge function.
-  // Best-effort: usa o token da sessão (cookie) para não depender do supabase-js,
-  // que trava no navegador. Retorna true se o e-mail foi aceito pelo servidor.
+  // Dispara o e-mail oficial de regularização (suporte@) via Edge Function — agora
+  // invocada NO SERVIDOR (Server Action), com a sessão dos cookies. Best-effort.
   async function notificarDentista(): Promise<boolean> {
-    try {
-      const sessao = lerSessaoDoCookie();
-      const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-      if (!sessao?.accessToken || !url || !anon || !pro?.email) return false;
-      const res = await fetch(`${url}/functions/v1/notificar-cro-inativa`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${sessao.accessToken}`,
-          apikey: anon,
-        },
-        body: JSON.stringify({ email: pro.email, nome: pro.nome, cro: verificacao.cro }),
-      });
-      return res.ok;
-    } catch {
-      return false;
-    }
+    if (!pro?.email) return false;
+    return notificarCroInativa({ email: pro.email, nome: pro.nome, cro: verificacao.cro });
   }
 
   async function marcar(verificado: boolean) {
@@ -87,16 +68,10 @@ export default function VerificarCroDetalheCliente({ verificacao: inicial }: { v
 
     setSalvando(true);
     setMsg(null);
-    const { data, error } = await supabase.rpc("marcar_verificacao_cro", {
-      p_dentista_id: verificacao.dentista_id,
-      p_verificado: verificado,
-      p_observacao: observacao || null,
-    });
-    const ok = !error && (data as { success?: boolean } | null)?.success;
-    if (!ok) {
+    const res = await marcarVerificacaoCro(verificacao.dentista_id, verificado, observacao || null);
+    if (!res.ok) {
       setSalvando(false);
-      const detalhe = (data as { error?: string } | null)?.error || error?.message || "Erro desconhecido";
-      setMsg({ tipo: "erro", texto: `Erro ao salvar: ${detalhe}` });
+      setMsg({ tipo: "erro", texto: `Erro ao salvar: ${res.erro || "Erro desconhecido"}` });
       return;
     }
     setVerificacao((v) => ({ ...v, status: verificado ? "verificado" : "falhou" }));
@@ -119,8 +94,8 @@ export default function VerificarCroDetalheCliente({ verificacao: inicial }: { v
   }
 
   async function reabrir() {
-    const { error } = await supabase.from("cro_verificacoes").update({ status: "pendente", erro: null }).eq("id", verificacao.id);
-    if (error) {
+    const res = await reabrirVerificacao(verificacao.id);
+    if (!res.ok) {
       setMsg({ tipo: "erro", texto: "Não foi possível reabrir." });
       return;
     }
