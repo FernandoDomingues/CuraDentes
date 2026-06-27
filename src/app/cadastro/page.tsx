@@ -398,14 +398,24 @@ export default function CadastroPage() {
   }
 
   // Endereços: geocodifica NO CLIENTE (quando comGeo) e grava via Server Action
-  // (apaga todos e reinsere). O servidor recebe lat/lng já resolvidos.
+  // (apaga todos e reinsere). A geocodificação é BEST-EFFORT e NÃO pode travar a
+  // conclusão: o CEP às vezes não resolve e o Nominatim (rate limit) ou um ad-blocker
+  // somavam ~25s/endereço, deixando o botão "Concluindo" preso. Damos um ORÇAMENTO
+  // TOTAL curto (~7s); o que não resolver a tempo grava sem coords — o endereço ainda
+  // fica público e as coords podem ser preenchidas depois ao editar o perfil.
   async function persistirEnderecos(comGeo: boolean) {
     const comCoord: (EnderecoForm & { latitude: number | null; longitude: number | null })[] = [];
+    const prazoFinal = Date.now() + 7000;
     for (const end of enderecos) {
       let latitude: number | null = null;
       let longitude: number | null = null;
-      if (comGeo && end.cidade) {
-        const coord = await geocodeEnderecoComFallback(end);
+      const restante = prazoFinal - Date.now();
+      if (comGeo && end.cidade && restante > 0) {
+        // Corre a geocodificação contra o que sobra do orçamento; estourou → null.
+        const coord = await Promise.race([
+          geocodeEnderecoComFallback(end),
+          new Promise<null>((res) => setTimeout(() => res(null), restante)),
+        ]);
         if (coord) { latitude = coord.latitude; longitude = coord.longitude; }
       }
       comCoord.push({ ...end, latitude, longitude });
