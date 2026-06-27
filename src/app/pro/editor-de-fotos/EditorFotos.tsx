@@ -87,7 +87,7 @@ async function gerarFotoBlob(imageSrc: string, area: Area, rotacao: number): Pro
   return new Promise((resolve) => out.toBlob(resolve, "image/webp", 0.85));
 }
 
-export default function EditorFotos({ dentistaId }: { dentistaId: string }) {
+export default function EditorFotos() {
   const router = useRouter();
 
   const [srcImagem, setSrcImagem] = useState<string | null>(null);
@@ -151,7 +151,10 @@ export default function EditorFotos({ dentistaId }: { dentistaId: string }) {
       const blob = await gerarFotoBlob(srcImagem, areaPixels, rotacao);
       if (!blob) throw new Error("Falha ao gerar a imagem.");
 
-      await uploadFotoDentista(blob, dentistaId);
+      const fd = new FormData();
+      fd.append("foto", blob, "foto.webp");
+      const res = await uploadFotoDentista(fd);
+      if (!res.ok) throw new Error(res.erro || "Erro ao salvar a foto.");
       setOk(true);
       // Se a foto veio do CADASTRO, volta para o cadastro (a retomada posiciona na
       // etapa correta); caso contrário, vai para o painel (fluxo normal do editor).
