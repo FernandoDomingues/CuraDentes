@@ -4,7 +4,8 @@
 // Por que no servidor: o supabase-js do NAVEGADOR trava em operações de sessão
 // (signInWithPassword inclusive). No servidor ele funciona. Aqui fazemos o login,
 // reativamos a conta (se soft-deleted) e gravamos os cookies de sessão NA RESPOSTA
-// (com httpOnly:false p/ o cliente ler). O cliente então navega para o painel.
+// (httpOnly:true — C1: o token não fica legível por JS; o cliente lê o estado de
+// login do servidor via /api/me). O cliente então navega para o painel.
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import { NextResponse, type NextRequest } from "next/server";
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
   const redirect = isSuperuserEmail(emailResolvido) ? "/pro/dashboard-analytics" : "/pro/dashboard";
   const res = NextResponse.json({ ok: true, redirect });
   for (const { name, value, options } of cookiesParaSetar) {
-    res.cookies.set(name, value, { ...(options ?? {}), httpOnly: false, sameSite: "lax", secure: true, path: "/" });
+    res.cookies.set(name, value, { ...(options ?? {}), httpOnly: true, sameSite: "lax", secure: true, path: "/" });
   }
   return res;
 }

@@ -30,8 +30,11 @@ export async function proxy(request: NextRequest) {
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           response = NextResponse.next({ request });
+          // httpOnly:true (C1): ao RENOVAR o token, regravamos os cookies de sessão
+          // SEM permitir leitura por JS. Sem este override, o supabase regravaria os
+          // cookies sem httpOnly e "desfaria" o flip a cada request a /pro|/entrar|etc.
           cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options),
+            response.cookies.set(name, value, { ...options, httpOnly: true }),
           );
         },
       },

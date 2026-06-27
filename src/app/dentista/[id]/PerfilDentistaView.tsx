@@ -666,8 +666,13 @@ function AvaliarDentista({
   /** Link de avaliação no Google (CTA pós-avaliação). null/ausente = sem botão. */
   googleUrl?: string | null;
 }) {
-  const [carregandoSessao, setCarregandoSessao] = useState(true);
-  const [logado, setLogado] = useState(false);
+  // Estado de login VINDO DO SERVIDOR (useSessao → /api/me, cookies httpOnly). Antes
+  // líamos a sessão direto no cliente (getUser), o que exigia httpOnly:false; agora o
+  // muro de login central já resolve quem está logado — compatível com httpOnly:true.
+  const { user, carregando: carregandoSessao } = useSessao();
+  // Se o servidor recusar a avaliação por sessão expirada, força a UI de re-login.
+  const [sessaoExpirada, setSessaoExpirada] = useState(false);
+  const logado = !!user && !sessaoExpirada;
 
   const [formAberto, setFormAberto] = useState(false);
   const [nota, setNota] = useState(0);
@@ -677,25 +682,6 @@ function AvaliarDentista({
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState(false);
-
-  // Descobre se há paciente logado (sessão em cookies via @supabase/ssr).
-  useEffect(() => {
-    let ativo = true;
-    const supabase = criarClienteNavegador();
-    supabase.auth.getUser().then(({ data }) => {
-      if (!ativo) return;
-      setLogado(!!data.user);
-      setCarregandoSessao(false);
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
-      if (!ativo) return;
-      setLogado(!!session?.user);
-    });
-    return () => {
-      ativo = false;
-      sub.subscription.unsubscribe();
-    };
-  }, []);
 
   async function entrarComGoogle() {
     setErro("");
@@ -729,7 +715,7 @@ function AvaliarDentista({
     });
     if (!res.ok) {
       setEnviando(false);
-      if (res.precisaLogin) setLogado(false);
+      if (res.precisaLogin) setSessaoExpirada(true);
       setErro(res.erro || "Falha ao salvar a avaliação. Tente novamente.");
       return;
     }

@@ -43,11 +43,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, erro: "Código inválido ou expirado." }, { status: 401 });
   }
 
-  // NOTA DO FLIP: httpOnly:false por ora (igual a callback/login-dentista). No flip
-  // final do C1, trocar para httpOnly:true nos três pontos.
+  // httpOnly:true (C1): o token não fica legível por JS. O wizard segue com o userId
+  // retornado; o estado de login vem do servidor (/api/me), não do cookie no cliente.
   const res = NextResponse.json({ ok: true, userId: data.user.id });
   for (const { name, value, options } of cookiesParaSetar) {
-    res.cookies.set(name, value, { ...(options ?? {}), httpOnly: false, sameSite: "lax", secure: true, path: "/" });
+    res.cookies.set(name, value, { ...(options ?? {}), httpOnly: true, sameSite: "lax", secure: true, path: "/" });
   }
   return res;
 }

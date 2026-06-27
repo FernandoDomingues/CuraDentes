@@ -104,15 +104,15 @@ export async function GET(request: NextRequest) {
   }
 
   // Redirect final COM os cookies de sessão aplicados (crítico) + cd_next limpo.
-  // IMPORTANTE: forçamos httpOnly:false — o @supabase/ssr precisa que o CLIENTE
-  // (JavaScript) consiga LER os cookies de sessão; se saírem httpOnly, o servidor
-  // enxerga a sessão mas o navegador "fica deslogado". sameSite/lax + secure + path
+  // httpOnly:true (C1): o token NÃO fica legível por JavaScript (defesa contra XSS).
+  // Nenhum cliente lê mais a sessão — o estado de login vem do servidor via /api/me;
+  // o servidor enxerga o cookie httpOnly normalmente. sameSite/lax + secure + path
   // garantem que o cookie sobreviva ao redirect e seja enviado de volta.
   const res = NextResponse.redirect(destino);
   for (const { name, value, options } of setList) {
     res.cookies.set(name, value, {
       ...(options ?? {}),
-      httpOnly: false,
+      httpOnly: true,
       sameSite: "lax",
       secure: true,
       path: "/",
