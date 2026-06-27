@@ -21,7 +21,7 @@ import { useRouter } from "next/navigation";
 import { X, Eye, EyeOff, ChevronRight } from "lucide-react";
 import { criarClienteNavegador } from "@/lib/supabase/client";
 import { resolveLoginEmail } from "@/lib/superuser";
-import { limparCookiesSessao } from "@/lib/sessao-cookie";
+import { sairConta } from "@/lib/conta-acoes";
 
 interface UsuarioSessao {
   id: string;
@@ -262,9 +262,15 @@ export default function SessaoProvider({ children }: { children: ReactNode }) {
   }
 
   async function sair() {
-    // Logout local: apaga os cookies de sessão (o signOut do supabase-js trava).
-    limparCookiesSessao();
+    // Logout NO SERVIDOR: o signOut limpa os cookies de sessão server-side, o que passa
+    // a funcionar com httpOnly:true (o cliente não consegue mais apagar o cookie).
+    await sairConta();
     setUser(null);
+    try {
+      localStorage.removeItem("cd_user");
+    } catch {
+      /* ignore */
+    }
     if (typeof window !== "undefined") window.dispatchEvent(new Event("curadentes:auth"));
     router.replace("/");
     router.refresh();
