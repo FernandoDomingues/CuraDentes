@@ -17,6 +17,8 @@ export async function registrarContato(
   dentistaId: string,
   tipo: "whatsapp" | "telefone",
 ): Promise<void> {
+  // Valida o tipo no servidor — tipos do TS somem em runtime e a action é POST-callable.
+  if (tipo !== "whatsapp" && tipo !== "telefone") return;
   try {
     const supabase = await criarClienteServidor();
     const {
@@ -90,8 +92,8 @@ export async function enviarAvaliacao(args: {
     await supabase.functions.invoke("send-rating-notification", {
       body: { dentistId: args.dentistaId, dentistName: args.nomeDentista, specialty: args.atividade || null, patientName },
     });
-  } catch {
-    /* best-effort */
+  } catch (e) {
+    console.warn("[enviarAvaliacao] notificação falhou (best-effort):", e);
   }
 
   return { ok: true };
@@ -100,6 +102,8 @@ export async function enviarAvaliacao(args: {
 /**
  * Lê as avaliações individuais de uma atividade + nome/foto dos pacientes (clientes
  * não excluídos), no formato exibido pelo modal "Ver". Retorna [] em qualquer falha.
+ * LEITURA PÚBLICA INTENCIONAL: são os mesmos dados já exibidos no perfil público, por
+ * isso NÃO exige sessão (≠ das mutações). A RLS de avaliacoes/clientes é o guard final.
  */
 export async function lerAvaliacoesAtividade(
   dentistaId: string,

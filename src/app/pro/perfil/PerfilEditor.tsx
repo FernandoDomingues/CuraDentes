@@ -17,7 +17,7 @@ import { Trash2, ShieldCheck, Mail, KeyRound } from "lucide-react";
 import Container from "@/components/Container";
 import EnderecosEditor, { type EnderecoForm } from "@/components/pro/EnderecosEditor";
 import { criarClienteNavegador } from "@/lib/supabase/client";
-import { encerrarSessao } from "@/lib/encerrar-sessao";
+import { excluirContaDentista } from "@/lib/conta-acoes";
 import { formatarInstagram, extrairUserInstagram, INSTAGRAM_BASE } from "@/lib/instagram";
 import { validarTelefone, validarAnoFormacao } from "@/lib/validacao";
 import { geocodeEnderecoComFallback } from "@/lib/geocoding";
@@ -229,13 +229,18 @@ export default function PerfilEditor({
 
   async function excluirConta() {
     setExcluindo(true);
-    const { error } = await supabase.rpc("apagar_minha_conta_dentista");
-    if (error) {
-      setMsg({ tipo: "erro", texto: "Erro ao excluir a conta. Tente novamente." });
+    const res = await excluirContaDentista();
+    if (!res.ok) {
+      setMsg({ tipo: "erro", texto: res.erro || "Erro ao excluir a conta. Tente novamente." });
       setExcluindo(false);
       return;
     }
-    await encerrarSessao(supabase);
+    try {
+      localStorage.removeItem("cd_user");
+    } catch {
+      /* ignore */
+    }
+    window.dispatchEvent(new Event("curadentes:auth"));
     router.replace("/");
     router.refresh();
   }
