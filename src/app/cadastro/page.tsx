@@ -380,7 +380,8 @@ export default function CadastroPage() {
     } catch (e) {
       console.warn("[cadastro] salvar parcial:", e);
     }
-    router.push("/pro/dashboard");
+    // Navegação DURA (ver concluir): remonta o SessaoProvider com a sessão fresca.
+    window.location.assign("/pro/dashboard");
   }
 
   // Update genérico + avanço (via Server Action).
@@ -447,7 +448,7 @@ export default function CadastroPage() {
   // Vai para o painel mesmo com o cadastro incompleto (o perfil não fica público).
   function continuarIncompleto() {
     setExibirModalIncompleto(false);
-    router.push("/pro/dashboard");
+    window.location.assign("/pro/dashboard");
   }
 
   async function concluir() {
@@ -467,8 +468,12 @@ export default function CadastroPage() {
       const r = await finalizarCadastro({ desempenho: prefDesempenho, novidades: prefNovidades, parceiros: prefParceiros });
       if (!r.ok) throw new Error(r.erro || "Não foi possível concluir o cadastro.");
 
-      router.replace("/pro/dashboard");
-      router.refresh();
+      // Navegação DURA (full load) para o painel. A transição client-side do App
+      // Router não concluía aqui: o router.refresh() re-rodava a retomada do /cadastro
+      // (agora jaCompleto → outro redirect), e os dois competindo deixavam o botão
+      // preso em "Concluindo". window.location garante a chegada e remonta o
+      // SessaoProvider com a sessão do dentista recém-criada (cabeçalho correto).
+      window.location.assign("/pro/dashboard");
     } catch (e) {
       setErro(traduzErro(e, "Não foi possível concluir o cadastro."));
       setOcupado(false);
