@@ -14,10 +14,10 @@ import { useEffect, useMemo, useState, type ComponentType } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import Container from "@/components/Container";
-import { criarClienteNavegador } from "@/lib/supabase/client";
+import { carregarUrgencias } from "../acoes";
 import { PERIODOS } from "@/lib/dba";
 import {
-  apenasUrgencias, serieContagem, heatPointsUsuarios, logsNoPeriodo, diasDoPeriodo,
+  serieContagem, heatPointsUsuarios, logsNoPeriodo, diasDoPeriodo,
   type LogBusca,
 } from "@/lib/analytics";
 import {
@@ -60,22 +60,15 @@ export default function UrgenciasPainel() {
     let ativo = true;
     (async () => {
       setLoading(true);
-      const supabase = criarClienteNavegador();
-      const desde = new Date(Date.now() - 365 * 86400000).toISOString();
-      try {
-        const { data, error } = await supabase
-          .from("logs_busca")
-          .select("query, cidade, estado, bairro, latitude, longitude, criado_em")
-          .gte("criado_em", desde)
-          .order("criado_em", { ascending: false });
-        if (!ativo) return;
-        if (error) throw error;
-        setUrgencias(apenasUrgencias((data as LogBusca[]) ?? []));
-      } catch (e) {
-        if (ativo) setErro(e instanceof Error ? e.message : "Erro ao carregar as urgências.");
-      } finally {
-        if (ativo) setLoading(false);
+      const res = await carregarUrgencias();
+      if (!ativo) return;
+      if (!res.ok) {
+        setErro(res.erro || "Erro ao carregar as urgências.");
+        setLoading(false);
+        return;
       }
+      setUrgencias(res.urgencias);
+      setLoading(false);
     })();
     return () => { ativo = false; };
   }, []);
