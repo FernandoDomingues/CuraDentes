@@ -113,12 +113,21 @@ export default function SessaoProvider({ children }: { children: ReactNode }) {
     sincronizar();
     // Re-checa ao voltar o foco e quando login/logout dispara o evento.
     const onAuth = () => sincronizar();
+    // bfcache: ao voltar do OAuth do Google (home → Google → callback → home), o
+    // navegador pode RESTAURAR a home do back/forward cache com o estado React
+    // congelado de ANTES do login (user=null). O efeito de montagem não roda de novo,
+    // então /api/me nunca é re-buscado e o cabeçalho fica preso em "Entrar" até um
+    // reload manual. pageshow.persisted detecta essa restauração e re-sincroniza.
+    // (Bug pego no QA: dentista → logout → login Google não aparecia logado.)
+    const onPageShow = (e: PageTransitionEvent) => { if (e.persisted) sincronizar(); };
     window.addEventListener("focus", onAuth);
     window.addEventListener("curadentes:auth", onAuth);
+    window.addEventListener("pageshow", onPageShow);
     return () => {
       ativo = false;
       window.removeEventListener("focus", onAuth);
       window.removeEventListener("curadentes:auth", onAuth);
+      window.removeEventListener("pageshow", onPageShow);
     };
   }, []);
 
