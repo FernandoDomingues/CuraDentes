@@ -41,7 +41,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { criarClienteNavegador } from "@/lib/supabase/client";
-import { registrarContato, registrarVisualizacao } from "./acoes";
+import { registrarContato, registrarVisualizacao, enviarAvaliacao as enviarAvaliacaoAction, lerAvaliacoesAtividade } from "./acoes";
 import { useSessao } from "@/components/SessaoProvider";
 
 /** Ícone do Instagram (inline — lucide-react ^1.x não exporta `Instagram`). */
@@ -720,49 +720,18 @@ function AvaliarDentista({
     }
 
     setEnviando(true);
-    const supabase = criarClienteNavegador();
-
-    const { data: userData } = await supabase.auth.getUser();
-    const user = userData.user;
-    if (!user) {
-      setEnviando(false);
-      setLogado(false);
-      setErro("Você precisa entrar com sua conta Google para avaliar.");
-      return;
-    }
-
-    // Salva a avaliação: nota + atividade (opcional) + comentário (opcional, máx 300).
-    const { error: insertError } = await supabase.from("avaliacoes").insert({
-      paciente_id: user.id,
-      dentista_id: dentistaId,
+    const res = await enviarAvaliacaoAction({
+      dentistaId,
       nota,
       atividade: atividade || null,
       comentario: comentario.trim() || null,
+      nomeDentista,
     });
-
-    if (insertError) {
+    if (!res.ok) {
       setEnviando(false);
-      setErro("Falha ao salvar a avaliação. Tente novamente.");
+      if (res.precisaLogin) setLogado(false);
+      setErro(res.erro || "Falha ao salvar a avaliação. Tente novamente.");
       return;
-    }
-
-    // Notifica o dentista por e-mail (fire-and-forget; erros ignorados — k11).
-    // dentistEmail não vai aqui: o perfil público omite e-mail por LGPD; a Edge
-    // Function resolve o destinatário pelo dentista_id quando o e-mail não vem.
-    try {
-      void supabase.functions.invoke("send-rating-notification", {
-        body: {
-          dentistId: dentistaId,
-          dentistName: nomeDentista,
-          specialty: atividade || null,
-          patientName:
-            (user.user_metadata as { full_name?: string } | undefined)?.full_name ||
-            user.email ||
-            null,
-        },
-      });
-    } catch {
-      /* ignora — notificação é best-effort */
     }
 
     setEnviando(false);
@@ -1025,55 +994,8 @@ export default function PerfilDentistaView({
   // Lê de `avaliacoes` (por dentista_id + atividade) e `clientes` (nome/foto).
   const fetchAvaliacoesIndividuais = useCallback(
     async (atividade: string) => {
-      try {
-        const supabase = criarClienteNavegador();
-        const { data: avaliacoes, error } = await supabase
-          .from("avaliacoes")
-          .select("paciente_id, nota, comentario, criado_em")
-          .eq("dentista_id", perfil.id)
-          .eq("atividade", atividade)
-          .order("criado_em", { ascending: false });
-
-        if (error) throw error;
-
-        const lista = (avaliacoes ?? []) as {
-          paciente_id: string;
-          nota: number;
-          comentario: string | null;
-          criado_em: string;
-        }[];
-
-        // Resolve nome/foto dos pacientes (clientes não excluídos).
-        const ids = [...new Set(lista.map((a) => a.paciente_id))];
-        let mapaPacientes: Record<string, { nome: string; foto: string }> = {};
-        if (ids.length > 0) {
-          const { data: pacientes } = await supabase
-            .from("clientes")
-            .select("id, nome, foto")
-            .in("id", ids)
-            .is("deleted_at", null);
-          mapaPacientes = Object.fromEntries(
-            ((pacientes ?? []) as { id: string; nome: string; foto: string }[]).map((p) => [
-              p.id,
-              { nome: p.nome, foto: p.foto },
-            ]),
-          );
-        }
-
-        setAvaliacoesIndividuais({
-          atividade,
-          ratings: lista.map((r) => ({
-            nota: r.nota,
-            paciente_nome: mapaPacientes[r.paciente_id]?.nome || "Anônimo",
-            paciente_foto: mapaPacientes[r.paciente_id]?.foto || "",
-            comentario: r.comentario,
-            criado_em: r.criado_em,
-          })),
-        });
-      } catch {
-        // Sem toast (convenção R0): abre o modal vazio com a mensagem padrão.
-        setAvaliacoesIndividuais({ atividade, ratings: [] });
-      }
+      const ratings = await lerAvaliacoesAtividade(perfil.id, atividade);
+      setAvaliacoesIndividuais({ atividade, ratings });
     },
     [perfil.id],
   );
