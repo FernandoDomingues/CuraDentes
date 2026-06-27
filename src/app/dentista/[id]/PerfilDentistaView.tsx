@@ -41,6 +41,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { criarClienteNavegador } from "@/lib/supabase/client";
+import { registrarContato, registrarVisualizacao, enviarAvaliacao as enviarAvaliacaoAction, lerAvaliacoesAtividade } from "./acoes";
 import { useSessao } from "@/components/SessaoProvider";
 
 /** Ícone do Instagram (inline — lucide-react ^1.x não exporta `Instagram`). */
@@ -665,8 +666,13 @@ function AvaliarDentista({
   /** Link de avaliação no Google (CTA pós-avaliação). null/ausente = sem botão. */
   googleUrl?: string | null;
 }) {
-  const [carregandoSessao, setCarregandoSessao] = useState(true);
-  const [logado, setLogado] = useState(false);
+  // Estado de login VINDO DO SERVIDOR (useSessao → /api/me, cookies httpOnly). Antes
+  // líamos a sessão direto no cliente (getUser), o que exigia httpOnly:false; agora o
+  // muro de login central já resolve quem está logado — compatível com httpOnly:true.
+  const { user, carregando: carregandoSessao } = useSessao();
+  // Se o servidor recusar a avaliação por sessão expirada, força a UI de re-login.
+  const [sessaoExpirada, setSessaoExpirada] = useState(false);
+  const logado = !!user && !sessaoExpirada;
 
   const [formAberto, setFormAberto] = useState(false);
   const [nota, setNota] = useState(0);
@@ -676,25 +682,6 @@ function AvaliarDentista({
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState(false);
-
-  // Descobre se há paciente logado (sessão em cookies via @supabase/ssr).
-  useEffect(() => {
-    let ativo = true;
-    const supabase = criarClienteNavegador();
-    supabase.auth.getUser().then(({ data }) => {
-      if (!ativo) return;
-      setLogado(!!data.user);
-      setCarregandoSessao(false);
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
-      if (!ativo) return;
-      setLogado(!!session?.user);
-    });
-    return () => {
-      ativo = false;
-      sub.subscription.unsubscribe();
-    };
-  }, []);
 
   async function entrarComGoogle() {
     setErro("");
@@ -719,49 +706,18 @@ function AvaliarDentista({
     }
 
     setEnviando(true);
-    const supabase = criarClienteNavegador();
-
-    const { data: userData } = await supabase.auth.getUser();
-    const user = userData.user;
-    if (!user) {
-      setEnviando(false);
-      setLogado(false);
-      setErro("Você precisa entrar com sua conta Google para avaliar.");
-      return;
-    }
-
-    // Salva a avaliação: nota + atividade (opcional) + comentário (opcional, máx 300).
-    const { error: insertError } = await supabase.from("avaliacoes").insert({
-      paciente_id: user.id,
-      dentista_id: dentistaId,
+    const res = await enviarAvaliacaoAction({
+      dentistaId,
       nota,
       atividade: atividade || null,
       comentario: comentario.trim() || null,
+      nomeDentista,
     });
-
-    if (insertError) {
+    if (!res.ok) {
       setEnviando(false);
-      setErro("Falha ao salvar a avaliação. Tente novamente.");
+      if (res.precisaLogin) setSessaoExpirada(true);
+      setErro(res.erro || "Falha ao salvar a avaliação. Tente novamente.");
       return;
-    }
-
-    // Notifica o dentista por e-mail (fire-and-forget; erros ignorados — k11).
-    // dentistEmail não vai aqui: o perfil público omite e-mail por LGPD; a Edge
-    // Function resolve o destinatário pelo dentista_id quando o e-mail não vem.
-    try {
-      void supabase.functions.invoke("send-rating-notification", {
-        body: {
-          dentistId: dentistaId,
-          dentistName: nomeDentista,
-          specialty: atividade || null,
-          patientName:
-            (user.user_metadata as { full_name?: string } | undefined)?.full_name ||
-            user.email ||
-            null,
-        },
-      });
-    } catch {
-      /* ignora — notificação é best-effort */
     }
 
     setEnviando(false);
@@ -992,6 +948,9 @@ export default function PerfilDentistaView({
     atividade: string;
     ratings: AvaliacaoIndividual[];
   } | null>(null);
+  // Comentário "aberto" por TOQUE (mobile não tem hover): índice do card cujo
+  // balãozinho está aberto; tocar alterna. No desktop o hover continua funcionando.
+  const [comentarioAbertoIdx, setComentarioAbertoIdx] = useState<number | null>(null);
 
   // Procedimentos do dentista (todos os endereços) para o select de avaliação.
   const todasAtividades = Array.from(
@@ -1006,16 +965,7 @@ export default function PerfilDentistaView({
     (url: string, tipo: "whatsapp" | "telefone") => {
       if (!pedirLoginPaciente()) return;
       window.open(url, "_blank", "noopener,noreferrer");
-      if (user) {
-        const supabase = criarClienteNavegador();
-        supabase
-          .from("perfil_contatos")
-          .upsert(
-            { dentista_id: perfil.id, viewer_id: user.id, tipo },
-            { onConflict: "dentista_id,viewer_id,tipo,data_visita", ignoreDuplicates: true },
-          )
-          .then(undefined, () => {});
-      }
+      if (user) void registrarContato(perfil.id, tipo);
     },
     [pedirLoginPaciente, user, perfil.id],
   );
@@ -1026,69 +976,16 @@ export default function PerfilDentistaView({
   // Espelha o padrão do perfil_contatos (upsert idempotente, best-effort).
   useEffect(() => {
     if (!user || user.id === perfil.id) return;
-    const supabase = criarClienteNavegador();
-    supabase
-      .from("perfil_visualizacoes")
-      .upsert(
-        { dentista_id: perfil.id, viewer_id: user.id },
-        { onConflict: "dentista_id,viewer_id,data_visita", ignoreDuplicates: true },
-      )
-      .then(undefined, () => {});
+    void registrarVisualizacao(perfil.id);
   }, [user, perfil.id]);
 
   // ── Busca as avaliações individuais de uma atividade (modal "Ver", k11) ───────
   // Lê de `avaliacoes` (por dentista_id + atividade) e `clientes` (nome/foto).
   const fetchAvaliacoesIndividuais = useCallback(
     async (atividade: string) => {
-      try {
-        const supabase = criarClienteNavegador();
-        const { data: avaliacoes, error } = await supabase
-          .from("avaliacoes")
-          .select("paciente_id, nota, comentario, criado_em")
-          .eq("dentista_id", perfil.id)
-          .eq("atividade", atividade)
-          .order("criado_em", { ascending: false });
-
-        if (error) throw error;
-
-        const lista = (avaliacoes ?? []) as {
-          paciente_id: string;
-          nota: number;
-          comentario: string | null;
-          criado_em: string;
-        }[];
-
-        // Resolve nome/foto dos pacientes (clientes não excluídos).
-        const ids = [...new Set(lista.map((a) => a.paciente_id))];
-        let mapaPacientes: Record<string, { nome: string; foto: string }> = {};
-        if (ids.length > 0) {
-          const { data: pacientes } = await supabase
-            .from("clientes")
-            .select("id, nome, foto")
-            .in("id", ids)
-            .is("deleted_at", null);
-          mapaPacientes = Object.fromEntries(
-            ((pacientes ?? []) as { id: string; nome: string; foto: string }[]).map((p) => [
-              p.id,
-              { nome: p.nome, foto: p.foto },
-            ]),
-          );
-        }
-
-        setAvaliacoesIndividuais({
-          atividade,
-          ratings: lista.map((r) => ({
-            nota: r.nota,
-            paciente_nome: mapaPacientes[r.paciente_id]?.nome || "Anônimo",
-            paciente_foto: mapaPacientes[r.paciente_id]?.foto || "",
-            comentario: r.comentario,
-            criado_em: r.criado_em,
-          })),
-        });
-      } catch {
-        // Sem toast (convenção R0): abre o modal vazio com a mensagem padrão.
-        setAvaliacoesIndividuais({ atividade, ratings: [] });
-      }
+      const ratings = await lerAvaliacoesAtividade(perfil.id, atividade);
+      setAvaliacoesIndividuais({ atividade, ratings });
+      setComentarioAbertoIdx(null);
     },
     [perfil.id],
   );
@@ -1409,8 +1306,21 @@ export default function PerfilDentistaView({
                   <div
                     key={i}
                     className="group relative flex items-center gap-3 p-3 rounded-[12px]"
-                    style={{ background: "#F2F2F7", cursor: r.comentario ? "help" : "default" }}
-                    title={r.comentario || undefined}
+                    style={{ background: "#F2F2F7", cursor: r.comentario ? "pointer" : "default" }}
+                    onClick={r.comentario ? () => setComentarioAbertoIdx((cur) => (cur === i ? null : i)) : undefined}
+                    role={r.comentario ? "button" : undefined}
+                    tabIndex={r.comentario ? 0 : undefined}
+                    aria-expanded={r.comentario ? comentarioAbertoIdx === i : undefined}
+                    onKeyDown={
+                      r.comentario
+                        ? (e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              setComentarioAbertoIdx((cur) => (cur === i ? null : i));
+                            }
+                          }
+                        : undefined
+                    }
                   >
                     <img
                       src={r.paciente_foto || FOTO_FALLBACK}
@@ -1447,7 +1357,7 @@ export default function PerfilDentistaView({
                     {r.comentario && (
                       <div
                         role="tooltip"
-                        className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-2 w-max max-w-[260px] -translate-x-1/2 rounded-[14px] px-3.5 py-2.5 text-left text-[12.5px] font-medium leading-snug text-white opacity-0 shadow-lg transition-opacity duration-200 group-hover:opacity-100"
+                        className={`pointer-events-none absolute bottom-full left-1/2 z-30 mb-2 w-max max-w-[260px] -translate-x-1/2 rounded-[14px] px-3.5 py-2.5 text-left text-[12.5px] font-medium leading-snug text-white shadow-lg transition-opacity duration-200 ${comentarioAbertoIdx === i ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
                         style={{ background: "rgba(10,42,102,0.96)" }}
                       >
                         &ldquo;{r.comentario}&rdquo;

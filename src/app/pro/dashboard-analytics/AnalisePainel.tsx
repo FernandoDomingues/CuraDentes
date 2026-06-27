@@ -12,7 +12,7 @@ import { useEffect, useMemo, useState, type ComponentType } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import Container from "@/components/Container";
-import { criarClienteNavegador } from "@/lib/supabase/client";
+import { carregarAnalise } from "./acoes";
 import { PERIODOS } from "@/lib/dba";
 import {
   metricas, origemLogins, funil as calcFunil, topListas, cadastros as calcCadastros,
@@ -87,50 +87,23 @@ export default function AnalisePainel() {
     let ativo = true;
     (async () => {
       setLoading(true);
-      const supabase = criarClienteNavegador();
-      const desde = new Date(Date.now() - 365 * 86400000).toISOString();
-      try {
-        const [
-          rBusca, rLogin, rEnd, rDentCount, rCadDent, rCadPac, rViews, rContatos, rTaxa,
-        ] = await Promise.all([
-          supabase.from("logs_busca").select("query, cidade, estado, bairro, resultados_count, latitude, longitude, criado_em").gte("criado_em", desde).order("criado_em", { ascending: false }),
-          supabase.from("logs_login").select("origem, criado_em").gte("criado_em", desde).order("criado_em", { ascending: false }),
-          supabase.from("curadentespro_enderecos").select("bairro, cidade, latitude, longitude").not("latitude", "is", null).not("longitude", "is", null),
-          supabase.from("curadentespro").select("id", { count: "exact", head: true }).eq("lgpd_aceito", true).is("deleted_at", null),
-          supabase.from("curadentespro").select("criado_em").eq("lgpd_aceito", true).is("deleted_at", null).gte("criado_em", desde),
-          supabase.from("clientes").select("criado_em").is("deleted_at", null).gte("criado_em", desde),
-          supabase.from("perfil_visualizacoes").select("criado_em").gte("criado_em", desde),
-          supabase.from("perfil_contatos").select("criado_em").gte("criado_em", desde),
-          supabase.rpc("taxa_sucesso_contato", { p_dias: diasArg(periodo) }),
-        ]);
-        if (!ativo) return;
-        if (rBusca.error) throw rBusca.error;
-        // As demais consultas não derrubam o painel, mas erros (ex.: RLS) não devem
-        // ficar invisíveis — senão um gráfico zerado parece "sem dados".
-        const outros = [rLogin, rEnd, rDentCount, rCadDent, rCadPac, rViews, rContatos, rTaxa]
-          .map((r) => r.error)
-          .filter(Boolean);
-        if (outros.length) console.warn("[analytics] consultas com erro:", outros.map((e) => e?.message));
-        setLogs((rBusca.data as LogBusca[]) ?? []);
-        setLoginLogs((rLogin.data as LoginLog[]) ?? []);
-        setEnderecos((rEnd.data as EnderecoGeo[]) ?? []);
-        setTotalDentistas(rDentCount.count ?? 0);
-        setCadDentistas((rCadDent.data as ComCriadoEm[]) ?? []);
-        setCadPacientes((rCadPac.data as ComCriadoEm[]) ?? []);
-        setPerfilViews((rViews.data as ComCriadoEm[]) ?? []);
-        setPerfilContatos((rContatos.data as ComCriadoEm[]) ?? []);
-        const t = (Array.isArray(rTaxa.data) ? rTaxa.data[0] : rTaxa.data) as Record<string, unknown> | null;
-        setSucesso({
-          buscaram: Number(t?.buscaram) || 0,
-          sucesso: Number(t?.sucesso) || 0,
-          whatsapp: Number(t?.sucesso_whatsapp) || 0,
-          telefone: Number(t?.sucesso_telefone) || 0,
-        });
-      } catch (e) {
-        if (ativo) setErro(e instanceof Error ? e.message : "Erro ao carregar a análise.");
-      } finally {
-        if (ativo) setLoading(false);
+      const res = await carregarAnalise(diasArg(periodo));
+      if (!ativo) return;
+      if (!res.ok) {
+        setErro(res.erro || "Erro ao carregar a análise.");
+        setLoading(false);
+        return;
       }
+      setLogs(res.logs);
+      setLoginLogs(res.loginLogs);
+      setEnderecos(res.enderecos);
+      setTotalDentistas(res.totalDentistas);
+      setCadDentistas(res.cadDentistas);
+      setCadPacientes(res.cadPacientes);
+      setPerfilViews(res.perfilViews);
+      setPerfilContatos(res.perfilContatos);
+      setSucesso(res.sucesso);
+      setLoading(false);
     })();
     return () => { ativo = false; };
   }, [periodo]);

@@ -17,7 +17,8 @@ import { Trash2, ShieldCheck, Mail, KeyRound } from "lucide-react";
 import Container from "@/components/Container";
 import EnderecosEditor, { type EnderecoForm } from "@/components/pro/EnderecosEditor";
 import { criarClienteNavegador } from "@/lib/supabase/client";
-import { encerrarSessao } from "@/lib/encerrar-sessao";
+import { excluirContaDentista } from "@/lib/conta-acoes";
+import { salvarPerfil } from "./acoes";
 import { formatarInstagram, extrairUserInstagram, INSTAGRAM_BASE } from "@/lib/instagram";
 import { validarTelefone, validarAnoFormacao } from "@/lib/validacao";
 import { geocodeEnderecoComFallback } from "@/lib/geocoding";
@@ -119,34 +120,9 @@ export default function PerfilEditor({
       const instaNorm = extrairUserInstagram(instagramUrl || "");
       setInstagram(instaNorm);
 
-      const { error: pErr } = await supabase
-        .from("curadentespro")
-        .update({
-          nome,
-          tratamento: tratamento || null,
-          telefone,
-          ano_formacao: anoFormacao ? parseInt(anoFormacao, 10) : null,
-          especialidade,
-          bio,
-          instagram: instagramUrl,
-          google_review_url: googleReviewUrl.trim() || null,
-        })
-        .eq("id", perfil.id);
-      if (pErr) throw pErr;
-
-      // Preferências de e-mail (opt-in/opt-out).
-      const { error: prefErr } = await supabase.from("curadentespro_email").upsert(
-        { curadentespro_id: perfil.id, prefs: { desempenho: prefDesempenho, novidades: prefNovidades, parceiros: prefParceiros } },
-        { onConflict: "curadentespro_id" },
-      );
-      if (prefErr) console.warn("[perfil] prefs e-mail:", prefErr.message);
-
-      const idsRem = removidos.filter((id) => !id.startsWith("end-"));
-      if (idsRem.length > 0) {
-        const { error: delErr } = await supabase.from("curadentespro_enderecos").delete().in("id", idsRem);
-        if (delErr) throw delErr;
-      }
-
+      // Geocodifica cada endereço NO CLIENTE (preserva o comportamento atual) e
+      // delega TODAS as gravações autenticadas para a Server Action salvarPerfil.
+      const enderecosComCoord: (EnderecoForm & { latitude: number | null; longitude: number | null })[] = [];
       for (const end of enderecos) {
         let latitude: number | null = null;
         let longitude: number | null = null;
@@ -157,51 +133,38 @@ export default function PerfilEditor({
             longitude = coord.longitude;
           }
         }
-        const payload = {
-          curadentespro_id: perfil.id,
-          nome_clinica: end.nome_clinica,
-          logradouro: end.logradouro,
-          numero: end.numero,
-          complemento: end.complemento,
-          bairro: end.bairro,
-          cidade: end.cidade,
-          estado: end.estado,
-          cep: end.cep,
-          telefone: end.telefone,
-          whatsapp: end.whatsapp,
-          atende_urgencias: end.atende_urgencias,
-          aceita_urgencia_termo: end.aceita_urgencia_termo,
-          estacionamento: end.estacionamento,
-          atividades: end.atividades,
-          convenios: end.convenios,
-          formas_pagamento: end.formas_pagamento,
-          politica_cancelamento: end.politica_cancelamento,
-          observacoes: end.observacoes,
-          agenda: end.agenda,
-          latitude,
-          longitude,
-        };
-        if (end._isNew) {
-          const { data: novo, error } = await supabase
-            .from("curadentespro_enderecos")
-            .insert(payload)
-            .select("id")
-            .single();
-          if (error) throw error;
-          // Marca como salvo (id real, sem _isNew): se um endereço POSTERIOR falhar e
-          // o dentista tentar de novo, este vira UPDATE em vez de duplicar (review).
-          if (novo) {
-            setEnderecos((prev) => prev.map((x) => (x.id === end.id ? { ...x, id: novo.id, _isNew: false } : x)));
-          }
-        } else {
-          const { error } = await supabase.from("curadentespro_enderecos").update(payload).eq("id", end.id);
-          if (error) throw error;
-        }
+        enderecosComCoord.push({ ...end, latitude, longitude });
       }
+
+      const res = await salvarPerfil({
+        nome,
+        tratamento: tratamento || null,
+        telefone,
+        anoFormacao: anoFormacao ? parseInt(anoFormacao, 10) : null,
+        especialidade,
+        bio,
+        instagramUrl,
+        googleReviewUrl: googleReviewUrl.trim() || null,
+        prefs: { desempenho: prefDesempenho, novidades: prefNovidades, parceiros: prefParceiros },
+        enderecos: enderecosComCoord,
+        removidos: removidos.filter((id) => !id.startsWith("end-")),
+      });
+      if (!res.ok) {
+        setMsg({ tipo: "erro", texto: res.erro || "Erro ao salvar o perfil." });
+        setSalvando(false);
+        return;
+      }
+
+      // Aplica os ids reais dos endereços novos e marca todos como salvos.
+      const enderecosSalvos = enderecos.map((x) => {
+        const m = res.novosIds?.find((n) => n.tempId === x.id);
+        return m ? { ...x, id: m.id, _isNew: false } : { ...x, _isNew: false };
+      });
+      setEnderecos(enderecosSalvos);
 
       // Snapshot pós-save com o instagram já normalizado (evita falso "alterações
       // não salvas" logo após salvar — o setState do instagram é assíncrono).
-      snapshotRef.current = JSON.stringify({ nome, tratamento, telefone, anoFormacao, especialidade, googleReviewUrl, bio, instagram: instaNorm, enderecos, prefDesempenho, prefNovidades, prefParceiros });
+      snapshotRef.current = JSON.stringify({ nome, tratamento, telefone, anoFormacao, especialidade, googleReviewUrl, bio, instagram: instaNorm, enderecos: enderecosSalvos, prefDesempenho, prefNovidades, prefParceiros });
       setMsg({ tipo: "ok", texto: "Perfil atualizado com sucesso!" });
       setTimeout(() => {
         router.push("/pro/dashboard");
@@ -229,13 +192,18 @@ export default function PerfilEditor({
 
   async function excluirConta() {
     setExcluindo(true);
-    const { error } = await supabase.rpc("apagar_minha_conta_dentista");
-    if (error) {
-      setMsg({ tipo: "erro", texto: "Erro ao excluir a conta. Tente novamente." });
+    const res = await excluirContaDentista();
+    if (!res.ok) {
+      setMsg({ tipo: "erro", texto: res.erro || "Erro ao excluir a conta. Tente novamente." });
       setExcluindo(false);
       return;
     }
-    await encerrarSessao(supabase);
+    try {
+      localStorage.removeItem("cd_user");
+    } catch {
+      /* ignore */
+    }
+    window.dispatchEvent(new Event("curadentes:auth"));
     router.replace("/");
     router.refresh();
   }

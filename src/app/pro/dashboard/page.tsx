@@ -262,7 +262,7 @@ export default async function DashboardPage() {
         <aside className="flex flex-col gap-6">
           <section className="rounded-2xl border border-white/60 bg-white/90 shadow-[0_2px_8px_rgba(16,24,64,0.05)] backdrop-blur p-5">
             <h2 className="mb-3 text-lg font-bold text-brand-navy">Sua bio</h2>
-            <BioEditor id={pro.id} bioInicial={pro.bio ?? ""} />
+            <BioEditor bioInicial={pro.bio ?? ""} />
           </section>
 
           <section className="rounded-2xl border border-white/60 bg-white/90 shadow-[0_2px_8px_rgba(16,24,64,0.05)] backdrop-blur p-5">

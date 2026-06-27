@@ -1,14 +1,14 @@
 "use client";
 
 // Editor da bio do dentista (ilha cliente dentro do dashboard).
-// Salva direto no curadentespro via cliente do navegador (RLS owner-only).
-// Bio vazia continua vazia — sem texto padrão (ver [[bio-dentista-sem-padrao]]).
+// Salva via Server Action (salvarBio) — o id vem da SESSÃO no servidor, não daqui
+// (parte do refactor do C1/httpOnly). Bio vazia continua vazia — sem texto padrão.
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { criarClienteNavegador } from "@/lib/supabase/client";
+import { salvarBio } from "./acoes";
 
-export default function BioEditor({ id, bioInicial }: { id: string; bioInicial: string }) {
+export default function BioEditor({ bioInicial }: { bioInicial: string }) {
   const router = useRouter();
   const [editando, setEditando] = useState(false);
   const [bio, setBio] = useState(bioInicial);
@@ -18,11 +18,10 @@ export default function BioEditor({ id, bioInicial }: { id: string; bioInicial: 
   async function salvar() {
     setSalvando(true);
     setMsg("");
-    const supabase = criarClienteNavegador();
-    const { error } = await supabase.from("curadentespro").update({ bio }).eq("id", id);
+    const res = await salvarBio(bio);
     setSalvando(false);
-    if (error) {
-      setMsg("Não foi possível salvar. Tente novamente.");
+    if (!res.ok) {
+      setMsg(res.erro || "Não foi possível salvar. Tente novamente.");
       return;
     }
     setEditando(false);

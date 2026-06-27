@@ -1,14 +1,12 @@
 "use client";
 
 // Ações da conta no dashboard (ilha cliente): Sair e Excluir conta.
-//   • Sair: signOut no navegador (limpa cookies) → home.
-//   • Excluir: confirma, chama RPC apagar_minha_conta_dentista (soft-delete),
-//     faz signOut e vai para a home. Mesma semântica do site-k11.
+// Ambas via Server Action (logout/exclusão NO SERVIDOR — refactor do C1; o signOut
+// no servidor limpa os cookies httpOnly). Mesma semântica do site-k11.
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { criarClienteNavegador } from "@/lib/supabase/client";
-import { encerrarSessao } from "@/lib/encerrar-sessao";
+import { excluirContaDentista, sairConta } from "@/lib/conta-acoes";
 
 export default function AcoesConta() {
   const router = useRouter();
@@ -16,27 +14,35 @@ export default function AcoesConta() {
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState("");
 
-  async function sair() {
-    setOcupado(true);
-    const supabase = criarClienteNavegador();
-    await encerrarSessao(supabase);
+  // Pós-logout: limpa o cache otimista de login e avisa o SessaoProvider (que re-busca
+  // /api/me e atualiza o cabeçalho), depois vai para a home.
+  function finalizar() {
+    try {
+      localStorage.removeItem("cd_user");
+    } catch {
+      /* ignore */
+    }
+    window.dispatchEvent(new Event("curadentes:auth"));
     router.replace("/");
     router.refresh();
+  }
+
+  async function sair() {
+    setOcupado(true);
+    await sairConta();
+    finalizar();
   }
 
   async function excluir() {
     setOcupado(true);
     setErro("");
-    const supabase = criarClienteNavegador();
-    const { error } = await supabase.rpc("apagar_minha_conta_dentista");
-    if (error) {
-      setErro("Não foi possível excluir a conta agora. Tente novamente.");
+    const res = await excluirContaDentista();
+    if (!res.ok) {
+      setErro(res.erro || "Não foi possível excluir a conta agora. Tente novamente.");
       setOcupado(false);
       return;
     }
-    await encerrarSessao(supabase);
-    router.replace("/");
-    router.refresh();
+    finalizar();
   }
 
   return (

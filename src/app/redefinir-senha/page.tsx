@@ -17,7 +17,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, Loader2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
-import { criarClienteNavegador } from "@/lib/supabase/client";
+import { redefinirSenhaDentista } from "./acoes";
 import { forcaSenha, senhaValida } from "@/lib/senha";
 
 export default function RedefinirSenhaPage() {
@@ -30,10 +30,13 @@ export default function RedefinirSenhaPage() {
   const [erro, setErro] = useState("");
   const [ok, setOk] = useState(false);
 
-  // Confere se há sessão (criada pelo callback do link de recuperação).
+  // Confere se há sessão (criada pelo callback do link de recuperação) — lê no
+  // servidor via /api/me (cookies httpOnly), não mais com o cliente do navegador.
   useEffect(() => {
-    const supabase = criarClienteNavegador();
-    supabase.auth.getUser().then(({ data: { user } }) => setTemSessao(!!user));
+    fetch("/api/me", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d: { user: unknown }) => setTemSessao(!!d.user))
+      .catch(() => setTemSessao(false));
   }, []);
 
   async function salvar(e: FormEvent) {
@@ -48,28 +51,19 @@ export default function RedefinirSenhaPage() {
       return;
     }
     setOcupado(true);
-    const supabase = criarClienteNavegador();
-    const { error } = await supabase.auth.updateUser({ password: senha });
-    if (error) {
-      setErro("Não foi possível salvar a nova senha. O link pode ter expirado.");
+    const res = await redefinirSenhaDentista(senha);
+    if (!res.ok) {
+      setErro(res.erro || "Não foi possível salvar a nova senha. O link pode ter expirado.");
       setOcupado(false);
       return;
     }
-    // Reativa a conta se estava em soft-delete (paridade com o login por senha).
-    const { error: rErr } = await supabase.rpc("restaurar_minha_conta_dentista");
-    if (rErr) console.warn("[redefinir-senha] restaurar conta:", rErr.message);
-
-    // Encerra a sessão de recuperação (com fallback local) e vai para o login.
+    // Sessão de recuperação já encerrada no servidor; limpa o cache otimista do header.
     try {
-      const { error: sErr } = await supabase.auth.signOut();
-      if (sErr) await supabase.auth.signOut({ scope: "local" });
+      localStorage.removeItem("cd_user");
     } catch {
-      try {
-        await supabase.auth.signOut({ scope: "local" });
-      } catch {
-        /* ignora — a sessão será descartada na navegação */
-      }
+      /* ignore */
     }
+    window.dispatchEvent(new Event("curadentes:auth"));
     setOk(true);
     toast.success("Senha alterada com sucesso! Faça login novamente.");
     setTimeout(() => router.replace("/"), 1800);

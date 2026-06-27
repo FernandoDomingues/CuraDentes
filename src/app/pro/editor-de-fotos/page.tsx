@@ -1,19 +1,15 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// EDITOR DE FOTOS — /pro/editor-de-fotos (Server Component → casca + id do dentista).
+// EDITOR DE FOTOS — /pro/editor-de-fotos (Server Component → casca).
 //
-// O acesso já foi garantido pelo layout /pro. Pegamos o id do dentista no servidor
-// e passamos para o editor interativo (Client Component), que faz crop + upload.
+// O acesso já foi garantido pelo layout /pro. O editor interativo (Client Component)
+// faz crop + upload; o upload é uma Server Action que pega o id do dentista da SESSÃO
+// (não precisamos mais passar o id por prop — refactor do C1).
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import Container from "@/components/Container";
-import { getUsuario } from "@/lib/auth";
 import EditorFotos from "./EditorFotos";
 
-export const dynamic = "force-dynamic";
-
-export default async function EditorDeFotosPage() {
-  const usuario = await getUsuario();
-  // O guard de /pro garante dentista/superuser; o superuser não tem foto de perfil.
+export default function EditorDeFotosPage() {
   return (
     <Container className="py-10 md:py-12">
       <h1 className="text-2xl font-bold text-brand-navy">Foto de perfil</h1>
@@ -22,7 +18,7 @@ export default async function EditorDeFotosPage() {
         qualidade (WebP).
       </p>
       <div className="mt-8 max-w-xl">
-        <EditorFotos dentistaId={usuario!.id} />
+        <EditorFotos />
       </div>
     </Container>
   );

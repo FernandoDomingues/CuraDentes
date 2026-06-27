@@ -20,8 +20,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { X, Eye, EyeOff, ChevronRight } from "lucide-react";
 import { criarClienteNavegador } from "@/lib/supabase/client";
-import { isSuperuserEmail, resolveLoginEmail } from "@/lib/superuser";
-import { lerSessaoDoCookie, limparCookiesSessao } from "@/lib/sessao-cookie";
+import { resolveLoginEmail } from "@/lib/superuser";
+import { sairConta } from "@/lib/conta-acoes";
 
 interface UsuarioSessao {
   id: string;
@@ -79,56 +79,77 @@ export default function SessaoProvider({ children }: { children: ReactNode }) {
   const proximaUrlRef = useRef<string | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
-  // ── Detecta sessão LENDO O COOKIE ───────────────────────────────────────────
-  // (O getUser()/getSession() do supabase-js no navegador TRAVA — confirmado em
-  // /diag. Lemos a sessão direto do cookie, que funciona, e checamos "é dentista?"
-  // via REST cru, porque o .from() do supabase-js também depende do auth travado.)
+  // ── Estado de login VINDO DO SERVIDOR (/api/me) ─────────────────────────────
+  // Antes líamos o cookie de sessão direto no cliente (exigia httpOnly:false) e
+  // checávamos "é dentista?" por REST cru com o token. Agora pedimos ao servidor
+  // via /api/me, que lê a sessão httpOnly (cookies()) e devolve {nome,foto,ehPro,
+  // ehSuper} já resolvido — sem token no cliente e compatível com httpOnly:true.
   useEffect(() => {
     let ativo = true;
-    function sincronizar() {
-      const s = lerSessaoDoCookie();
-      if (!s) { setUser(null); setCarregando(false); return; }
-      const ehSuper = isSuperuserEmail(s.email);
-      const base: UsuarioSessao = {
-        id: s.userId,
-        email: s.email,
-        nome: ehSuper ? "SuperDom" : s.nome,
-        foto: s.foto,
-        ehPro: false,
-        ehSuper,
-      };
-      setUser(base);
-      setCarregando(false);
-      if (ehSuper) return;
-      // É dentista? (REST cru com o token do cookie — não trava)
-      const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-      const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-      fetch(`${url}/rest/v1/curadentespro?id=eq.${s.userId}&deleted_at=is.null&select=nome,foto_url`, {
-        headers: { apikey: key, Authorization: `Bearer ${s.accessToken}` },
-      })
-        .then((r) => (r.ok ? r.json() : []))
-        .then((rows: { nome?: string | null; foto_url?: string | null }[]) => {
-          if (!ativo || !rows?.[0]) return;
-          setUser({ ...base, nome: rows[0].nome || base.nome, foto: rows[0].foto_url || base.foto, ehPro: true });
-        })
-        .catch(() => {});
+    // Otimista: mostra o último login conhecido (só nome/foto/papel — NUNCA o token)
+    // para não piscar "Entrar" enquanto /api/me responde; /api/me confirma/corrige.
+    try {
+      const cache = localStorage.getItem("cd_user");
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (cache) setUser(JSON.parse(cache) as UsuarioSessao);
+    } catch { /* ignore */ }
+
+    async function sincronizar() {
+      try {
+        const r = await fetch("/api/me", { cache: "no-store" });
+        const data = (await r.json()) as { user: UsuarioSessao | null };
+        if (!ativo) return;
+        setUser(data.user ?? null);
+        try {
+          if (data.user) localStorage.setItem("cd_user", JSON.stringify(data.user));
+          else localStorage.removeItem("cd_user");
+        } catch { /* ignore */ }
+      } catch {
+        if (ativo) setUser(null);
+      } finally {
+        if (ativo) setCarregando(false);
+      }
     }
     sincronizar();
     // Re-checa ao voltar o foco e quando login/logout dispara o evento.
     const onAuth = () => sincronizar();
+    // bfcache: ao voltar do OAuth do Google (home → Google → callback → home), o
+    // navegador pode RESTAURAR a home do back/forward cache com o estado React
+    // congelado de ANTES do login (user=null). O efeito de montagem não roda de novo,
+    // então /api/me nunca é re-buscado e o cabeçalho fica preso em "Entrar" até um
+    // reload manual. pageshow.persisted detecta essa restauração e re-sincroniza.
+    // (Bug pego no QA: dentista → logout → login Google não aparecia logado.)
+    const onPageShow = (e: PageTransitionEvent) => { if (e.persisted) sincronizar(); };
     window.addEventListener("focus", onAuth);
     window.addEventListener("curadentes:auth", onAuth);
+    window.addEventListener("pageshow", onPageShow);
     return () => {
       ativo = false;
       window.removeEventListener("focus", onAuth);
       window.removeEventListener("curadentes:auth", onAuth);
+      window.removeEventListener("pageshow", onPageShow);
     };
   }, []);
 
   function fecharModal() {
     setModal(null); setEmailLogin(""); setSenhaLogin(""); setMostrarSenha(false);
     setModoRecovery(false); setEmailRecovery(""); setErro(""); setAviso("");
+    setOcupado(false);
   }
+
+  // Reset à PROVA DE FLUXO: sempre que um modal ABRE, garante o botão clicável. Resetar
+  // só em cada handler (fecharModal/abrir/pedir) era frágil — um login bem-sucedido
+  // chama fecharModal e em seguida navega (router.replace+refresh); como o
+  // SessaoProvider fica no layout raiz e NÃO remonta entre navegações, o `ocupado=true`
+  // conseguia ficar pendurado e o botão reabria preso em "Entrando…" (logout → reabrir).
+  // Reload (Ctrl+Shift+R) limpava porque remontava o provider. Zerar na ABERTURA cobre
+  // qualquer caminho. Keyed em `modal`: não dispara durante um login em andamento (o
+  // modal não muda enquanto está aberto). erro/aviso já são limpos pelos handlers.
+  useEffect(() => {
+    if (!modal) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset síncrono na abertura é intencional (1 render extra, só ao abrir o modal)
+    setOcupado(false);
+  }, [modal]);
 
   // Acessibilidade dos modais de login: ao abrir, foca o diálogo; fecha no Esc;
   // aprisiona o Tab dentro do modal (não vaza para a página de trás); e devolve o
@@ -212,13 +233,14 @@ export default function SessaoProvider({ children }: { children: ReactNode }) {
       proximaUrlRef.current = window.location.pathname + window.location.search;
     }
     setErro("");
+    setOcupado(false); // garante o botão clicável ao (re)abrir o modal
     setModal("paciente");
     return false;
   }
   function abrirModalDentista() {
     if (user?.ehSuper) { router.push("/pro/dashboard-analytics"); return; }
     if (user?.ehPro) { router.push("/pro/dashboard"); return; }
-    setErro(""); setModal("dentista");
+    setErro(""); setOcupado(false); setModal("dentista"); // ocupado=false: botão sempre clicável ao abrir
   }
 
   async function loginDentista(e?: FormEvent) {
@@ -260,9 +282,15 @@ export default function SessaoProvider({ children }: { children: ReactNode }) {
   }
 
   async function sair() {
-    // Logout local: apaga os cookies de sessão (o signOut do supabase-js trava).
-    limparCookiesSessao();
+    // Logout NO SERVIDOR: o signOut limpa os cookies de sessão server-side, o que passa
+    // a funcionar com httpOnly:true (o cliente não consegue mais apagar o cookie).
+    await sairConta();
     setUser(null);
+    try {
+      localStorage.removeItem("cd_user");
+    } catch {
+      /* ignore */
+    }
     if (typeof window !== "undefined") window.dispatchEvent(new Event("curadentes:auth"));
     router.replace("/");
     router.refresh();
