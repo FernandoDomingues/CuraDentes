@@ -125,11 +125,22 @@ export default function SessaoProvider({ children }: { children: ReactNode }) {
   function fecharModal() {
     setModal(null); setEmailLogin(""); setSenhaLogin(""); setMostrarSenha(false);
     setModoRecovery(false); setEmailRecovery(""); setErro(""); setAviso("");
-    // Reseta o estado de "Entrando..." — sem isto, após um login bem-sucedido
-    // (que chama fecharModal e navega) o ocupado ficava travado em true e o botão
-    // reaparecia desabilitado ("Entrando...") na próxima vez que o modal abrisse.
     setOcupado(false);
   }
+
+  // Reset à PROVA DE FLUXO: sempre que um modal ABRE, garante o botão clicável. Resetar
+  // só em cada handler (fecharModal/abrir/pedir) era frágil — um login bem-sucedido
+  // chama fecharModal e em seguida navega (router.replace+refresh); como o
+  // SessaoProvider fica no layout raiz e NÃO remonta entre navegações, o `ocupado=true`
+  // conseguia ficar pendurado e o botão reabria preso em "Entrando…" (logout → reabrir).
+  // Reload (Ctrl+Shift+R) limpava porque remontava o provider. Zerar na ABERTURA cobre
+  // qualquer caminho. Keyed em `modal`: não dispara durante um login em andamento (o
+  // modal não muda enquanto está aberto). erro/aviso já são limpos pelos handlers.
+  useEffect(() => {
+    if (!modal) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset síncrono na abertura é intencional (1 render extra, só ao abrir o modal)
+    setOcupado(false);
+  }, [modal]);
 
   // Acessibilidade dos modais de login: ao abrir, foca o diálogo; fecha no Esc;
   // aprisiona o Tab dentro do modal (não vaza para a página de trás); e devolve o
