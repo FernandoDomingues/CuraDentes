@@ -16,6 +16,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { getCoordenadas, reverseGeocodeCidadeBairro, GEOLOC_TIMEOUT_MS } from "@/lib/geocoding";
 import { calcularDistanciaKm, formatarDistancia } from "@/lib/distancia";
 import { supabase } from "@/lib/supabase/public";
+import { aoFalharAvatar } from "@/lib/avatar";
 import { Loader2, MapPin, Star, Building2, ChevronRight, Filter, SlidersHorizontal, X, Search } from "lucide-react";
 import CroVerificationBadge from "@/components/CroVerificationBadge";
 import { ESPECIALIDADES, nomeAmigavel } from "@/lib/especialidades";
@@ -1079,6 +1080,7 @@ export default function BuscaCliente({ queryInicial }: { queryInicial: string })
                     src={dentista.dentista_foto || logoProAltUrl}
                     alt={dentista.dentista_nome}
                     className="w-16 h-16 rounded-full object-cover border-2 border-gray-50 bg-gray-50"
+                    onError={aoFalharAvatar}
                   />
                   <div className="flex-1">
                     <div className="flex justify-between items-start">
