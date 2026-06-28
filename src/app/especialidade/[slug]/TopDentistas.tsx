@@ -27,6 +27,7 @@ import CroVerificationBadge from "@/components/CroVerificationBadge";
 import CtaEspecialidade from "./CtaEspecialidade";
 import { MapPin, Star, ChevronRight, Navigation, Loader2 } from "lucide-react";
 import { AVATAR_PADRAO } from "@/lib/site";
+import { aoFalharAvatar } from "@/lib/avatar";
 import { nomeExibicao as nomeExibicaoDentista } from "@/lib/dentistas";
 
 // Linha bruta devolvida pela RPC.
@@ -222,6 +223,7 @@ export default function TopDentistas({ especialidade }: { especialidade: string 
                 alt={d.dentista_nome}
                 className="w-9 h-9 rounded-full object-cover flex-shrink-0"
                 loading="lazy"
+                onError={aoFalharAvatar}
               />
               <div className="flex-1 min-w-0">
                 <div className="text-[13px] font-semibold truncate" style={{ color: "#fff" }}>

@@ -19,6 +19,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/public";
+import { aoFalharAvatar } from "@/lib/avatar";
 import { Sparkles, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import CroVerificationBadge from "@/components/CroVerificationBadge";
 import { nomeAmigavel } from "@/lib/especialidades";
@@ -210,6 +211,7 @@ export default function UltimosDentistas() {
                   src={dentista.foto_url || logoProAltUrl}
                   alt={dentista.nome}
                   className="w-14 h-14 rounded-full object-cover border-2 border-gray-50 bg-gray-50"
+                  onError={aoFalharAvatar}
                 />
                 <div className="flex-1 mt-1">
                   <h3 className="font-bold text-[16px] text-[#1C1C1E] leading-tight line-clamp-1 group-hover:text-[#007AFF] transition-colors">

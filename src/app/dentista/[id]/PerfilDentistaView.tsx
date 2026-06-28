@@ -43,6 +43,7 @@ import {
 import { criarClienteNavegador } from "@/lib/supabase/client";
 import { registrarContato, registrarVisualizacao, enviarAvaliacao as enviarAvaliacaoAction, lerAvaliacoesAtividade } from "./acoes";
 import { useSessao } from "@/components/SessaoProvider";
+import { aoFalharAvatar } from "@/lib/avatar";
 
 /** Ícone do Instagram (inline — lucide-react ^1.x não exporta `Instagram`). */
 function IconeInstagram({ size = 22 }: { size?: number }) {
@@ -1012,6 +1013,7 @@ export default function PerfilDentistaView({
                 src={perfil.foto_url || FOTO_FALLBACK}
                 alt={nome}
                 className="w-full h-full object-cover"
+                onError={aoFalharAvatar}
               />
             </div>
 
