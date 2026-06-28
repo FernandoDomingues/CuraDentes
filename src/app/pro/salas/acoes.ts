@@ -7,7 +7,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import { criarClienteServidor } from "@/lib/supabase/server";
-import type { SalaForm, SalaStatus, MinhaSala } from "@/lib/salas";
+import type { SalaForm, SalaStatus, MinhaSala, EnderecoResumo } from "@/lib/salas";
 
 async function sessao() {
   const supabase = await criarClienteServidor();
@@ -15,14 +15,6 @@ async function sessao() {
     data: { user },
   } = await supabase.auth.getUser();
   return { supabase, uid: (user?.id ?? null) as string | null };
-}
-
-/** Endereço resumido do anfitrião (para o seletor de "onde fica a sala"). */
-export interface EnderecoResumo {
-  id: string;
-  nome_clinica: string | null;
-  cidade: string | null;
-  bairro: string | null;
 }
 
 /** Carrega as salas do anfitrião + seus endereços (para o formulário). */

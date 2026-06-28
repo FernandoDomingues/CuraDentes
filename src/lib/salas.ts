@@ -58,6 +58,14 @@ export interface SalaForm {
   contato_email: string;
 }
 
+/** Endereço resumido do anfitrião (seletor de "onde fica a sala"). */
+export interface EnderecoResumo {
+  id: string;
+  nome_clinica: string | null;
+  cidade: string | null;
+  bairro: string | null;
+}
+
 /** Solicitação de reserva (tabela solicitacoes_reserva). */
 export interface SolicitacaoReserva {
   id: string;
