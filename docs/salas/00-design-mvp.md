@@ -7,7 +7,7 @@
 ---
 
 ## 0. Decisões do dono (travadas 2026-06-28)
-- **Contato:** revelado **só após a clínica aprovar** (antes, só cidade/bairro). → RPC `contato_da_reserva` gated em `status='aprovada'`; tela de sala oculta o contato direto até lá.
+- **Contato:** revelado **só após a clínica aprovar**. → A sala tem um **contato de locação DEDICADO e privado** (`salas.contato_whatsapp/contato_email`), **separado do telefone público de paciente** (que já é público no perfil). Revelado só pela RPC `contato_da_reserva` (gated em `status='aprovada'` + ser parte). A leitura pública das salas é por uma **view `salas_publicas`** que NÃO expõe `endereco_id`/`anfitriao_id`/contato. *(Decisão de v2, pós revisão adversarial: usar o telefone público da clínica NÃO honraria a trava — ele é descobrível pelo perfil; por isso o contato dedicado.)*
 - **CRO:** exigir **CRO verificado para os DOIS lados** — anunciar **e** solicitar. → checar `cro_verificado = true` no INSERT de `salas` (anfitrião) **e** na criação de `solicitacoes_reserva` (locatário); reforçar no RLS/RPC.
 - **Preço:** **sempre mostrar valor** (R$ por hora/turno/dia). → `salas.preco_valor NOT NULL` + `preco_unidade`.
 - **Defaults aplicados** (recomendações da §8 — overridable): sala **referencia `endereco_id`** existente; conexão por **e-mail** na Fase 1 (in-app na Fase 3); cancelamento pós-aprovação "por fora" no MVP; CTA "Alugar sala" **discreto** na home.
