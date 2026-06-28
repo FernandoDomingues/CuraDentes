@@ -10,6 +10,15 @@
 
 ## 0. Status (atualizado em 2026-06-26)
 
+> **▶ Atualização 2026-06-28 — AUDITORIA PAUSADA a pedido do usuário.** Re-verificada contra o código vivo (workflow de 6 agentes) + lint/testes rodados. **~55/62 efetivamente resolvidos · 0 crítico em aberto.**
+> - **C1** (sessão httpOnly): **CONCLUÍDO e em produção** — refactor completo (tudo no servidor) + QA de 9 fluxos no navegador + smoke test.
+> - **Também concluídos desde 26/06:** **A1** os headers de segurança EXISTEM (HSTS, nosniff, X-Frame, Referrer-Policy, Permissions-Policy + CSP) — a CSP está em **Report-Only**, falta só virar *enforce*; **M23** banner de consentimento de cookies; **A2** lint com **0 erros**; testes 114 → **148**; além de M24, M10, M28, M3, M6, B14, M11.
+> - **Lote 1 de polimento** (merge `a3ee57e`, em prod 2026-06-28): **A13** (foco/Esc/focus-trap no modal de avaliações), **B10** (onError de avatar quebrado nos cards — helper `src/lib/avatar.ts`), **M5** (bots de IA explícitos no robots.txt).
+> - **Falta, nenhum crítico:** *dependem de você* → **A1** ligar a CSP em enforce (decisão + QA do mapa/iframe-CFO/upload), **A5** OG 1200×630 (arte), **B16** endereço/foro (dado). *Adiado por custo* → **M1/M2** imagens via next/image. *Polimento opcional (lote 2)* → M22 (ARIA combobox), B5 (geo JSON-LD), B6 (breadcrumb), B7/B8 (tipos), B15 (timezone analytics), B1/B2 (senha/reset), M7 (sitemap lastmod), A11 (next/font).
+> - **Para retomar:** rodar o "lote 2" (opcionais, mesma disciplina branch→Preview→QA→prod) ou encaminhar os itens que dependem de você.
+>
+> _O detalhamento por ID abaixo é do levantamento original (25–26/06) e fica como referência histórica; alguns status individuais nas seções seguintes podem estar defasados — vale o resumo acima._
+
 A maior parte já foi **corrigida e publicada** em lotes pequenos e verificados (build + testes + lint a cada lote). Mapa de status conferido contra o código atual:
 
 - ✅ **Corrigidos e no ar (~49):** C2, C3, C4, A2, A3, A4, A6, A7, A8, A9, A10, A12, A14, M3, M4, M5, M6, M8, M9, M10, M11, M12, M13, M14, M15, M16, M17, M18, M19, M20, M21, M23, M24, M25, M27, M28, B4, B9, B10, B12, B13, B14, B18, B19. (Inclui também: busca por nome do dentista + autocomplete, e o editor de fotos migrado para `react-easy-crop`.)
