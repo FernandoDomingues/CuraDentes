@@ -18,7 +18,7 @@
 
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Star,
@@ -952,6 +952,8 @@ export default function PerfilDentistaView({
   // Comentário "aberto" por TOQUE (mobile não tem hover): índice do card cujo
   // balãozinho está aberto; tocar alterna. No desktop o hover continua funcionando.
   const [comentarioAbertoIdx, setComentarioAbertoIdx] = useState<number | null>(null);
+  // Ref do diálogo de avaliações (acessibilidade: foco/Esc/focus-trap — auditoria A13).
+  const modalAvalRef = useRef<HTMLDivElement>(null);
 
   // Procedimentos do dentista (todos os endereços) para o select de avaliação.
   const todasAtividades = Array.from(
@@ -990,6 +992,33 @@ export default function PerfilDentistaView({
     },
     [perfil.id],
   );
+
+  // Acessibilidade do modal de avaliações (A13): foca o diálogo ao abrir, fecha no
+  // Esc, aprisiona o Tab dentro do modal e devolve o foco ao fechar — mesmo padrão
+  // dos modais de login no SessaoProvider (WCAG 2.1.2 / 2.4.3).
+  useEffect(() => {
+    if (!avaliacoesIndividuais) return;
+    const node = modalAvalRef.current;
+    const anterior = document.activeElement as HTMLElement | null;
+    node?.focus();
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") { setAvaliacoesIndividuais(null); return; }
+      if (e.key !== "Tab" || !node) return;
+      const foco = node.querySelectorAll<HTMLElement>(
+        'a[href],button:not([disabled]),input:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])',
+      );
+      if (foco.length === 0) return;
+      const primeiro = foco[0];
+      const ultimo = foco[foco.length - 1];
+      if (e.shiftKey && document.activeElement === primeiro) { e.preventDefault(); ultimo.focus(); }
+      else if (!e.shiftKey && document.activeElement === ultimo) { e.preventDefault(); primeiro.focus(); }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      anterior?.focus?.();
+    };
+  }, [avaliacoesIndividuais]);
 
   return (
     <div className="min-h-screen" style={{ background: "#F2F2F7" }}>
@@ -1265,10 +1294,12 @@ export default function PerfilDentistaView({
           }}
         >
           <div
+            ref={modalAvalRef}
+            tabIndex={-1}
             role="dialog"
             aria-modal="true"
             aria-labelledby="modal-avaliacoes-titulo"
-            className="w-full max-w-[420px] max-h-[70vh] overflow-y-auto rounded-[24px] p-6 flex flex-col gap-4"
+            className="w-full max-w-[420px] max-h-[70vh] overflow-y-auto rounded-[24px] p-6 flex flex-col gap-4 outline-none"
             style={{ background: "#fff", boxShadow: "0 24px 64px rgba(10,42,102,0.20)" }}
           >
             <div
