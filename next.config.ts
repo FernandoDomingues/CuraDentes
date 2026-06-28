@@ -45,19 +45,20 @@ const csp = [
 ].join("; ");
 
 const securityHeaders = [
-  // HSTS conservador (1 ano, só o host exato — sem includeSubDomains/preload por
-  // ora, para não afetar subdomínios sem querer; dá para reforçar depois).
-  { key: "Strict-Transport-Security", value: "max-age=31536000" },
+  // HSTS 2 anos, só o host exato — sem includeSubDomains/preload (preload é difícil
+  // de reverter e subdomínios poderiam não estar 100% em https). Reforçável depois.
+  { key: "Strict-Transport-Security", value: "max-age=63072000" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "X-Frame-Options", value: "SAMEORIGIN" },
   { key: "Permissions-Policy", value: "geolocation=(self), camera=(), microphone=()" },
   { key: "X-DNS-Prefetch-Control", value: "on" },
-  // CSP em Report-Only POR ORA (não bloqueia; só observa). A allowlist já foi
-  // validada no smoke-test; falta só re-testar o enforce no Preview (mapa/iframe/
-  // upload) antes de bloquear de verdade em produção. Trocar a chave por
-  // "Content-Security-Policy" liga o enforce.
-  { key: "Content-Security-Policy-Report-Only", value: csp },
+  // CSP em ENFORCE (bloqueia de verdade — achado A1). A allowlist foi derivada das
+  // chamadas externas reais (Supabase, Nominatim, ViaCEP, awesomeapi, tiles do OSM,
+  // avatar Google, iframe do CFO) e validada em Report-Only; o enforce é re-testado
+  // no Preview (mapa Leaflet, iframe do CFO em verificar-CRO, upload de foto).
+  // Evolução futura possível: trocar 'unsafe-inline'/'unsafe-eval' por nonce.
+  { key: "Content-Security-Policy", value: csp },
 ];
 
 const nextConfig: NextConfig = {
