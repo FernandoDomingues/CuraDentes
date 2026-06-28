@@ -1,0 +1,445 @@
+[
+  {
+    "area": "Contas, auth e autorização",
+    "fatos": [
+      {
+        "tema": "Identidade da sessão (fonte da verdade no servidor)",
+        "detalhe": "getUsuario() cria o cliente do servidor (criarClienteServidor) e chama supabase.auth.getUser() — valida o JWT no Supabase (não confia só no cookie). Retorna Usuario{id,nome,email,foto,papel} ou null. É a função canônica para saber quem está logado no servidor.",
+        "ref": "src/lib/auth.ts:32-74"
+      },
+      {
+        "tema": "Derivação de PAPEL (paciente/dentista/superuser)",
+        "detalhe": "Ordem: (1) superuser = email fixo via isSuperuserEmail; (2) dentista = existe linha em curadentespro com id == auth.uid e deleted_at IS NULL (maybeSingle por id); (3) paciente = qualquer outro usuário autenticado (nome/foto vêm de user_metadata do Google). Tipo Papel = 'paciente'|'dentista'|'superuser'.",
+        "ref": "src/lib/auth.ts:18-74"
+      },
+      {
+        "tema": "Anfitrião e locatário são ambos 'dentista'",
+        "detalhe": "Não há subpapel/role além de paciente/dentista/superuser. Um anfitrião (clínica que aluga sala) e um locatário (dentista que aluga) seriam ambos papel='dentista' — a distinção entre os dois NÃO existe hoje; teria de ser derivada de dados (ex.: possuir endereço/sala) ou de uma nova flag/coluna.",
+        "ref": "src/lib/auth.ts:18-63"
+      },
+      {
+        "tema": "Guard da área logada /pro",
+        "detalhe": "ProLayout (Server Component) chama getUsuario(): sem sessão → redirect('/entrar'); papel 'paciente' → redirect('/'); dentista/superuser liberados. Comentário do arquivo enfatiza que a proteção REAL dos dados é a RLS; o layout só evita renderizar o painel. Também aplica metadata robots index:false a todo /pro/*.",
+        "ref": "src/app/pro/layout.tsx:21-30"
+      },
+      {
+        "tema": "Guard exclusivo de superuser",
+        "detalhe": "requireSuperuser(): sem sessão → /entrar; papel != superuser → rotaInicialPorPapel(papel). rotaInicialPorPapel: superuser→/pro/dashboard-analytics, dentista→/pro/dashboard, paciente→/. Proteção real no banco é a função SQL is_superuser().",
+        "ref": "src/lib/auth.ts:76-93"
+      },
+      {
+        "tema": "PADRÃO de Server Action segura (o molde a reusar)",
+        "detalhe": "Toda action é \"use server\"; cria criarClienteServidor(); const {data:{user}} = await supabase.auth.getUser(); if(!user) return {ok:false,erro:'Sessão expirada...'}; usa user.id (uid da SESSÃO) em .eq('id', uid) / payloads — NUNCA um id vindo do cliente. Retorna {ok:boolean, erro?:string}. RLS é a guarda final. Comentário cita a doc do Next: 'Always verify authentication and authorization inside every Server Function'.",
+        "ref": "src/app/pro/dashboard/acoes.ts:1-27"
+      },
+      {
+        "tema": "Server Action multi-tabela com uid da sessão (perfil + prefs + endereços)",
+        "detalhe": "salvarPerfil() faz getUser→uid, depois update em curadentespro.eq('id',uid), upsert em curadentespro_email (onConflict curadentespro_id), delete/insert/update em curadentespro_enderecos com curadentespro_id=uid. Mostra o padrão de CRUD de entidades-filhas escopadas ao dono pela sessão (insert .select('id').single() para devolver novosIds tempId→id real).",
+        "ref": "src/app/pro/perfil/acoes.ts:14-105"
+      },
+      {
+        "tema": "Server Action de autorização superuser via RPC (verificar CRO)",
+        "detalhe": "marcarVerificacaoCro() valida getUser e chama supabase.rpc('marcar_verificacao_cro', {p_dentista_id,p_verificado,p_observacao}) — a RPC é 'fonte da verdade, gated em superuser' no banco (a action não re-checa o papel no JS; confia no gate da RPC/RLS). reabrirVerificacao() faz update direto em cro_verificacoes. notificarCroInativa() invoca Edge Function via supabase.functions.invoke com a sessão.",
+        "ref": "src/app/pro/verificar-cro/[id]/acoes.ts:13-67"
+      },
+      {
+        "tema": "Três clientes Supabase distintos",
+        "detalhe": "server.ts: criarClienteServidor() = createServerClient(@supabase/ssr) ligado aos cookies da request (next/headers) — para Server Components/Actions/Route Handlers. client.ts: criarClienteNavegador() = createBrowserClient singleton com lock NO-OP (evita deadlock de navigator.locks) — para login/logout no browser. public.ts: createClient anon SEM sessão (persistSession:false) — só leituras públicas sob RLS.",
+        "ref": "src/lib/supabase/server.ts:19-39"
+      },
+      {
+        "tema": "Sessão httpOnly e renovação (proxy = middleware do Next 16)",
+        "detalhe": "src/proxy.ts (export function proxy) renova o token em cada request chamando supabase.auth.getUser() e REGRAVA os cookies com {...options, httpOnly:true}. matcher só cobre /pro/:path*, /entrar, /cadastro, /redefinir-senha (páginas públicas não acionam o proxy, por custo). Comentário: a proteção de rota fica no layout /pro, não no proxy.",
+        "ref": "src/proxy.ts:19-60"
+      },
+      {
+        "tema": "Estado de login no cliente sem expor token (/api/me)",
+        "detalhe": "GET /api/me chama getUsuario() e devolve apenas {id,email,nome,foto,ehPro:(papel==='dentista'),ehSuper:(papel==='superuser')} com Cache-Control no-store, force-dynamic — NUNCA o token. A ilha cliente (SessaoProvider) consome isto. Padrão a reusar para qualquer UI que precise saber 'sou anfitrião/locatário?' sem ler cookie.",
+        "ref": "src/app/api/me/route.ts:16-35"
+      },
+      {
+        "tema": "Login dentista por email/senha (Route Handler servidor)",
+        "detalhe": "POST /auth/login-dentista: signInWithPassword no servidor, resolveLoginEmail (mapeia 'superdom'→email fixo), restaura conta soft-deleted via rpc('restaurar_minha_conta_dentista'), grava cookies httpOnly:true sameSite lax secure path:/, devolve redirect (superuser→/pro/dashboard-analytics, dentista→/pro/dashboard). Existe porque o supabase-js do navegador trava em operações de sessão.",
+        "ref": "src/app/auth/login-dentista/route.ts:18-63"
+      },
+      {
+        "tema": "Login OAuth/Google e bifurcação dentista vs cliente (callback)",
+        "detalhe": "GET /auth/callback troca code PKCE por sessão (exchangeCodeForSession), getUser, e decide destino: superuser/dentista (existe em curadentespro, deleted_at null) → /pro/dashboard; senão faz upsert em 'clientes' (id=user_id) e vai para '/'. Grava cookies httpOnly:true. Destino de volta vem do cookie cd_next (validado por regex de path interno).",
+        "ref": "src/app/auth/callback/route.ts:56-122"
+      },
+      {
+        "tema": "Criação do papel 'dentista' (cadastro = inserir em curadentespro)",
+        "detalhe": "O wizard /cadastro (acoes.ts) cria o dentista por etapas, sempre com uid da sessão: salvarEtapaConta faz upsert curadentespro {id:uid,user_id:uid,nome,tratamento,nome_completo} onConflict id; definirSenha usa auth.updateUser({password}); salvarIdentidade grava cro/ano/especialidade + cpf em curadentespro_cpf; finalizarCadastro marca lgpd_aceito=true (vira perfil público). O que torna alguém 'dentista' é existir linha não-excluída em curadentespro.",
+        "ref": "src/app/cadastro/acoes.ts:102-211"
+      },
+      {
+        "tema": "Logout e exclusão de conta no servidor",
+        "detalhe": "conta-acoes.ts: sairConta() = supabase.auth.signOut() (limpa cookies httpOnly no servidor — funciona mesmo com httpOnly:true, que o cliente não conseguiria apagar). excluirContaDentista() valida getUser, chama rpc('apagar_minha_conta_dentista') (soft-delete) e depois signOut().",
+        "ref": "src/lib/conta-acoes.ts:13-33"
+      },
+      {
+        "tema": "PII protegida só via RPC (não-REST)",
+        "detalhe": "Telefone/CPF/email de dentista NÃO são lidos por REST: carregarCadastro usa rpc('meu_telefone') e rpc('meu_cpf'); email vem da sessão Auth (não da coluna curadentespro.email). CPF grava em tabela separada curadentespro_cpf. Restrição de RLS/grants no banco (ver memória colunas-pii-protegidas-rest).",
+        "ref": "src/app/cadastro/acoes.ts:68-69"
+      },
+      {
+        "tema": "Tabela curadentespro (perfil do dentista) — colunas conhecidas",
+        "detalhe": "DentistaRow: id, nome, tratamento, cro, cro_verificado, foto_url, bio, instagram, especialidade, google_review_url, lgpd_aceito, deleted_at. Outras colunas escritas no código: nome_completo, ano_formacao, telefone, user_id, cobranca_aviso_aceita(_em). id == auth.uid (chave de ligação com Auth).",
+        "ref": "src/lib/dentistas.ts:20-34"
+      },
+      {
+        "tema": "Tabela curadentespro_enderecos (clínicas/locais do dentista)",
+        "detalhe": "EnderecoRow: id, nome_clinica, logradouro, numero, complemento, bairro, cidade, estado, cep, telefone, whatsapp, atividades[], convenios[], formas_pagamento[], agenda(JSON), atende_urgencias, estacionamento, observacoes. FK curadentespro_id. Também grava latitude/longitude, aceita_urgencia_termo, politica_cancelamento, agenda. É o modelo de 'local físico' mais próximo de uma 'sala'.",
+        "ref": "src/lib/dentistas.ts:48-67"
+      }
+    ],
+    "reuso_para_salas": [
+      "AUTENTICAÇÃO: reusar o molde exato das Server Actions seguras — \"use server\" + criarClienteServidor() + supabase.auth.getUser() + if(!user) return {ok,erro} + usar user.id da SESSÃO. Toda nova action de locação (criar sala, reservar, confirmar) deve seguir src/app/pro/dashboard/acoes.ts e src/app/pro/perfil/acoes.ts à risca, com a RLS como guarda final.",
+      "AUTORIZAÇÃO de rota: as telas de locação na área logada herdam o guard de ProLayout (src/app/pro/layout.tsx) — basta colocá-las sob /pro/* (ex.: /pro/salas para anfitrião, /pro/reservas para locatário) que já ficam barradas a paciente/anônimo e não-indexáveis.",
+      "IDENTIDADE anfitrião vs locatário: ambos são papel='dentista'. Para a UI saber em qual lado a pessoa está sem expor token, estender /api/me (src/app/api/me/route.ts) com flags derivadas (ex.: ehAnfitriao = possui sala cadastrada) ou consultar no servidor; NÃO criar leitura de cookie no cliente (quebraria o httpOnly).",
+      "MODELO de dados: a sala alugável é análoga a curadentespro_enderecos — mesma estrutura (endereço, lat/lng, agenda JSON, observacoes, nome_clinica). Pode-se reutilizar/derivar a sala a partir do endereço do anfitrião, ou criar tabela nova 'salas' com FK curadentespro_id (anfitrião) seguindo o mesmo padrão de CRUD escopado por uid de salvarEnderecosCadastro/salvarPerfil.",
+      "RESERVA escopada por sessão: numa reserva, o locatario_id deve vir de user.id da sessão (nunca do payload), exatamente como uid é usado em todas as actions; a relação anfitrião↔locatário↔sala fica protegida por RLS no banco (duas partes, dois ids, ambos validados pela sessão de quem chama).",
+      "OPERAÇÕES sensíveis via RPC gated: para ações que envolvem aprovar/confirmar/cancelar uma reserva (onde a regra de quem pode o quê é complexa), seguir o padrão de marcarVerificacaoCro — encapsular a regra numa RPC SECURITY DEFINER 'gated' no banco e só invocá-la pela action (src/app/pro/verificar-cro/[id]/acoes.ts).",
+      "NOTIFICAÇÕES: para avisar anfitrião/locatário de nova reserva, reusar supabase.functions.invoke a partir da action com a sessão (padrão notificarCroInativa), sem expor segredo no cliente.",
+      "COBRANÇA/LGPD: o cadastro já tem o gancho cobranca_aviso_aceita/cobranca_aviso_aceita_em e lgpd_aceito em curadentespro (src/app/cadastro/acoes.ts:207) — reaproveitável para o aceite de termos específicos da locação (taxa, política de cancelamento)."
+    ],
+    "lacunas": [
+      "Não existe subpapel/role 'anfitrião' vs 'locatário': ambos são papel='dentista' em src/lib/auth.ts. Precisa de um critério novo (coluna/flag em curadentespro, ou derivação 'tem sala cadastrada') para distinguir os dois lados e autorizar ações específicas.",
+      "Não há tabela de salas alugáveis nem de reservas/disponibilidade no código atual — só curadentespro_enderecos (locais do próprio dentista, sem semântica de aluguel para terceiros). Precisa de schema novo (salas, reservas) + RLS nova.",
+      "RLS é referida como guarda final em todo lugar, mas NÃO há arquivos .sql/migrations no repo (cwd) — as policies e RPCs (marcar_verificacao_cro, apagar/restaurar_minha_conta_dentista, meu_telefone, meu_cpf) vivem só no Supabase. As novas policies de salas/reservas terão de ser escritas direto no banco, fora deste repo.",
+      "O proxy (src/proxy.ts) só renova sessão em /pro, /entrar, /cadastro, /redefinir-senha. Se houver páginas de locação que leiam sessão no servidor fora de /pro, o matcher precisa ser estendido.",
+      "/api/me hoje só expõe ehPro/ehSuper (não distingue anfitrião/locatário). Para a UI de salas, será preciso ampliar o payload (sem vazar token).",
+      "Não há fluxo transacional de dois lados (uma reserva envolve anfitrião + locatário + sala): o padrão atual de action só age sobre dados do próprio uid; locação exige validar que o locatário pode reservar a sala de OUTRO dentista — regra que não tem precedente no código e dependerá de RPC/RLS nova.",
+      "Não há controle de disponibilidade/calendário transacional (evitar overbooking) — a 'agenda' existente é só um JSON exibível em curadentespro_enderecos (src/lib/dentistas.ts:76-86), sem reserva de slot."
+    ]
+  },
+  {
+    "area": "Modelo de CLÍNICA/ENDEREÇO (curadentespro_enderecos) — base da futura \"sala\"",
+    "fatos": [
+      {
+        "tema": "Tabela e relacionamento",
+        "detalhe": "Tabela `curadentespro_enderecos`, relacionada ao dentista por FK `curadentespro_id` (= id/UUID do dentista da sessão). Um dentista tem N endereços (máx. 8 no editor, via prop `max=8`). Leitura pública via anon key + RLS; gravação sempre com o id da SESSÃO (nunca do cliente).",
+        "ref": "src/lib/dentistas.ts:187, src/app/cadastro/acoes.ts:159-191, src/components/pro/EnderecosEditor.tsx:95"
+      },
+      {
+        "tema": "Campos da linha (EnderecoRow — tipados em código)",
+        "detalhe": "Campos tipados em EnderecoRow: id, nome_clinica, logradouro, numero, complemento, bairro, cidade, estado, cep, telefone, whatsapp, atividades (string[]), convenios (string[]), formas_pagamento (string[]), agenda (unknown=JSON), atende_urgencias (bool), estacionamento (bool), observacoes. NÃO inclui curadentespro_id/latitude/longitude/aceita_urgencia_termo/politica_cancelamento nesse tipo, mas essas colunas EXISTEM no banco (ver abaixo).",
+        "ref": "src/lib/dentistas.ts:47-67"
+      },
+      {
+        "tema": "Colunas adicionais reais no banco (gravadas no INSERT mas fora do EnderecoRow)",
+        "detalhe": "O INSERT do cadastro grava também: curadentespro_id, latitude, longitude, aceita_urgencia_termo (termo de aceite de encaixe em urgência) e politica_cancelamento (texto). Logo a tabela tem essas colunas além das de EnderecoRow. São lidas via casts `(e as {...})` no front por não estarem no tipo cru.",
+        "ref": "src/app/cadastro/acoes.ts:164-187, src/app/cadastro/page.tsx:99-104, src/app/pro/perfil/acoes.ts:66-89"
+      },
+      {
+        "tema": "Lista COMPLETA dos campos inseridos em salvarEnderecosCadastro",
+        "detalhe": "curadentespro_id, nome_clinica, logradouro, numero, complemento, bairro, cidade, estado, cep, telefone, whatsapp, atende_urgencias, aceita_urgencia_termo, estacionamento, atividades, convenios, formas_pagamento, politica_cancelamento, observacoes, agenda, latitude, longitude.",
+        "ref": "src/app/cadastro/acoes.ts:163-187"
+      },
+      {
+        "tema": "Forma do JSON `agenda` (como persistido)",
+        "detalhe": "Array de objetos { dia:string, inicio:'HH:MM', fim:'HH:MM', ativo:boolean } — um item por dia da semana. Default em novoEndereco(): 7 dias (Segunda..Domingo, em pt-BR por extenso), inicio '08:00', fim '18:00', ativo=true só seg-sex. Inputs HTML type=time. Dia inativo = 'Fechado'.",
+        "ref": "src/components/pro/EnderecosEditor.tsx:19-24, src/components/pro/EnderecosEditor.tsx:68-82, src/components/pro/EnderecosEditor.tsx:288-304"
+      },
+      {
+        "tema": "Normalização da agenda na leitura (compat de nomes)",
+        "detalhe": "normalizarAgenda() aceita nomes NOVOS (dia/inicio/fim) e ANTIGOS (dia_semana/horario_inicio/horario_fim), descarta itens com ativo===false ou incompletos, e devolve AgendaDia { dia_semana, horario_inicio, horario_fim }. AgendaItemRaw documenta os dois formatos.",
+        "ref": "src/lib/dentistas.ts:36-45, src/lib/dentistas.ts:76-86, src/types/dentista.ts:12-16"
+      },
+      {
+        "tema": "lat/lng — geocodificação",
+        "detalhe": "latitude/longitude são number|null, geocodificadas NO CLIENTE ao salvar (best-effort, orçamento total ~7s p/ não travar). geocodeEnderecoComFallback tenta 1º por CEP (AwesomeAPI, preciso no BR) e cai p/ Nominatim/OSM rua→bairro→cidade→estado. Estouro de prazo grava sem coords (preenchível depois ao editar).",
+        "ref": "src/lib/geocoding.ts:105-131, src/app/cadastro/page.tsx:407-426"
+      },
+      {
+        "tema": "lat/lng — consumo (busca por proximidade)",
+        "detalhe": "RPC server-side `get_dentistas_proximos(lat,lng,raio_km)` faz Haversine (raio 6371km). No cliente, calcularDistanciaKm replica a fórmula para recomputar distância. Raio default da busca = 30km. Busca textual filtra curadentespro_enderecos por bairro/cidade (.or sanitizado) e exige curadentespro.lgpd_aceito=true.",
+        "ref": "src/lib/distancia.ts:10-24, src/app/busca/BuscaCliente.tsx:295-358"
+      },
+      {
+        "tema": "Atributos de estrutura/serviço da clínica (chips e flags)",
+        "detalhe": "atividades = procedimentos realizados no local (opções = ESPECIALIDADES de @/lib/especialidades). convenios (lista fixa CONVENIOS_OPCOES). formas_pagamento (PAGAMENTOS_OPCOES: Dinheiro, PIX, débito, crédito à vista/parcelado, boleto, transferência). Flags: estacionamento (bool + texto livre em `observacoes`, máx 300), atende_urgencias (+ aceita_urgencia_termo de encaixe).",
+        "ref": "src/components/pro/EnderecosEditor.tsx:50-65, src/components/pro/EnderecosEditor.tsx:261-310"
+      },
+      {
+        "tema": "Persistência: padrões de gravação",
+        "detalhe": "No CADASTRO: delete-all por curadentespro_id + reinsert de todos (loop). No editor de PERFIL (salvarPerfil): upsert granular — remove ids em `removidos` (ignora ids temporários 'end-'), insert dos _isNew (retorna novosIds tempId→id), update dos existentes por id. Tipo compartilhado EnderecoForm (mesmo form nos dois fluxos).",
+        "ref": "src/app/cadastro/acoes.ts:161-190, src/app/pro/perfil/acoes.ts:56-104"
+      },
+      {
+        "tema": "CEP autopreenche endereço (ViaCEP)",
+        "detalhe": "aplicarCep() limpa p/ 8 dígitos e, ao completar, chama buscarCep (@/lib/cep) preenchendo logradouro/bairro/cidade/estado; mescla por id para não sobrescrever edição concorrente. Falha → toast 'Preencha manualmente'.",
+        "ref": "src/components/pro/EnderecosEditor.tsx:147-170"
+      },
+      {
+        "tema": "Exibição pública do endereço",
+        "detalhe": "EnderecoClinica (src/types/dentista.ts) é o shape público renderizado em /dentista/[id] (PerfilDentistaView). Urgência muda a borda do card. EnderecoCard no dashboard também usa atende_urgencias.",
+        "ref": "src/types/dentista.ts:19-46, src/app/dentista/[id]/PerfilDentistaView.tsx:327-335"
+      }
+    ],
+    "reuso_para_salas": [
+      "A tabela curadentespro_enderecos já modela um LOCAL físico completo (endereço estruturado + CEP + lat/lng geocodificada + nome_clinica) — é a base natural da 'sala': uma sala pertence a um endereço/clínica. Reaproveitar o EnderecosEditor e o pipeline de geocoding (client-side best-effort, CEP-first via AwesomeAPI) para cadastrar a localização da sala sem reescrever nada.",
+      "A busca por proximidade já existe pronta: RPC get_dentistas_proximos(lat,lng,raio_km) + Haversine (lib/distancia.ts) + busca textual por bairro/cidade. Um 'buscar salas perto de mim num raio' reusa exatamente esse mecanismo trocando a tabela/RPC alvo.",
+      "O JSON `agenda` (array { dia, inicio, fim, ativo }) já descreve disponibilidade semanal por faixa de horário — base direta para os horários em que a sala fica ociosa/disponível. normalizarAgenda já dá compat de nomes e filtragem de inativos. Inputs type=time + DIAS_SEMANA reutilizáveis no formulário da sala.",
+      "Padrão de atributos via chips (atividades/convenios/formas_pagamento) e flags boolean (estacionamento, atende_urgencias) é reaproveitável para descrever a ESTRUTURA da sala (ex.: cadeira odontológica, raio-x, autoclave, recepção compartilhada, estacionamento) e formas de pagamento da locação.",
+      "Os dois padrões de persistência (delete-all+reinsert no cadastro; upsert granular com novosIds no editor de perfil) e o uso consistente do id da SESSÃO via criarClienteServidor()/auth.getUser() são o molde para as Server Actions de CRUD da sala (dono = clínica logada).",
+      "Campo politica_cancelamento (texto, com POLITICA_PADRAO) já existe por endereço — diretamente reaproveitável como política de cancelamento da locação pontual da sala.",
+      "Tipos compartilhados (EnderecoRow cru no servidor; EnderecoForm no client; EnderecoClinica público) dão o template de 3 camadas (DB→form→público) para o modelo de Sala."
+    ],
+    "lacunas": [
+      "A agenda atual é uma DISPONIBILIDADE SEMANAL RECORRENTE (horário comercial fixo por dia da semana), não um calendário de SLOTS RESERVÁVEIS por data. Locação pontual precisa de slots datados (data específica + intervalo), estado reservado/livre, e prevenção de double-booking — não existe hoje.",
+      "Não há entidade de SALA distinta do endereço: hoje o endereço descreve onde o DENTISTA atende, não um espaço ALUGÁVEL. Falta tabela própria (ex.: salas) com: vínculo à clínica/endereço, preço/hora ou /período, descrição/fotos da sala, capacidade, equipamentos.",
+      "Não há modelo de RESERVA/BOOKING: falta tabela de reservas (sala_id, locatário dentista_id, data/hora início-fim, status, valor), com regras de conflito e ciclo de vida (solicitada/confirmada/cancelada).",
+      "Não há precificação nem pagamento: nada na tabela atual representa valor da locação, taxas, repasse ou integração de pagamento. formas_pagamento atual é do paciente da clínica, não da transação B2B de locação.",
+      "Não há papel de LOCATÁRIO nem distinção locador (clínica com sala ociosa) x locatário (dentista buscando espaço). O modelo atual só conhece o dentista dono do próprio endereço.",
+      "Geocoding é best-effort e pode gravar latitude/longitude=null; para uma busca de salas confiável por proximidade convém garantir/forçar coords (ou geocodificar no servidor) e indexar geograficamente.",
+      "Falta estrutura específica da sala (equipamentos odontológicos, m², acessibilidade, fotos da sala) — os chips atuais (atividades/convenios) são clínicos/comerciais e precisam de um vocabulário novo de infraestrutura.",
+      "Campos PII do endereço (telefone/whatsapp) ficam públicos; numa locação pode ser necessário ocultar contato até a reserva ser confirmada (regra de visibilidade nova)."
+    ]
+  },
+  {
+    "area": "Busca por proximidade + padrões de UI/telas (geo, filtros, design-system, rotas)",
+    "fatos": [
+      {
+        "tema": "Geocodificação (endereço texto -> lat/lng)",
+        "detalhe": "getCoordenadas(texto) usa Nominatim/OSM (search?format=json&countrycodes=br&limit=1), timeout 5s (GEOCODE_TIMEOUT_MS). reverseGeocodeCidadeBairro(lat,lng) faz reverse (cidade/bairro). getCoordenadasPorCep(cep) usa AwesomeAPI (cep.awesomeapi.com.br) — mais preciso no BR. geocodeEnderecoComFallback({logradouro,numero,bairro,cidade,estado,cep}) tenta CEP primeiro, depois Nominatim em cascata rua->bairro->cidade. Tudo reaproveitável direto para salas.",
+        "ref": "src/lib/geocoding.ts:17-131"
+      },
+      {
+        "tema": "Distância Haversine (cliente)",
+        "detalhe": "calcularDistanciaKm(lat1,lng1,lat2,lng2) — Haversine puro (R=6371km), mesma fórmula da RPC server-side. formatarDistancia(km) formata pt-BR ('850 m' / '2,4 km'). Funções puras e testadas, prontas para reuso.",
+        "ref": "src/lib/distancia.ts:10-35"
+      },
+      {
+        "tema": "RPC de proximidade no Supabase",
+        "detalhe": "supabase.rpc('get_dentistas_proximos', { lat, lng, raio_km }) retorna registros com distancia_km, latitude, longitude já calculados server-side e ordenados por distância ASC. A definição SQL está NO SUPABASE (não há .sql no repo). Para salas será preciso uma RPC análoga (ex.: get_salas_proximas) ou reusar uma busca geográfica sobre a tabela de salas.",
+        "ref": "src/app/busca/BuscaCliente.tsx:338-358"
+      },
+      {
+        "tema": "Padrão de captura de localização do usuário (opt-in LGPD)",
+        "detalhe": "Geolocalização SÓ é pedida no clique ('Usar minha localização') — nunca automática (LGPD). navigator.geolocation.getCurrentPosition -> reverseGeocodeCidadeBairro -> navega para /busca?q={bairro, cidade}&lat=&lng= (lat/lng com .toFixed(4)). Há também coords de login em sessionStorage 'curadentes_login_coords' usadas como origem fallback da distância. GEOLOC_TIMEOUT_MS=8000.",
+        "ref": "src/app/busca/BuscaCliente.tsx:772-815"
+      },
+      {
+        "tema": "Origem do usuário vs origem da busca",
+        "detalhe": "Distinção importante: a distância exibida é SEMPRE a partir da localização REAL do usuário (GPS da URL ou coords de login), recomputada no cliente com calcularDistanciaKm a partir do lat/lng retornado pela RPC — não da origem geocodificada do termo (que daria ~0km na busca textual). Badge de distância só aparece com temOrigemUsuario && distancia_km>0.",
+        "ref": "src/app/busca/BuscaCliente.tsx:266-282, 350-354, 1156-1162"
+      },
+      {
+        "tema": "Fluxo completo da busca (orquestração)",
+        "detalhe": "useEffect com [query,latPesquisa,lngPesquisa,raio]: roda em paralelo (1) busca textual em curadentespro_enderecos, (2) getCoordenadas do termo; depois (3) RPC geográfica, (4) busca por NOME do dentista, (5) merge sem duplicar por endereco_id (Map, RPC tem precedência), enriquecimento de atividades/convênios/avaliações/tratamento. Padrões: flag 'cancelled' anti-race, Promise.race com TIMEOUT 10s, cache por query (loadQueryCache/saveQueryCache). raio fixo em 30km (estado [raio]).",
+        "ref": "src/app/busca/BuscaCliente.tsx:233-649"
+      },
+      {
+        "tema": "Filtros locais (sidebar)",
+        "detalhe": "Filtragem em memória sobre resultadosBrutos: selectedAtividades (especialidades, match por includes case-insensitive), selectedConvenios (includes exato), selectedPagamentos (match por substring flexível). Ordenação por 'distancia' ou 'avaliacao'. Padrão de UI: <aside lg:w-[280px]> com checkboxes accent colorido por grupo (#007AFF/#34C759/#FF9500), modal no mobile (showFilters).",
+        "ref": "src/app/busca/BuscaCliente.tsx:651-686, 824-897"
+      },
+      {
+        "tema": "Sanitização de termo de busca (segurança PostgREST)",
+        "detalhe": "construirFiltrosEndereco / sanitizarTermoBusca em busca-filtro.ts: remove caracteres estruturais ([,()%*{}\\\"'\\\\]) que permitiriam injeção no .or() do PostgREST (ex.: burlar lgpd_aceito). Monta filtros .ilike sobre [bairro,cidade,estado,logradouro,nome_clinica]. urlBusca(termo,atividade) monta a URL /busca. Reusar este padrão em qualquer filtro .or() sobre a tabela de salas.",
+        "ref": "src/lib/busca-filtro.ts:19-75"
+      },
+      {
+        "tema": "Autocomplete fuzzy de endereço/nome",
+        "detalhe": "useAddressSuggestions(query) (hook) busca 1x do Supabase cidades/bairros/nome_clinica de curadentespro_enderecos + nomes públicos de curadentespro, cacheia 24h em localStorage (chave 'curadentes_suggestions_cache_v2'), filtra local com scorer fuzzy (sugestoes-core.ts). Debounce 180ms, min 2 chars. Componente de item: SugestaoEndereco (SuggestionItem). Reaproveitável para sugerir cidades/clínicas com salas.",
+        "ref": "src/lib/sugestoes.ts:34-133"
+      },
+      {
+        "tema": "Padrão de página: Server Component (casca+SEO) + Client (interativo)",
+        "detalhe": "/busca/page.tsx é Server Component: lê searchParams (Promise no Next desta versão — 'await searchParams'), gera generateMetadata com title/description/canonical, envolve em <Container> e renderiza <BuscaCliente key={termo} queryInicial={termo}/>. O key={termo} força remount ao mudar ?q. Toda lógica de dados fica no client ('use client'). Mesmo padrão para a tela de salas.",
+        "ref": "src/app/busca/page.tsx:14-40"
+      },
+      {
+        "tema": "Container e largura de página",
+        "detalhe": "Componente Container: mx-auto w-full max-w-6xl px-5 md:px-8, aceita className. Layout de busca usa 'flex-1 flex flex-col lg:flex-row gap-8' (sidebar 280px + grade de cards md:grid-cols-2). Reusar Container para enquadrar a tela de salas.",
+        "ref": "src/components/Container.tsx:6-18"
+      },
+      {
+        "tema": "Design tokens da marca (Tailwind v4 @theme)",
+        "detalhe": "globals.css define tokens: brand-navy #0a2a66, brand-blue #007aff, brand-magenta #e6004c, brand-soft #e3f2fd, ink/ink-soft/ink-muted, success #34c759, warning #ff9500, danger #ff3b30. Fonte de títulos 'CuraDentes' (font-brand), corpo Inter. Variáveis CSS legadas do k11 (--primary-blue etc.) e utilitários glass/glass-strong/shimmer. Cards usam rounded-[24px], badges rounded-full, bordas border-gray-100/black/10.",
+        "ref": "src/app/globals.css:22-127"
+      },
+      {
+        "tema": "CRUD de endereços reutilizável + geocoding no save",
+        "detalhe": "EnderecosEditor (componente compartilhado perfil+cadastro): EnderecoForm com nome_clinica, logradouro/numero/complemento/bairro/cidade/estado/cep, telefone/whatsapp, atividades/convenios/formas_pagamento, agenda (dias+horários inicio/fim/ativo), politica_cancelamento, observacoes. Edição diferida (só onChange; persistência na página). buscarCep (lib/cep) autopreenche via CEP. No save, PerfilEditor geocodifica cada endereço no cliente com geocodeEnderecoComFallback e passa latitude/longitude para a Server Action. Forte candidato a clonar para 'cadastrar sala'.",
+        "ref": "src/components/pro/EnderecosEditor.tsx:26-82, src/app/pro/perfil/PerfilEditor.tsx:125-137"
+      },
+      {
+        "tema": "Persistência via Server Action (padrão httpOnly C1)",
+        "detalhe": "salvarPerfil ('use server') pega o uid da SESSÃO via supabase.auth.getUser() (nunca do cliente), faz update em curadentespro, upsert prefs em curadentespro_email, delete/insert/update em curadentespro_enderecos. Insert retorna id e devolve mapeamento tempId->id (ids temporários começam com 'end-'). Mesmo padrão de Server Action deve ser usado para criar/editar salas e reservas.",
+        "ref": "src/app/pro/perfil/acoes.ts:14-105"
+      },
+      {
+        "tema": "Estrutura da área /pro (guarda de acesso)",
+        "detalhe": "src/app/pro/layout.tsx (Server Component) faz a guarda: sem sessão -> /entrar, paciente -> /, dentista/superuser -> libera; metadata robots index:false. Subrotas existentes: /pro/dashboard, /pro/perfil, /pro/dashboard-analytics, /pro/verificar-cro, /pro/editor-de-fotos. RLS no banco é a proteção real. Uma área de salas do dono da clínica (ex.: /pro/salas) plugaria aqui herdando a guarda.",
+        "ref": "src/app/pro/layout.tsx:25-30"
+      },
+      {
+        "tema": "Padrão de página de painel (/pro/dashboard)",
+        "detalhe": "Server Component com export const dynamic='force-dynamic', getUsuario() (lib/auth), criarClienteServidor() (lib/supabase/server), Promise.all de queries (perfil, enderecos via curadentespro_enderecos.eq('curadentespro_id',uid), RPC meu_dashboard_resumo). Cards de métrica, seção 'Locais de atendimento' com EnderecoCard, cabeçalho gradiente navy. Layout grid lg:grid-cols-[1fr_320px]. Modelo direto para um painel de salas do anunciante.",
+        "ref": "src/app/pro/dashboard/page.tsx:46-287"
+      },
+      {
+        "tema": "Card de resultado (grade de busca)",
+        "detalhe": "Card de dentista: rounded-[24px] p-5 border hover:shadow-xl hover:-translate-y-1, foto circular w-16 h-16 (onError=aoFalharAvatar), nome + especialidade (nomeAmigavel), CRO + CroVerificationBadge, badge de avaliação (Star amarela), bio line-clamp-2, sub-cards azuis por endereço (Building2 + endereço + chips de atividades/convênios + badge de distância 'X daqui' + CTA 'Agendar'). Estrutura clonável para card de sala (foto, clínica, preço/período, distância, CTA 'Reservar').",
+        "ref": "src/app/busca/BuscaCliente.tsx:1071-1172"
+      },
+      {
+        "tema": "Cliente Supabase público (anônimo) para leitura",
+        "detalhe": "import { supabase } from '@/lib/supabase/public' — cliente anônimo usado na busca e nas sugestões para ler dados públicos (curadentespro_enderecos, curadentespro com lgpd_aceito + deleted_at null). Para listagem pública de salas usar o mesmo cliente público; para mutações autenticadas usar criarClienteServidor em Server Action.",
+        "ref": "src/app/busca/BuscaCliente.tsx:18, src/lib/sugestoes.ts:56-65"
+      },
+      {
+        "tema": "Tabela curadentespro_enderecos (esquema observado)",
+        "detalhe": "Colunas usadas: id, curadentespro_id (FK dono), nome_clinica, logradouro, numero, complemento, bairro, cidade, estado, cep, telefone, whatsapp, atende_urgencias, aceita_urgencia_termo, estacionamento, atividades[], convenios[], formas_pagamento[], politica_cancelamento, observacoes, agenda(jsonb), latitude, longitude. É a estrutura de 'local físico' que uma sala anunciada provavelmente referencia (uma sala pertence a um endereço/clínica).",
+        "ref": "src/app/pro/perfil/acoes.ts:66-89"
+      }
+    ],
+    "reuso_para_salas": [
+      "Reusar geocoding.ts INTEGRALMENTE: geocodeEnderecoComFallback no cadastro da sala (CEP-first via AwesomeAPI, fallback Nominatim) para gravar latitude/longitude da sala; reverseGeocodeCidadeBairro + GEOLOC_TIMEOUT_MS para o botão 'usar minha localização' na tela 'buscar sala perto de mim'.",
+      "Reusar distancia.ts (calcularDistanciaKm + formatarDistancia) tal como na busca: recomputar distância no cliente a partir da origem REAL do usuário e exibir badge 'X daqui' no card de sala.",
+      "Clonar a RPC get_dentistas_proximos para get_salas_proximas no Supabase (mesma assinatura lat/lng/raio_km, retornando distancia_km + lat/lng), e chamar com supabase.rpc igual à busca atual. Manter raio default (ex.: 30km) e ordenação por distância.",
+      "Clonar o par page.tsx (Server Component: searchParams Promise + generateMetadata + Container + key={termo}) + Cliente '...Cliente' ('use client') com a orquestração: textual em paralelo com geocode, RPC geográfica, merge anti-duplicado, filtros locais, cache por query, anti-race (cancelled) e TIMEOUT 10s.",
+      "Reusar busca-filtro.ts (sanitizarTermoBusca/construirFiltrosEndereco/urlBusca) para a busca textual de salas por cidade/bairro/nome da clínica, fechando a brecha de injeção no .or() do PostgREST. Adaptar os campos pesquisados à tabela de salas.",
+      "Reusar useAddressSuggestions + SugestaoEndereco para autocomplete de cidade/bairro/clínica na barra de busca de salas (mesmo cache localStorage e scorer fuzzy).",
+      "Reusar EnderecosEditor (ou clonar como SalaEditor) para o formulário de cadastro da sala: já tem CEP autopreenchido, geocode no save, chips de atividades/convênios/pagamentos e agenda por dia/horário (útil para janelas de disponibilidade da sala).",
+      "Reusar o padrão de Server Action salvarPerfil (uid da sessão via auth.getUser, delete/insert/update, ids temporários 'end-' -> id real) para criar/editar salas e reservas com segurança (padrão httpOnly C1).",
+      "Plugar a área do anunciante (dono da sala) sob /pro (ex.: /pro/salas) herdando a guarda de src/app/pro/layout.tsx (dentista/superuser) e seguindo o padrão de painel de /pro/dashboard (force-dynamic, getUsuario, criarClienteServidor, Promise.all).",
+      "Reusar os tokens de marca (brand-navy/brand-blue/brand-magenta, glass, rounded-[24px], Container) e o layout sidebar 280px + grade de cards 2 colunas para que a tela de salas tenha identidade visual idêntica; clonar o card de resultado (foto/título/badges/distância/CTA) trocando 'Agendar' por 'Reservar'."
+    ],
+    "lacunas": [
+      "NÃO existe tabela de salas nem de reservas/disponibilidade no código observado — precisam ser criadas no Supabase (ex.: salas com endereco_id/clinica, preço por período, fotos, disponibilidade; reservas com período, status, locatário).",
+      "A RPC get_salas_proximas NÃO existe (a get_dentistas_proximos vive só no Supabase, sem .sql no repo) — precisa ser escrita/migrada no banco; o repo só CHAMA a RPC.",
+      "Não há fluxo de pagamento/checkout nem de reserva pontual (B2B) — toda a camada transacional (reservar período, confirmar, cobrança) é nova.",
+      "A distinção locador (dono da sala) x locatário (dentista que aluga) não existe no modelo de papéis atual (papel é paciente/dentista/superuser em lib/auth) — pode exigir novo papel/perfil ou flag.",
+      "Nenhum componente de mapa/pin é renderizado na busca (só lista de cards) — se a tela de salas precisar de mapa visual, é novo (existe HeatMapLayer em analytics, mas é heatmap administrativo, não mapa de seleção).",
+      "Calendário/seleção de data-hora para reserva pontual não existe (a 'agenda' do EnderecosEditor é só horário de funcionamento recorrente, não slots reserváveis) — UI de disponibilidade/booking é nova.",
+      "Rate limit/atribuição do Nominatim: a geocodificação atual roda 1 req por endereço no cliente; em volume de salas pode bater limite do OSM — considerar o caminho CEP-first (já implementado) como principal."
+    ]
+  },
+  {
+    "area": "Camada de dados + Server Actions + notificação/contato (Supabase)",
+    "fatos": [
+      {
+        "tema": "Cliente Supabase servidor (sessão via cookies)",
+        "detalhe": "criarClienteServidor() usa createServerClient(@supabase/ssr) lendo/gravando cookies via next/headers; anon key (NEXT_PUBLIC_SUPABASE_URL/ANON_KEY). É o cliente padrão de toda Server Action autenticada. O comentário do topo manda usar sempre auth.getUser() (valida token) para checagens de segurança, nunca getSession() (só lê cookie).",
+        "ref": "src/lib/supabase/server.ts:19-39"
+      },
+      {
+        "tema": "Cliente Supabase público (anon, leitura SSR/SSG)",
+        "detalhe": "export const supabase = createClient(...) com auth:{persistSession:false, autoRefreshToken:false}. Leitor anônimo puro para leituras públicas (perfis, avaliações, sitemap). RLS decide o que é lido. Usado em lib/dentistas.ts e lib/log-busca.ts.",
+        "ref": "src/lib/supabase/public.ts:21-23"
+      },
+      {
+        "tema": "Cliente Supabase navegador (singleton com lock NO-OP)",
+        "detalhe": "criarClienteNavegador() = singleton de createBrowserClient(@supabase/ssr) com auth.lock=lockNoOp (evita deadlock do navigator.locks). Sessão em cookies para o servidor enxergar o login. Usado por componentes 'use client' (login/logout/checar user).",
+        "ref": "src/lib/supabase/client.ts:29-45"
+      },
+      {
+        "tema": "Padrão canônico de Server Action mutadora",
+        "detalhe": "Todas as acoes.ts começam com \"use server\"; cada função: (1) const supabase = await criarClienteServidor(); (2) const {data:{user}} = await supabase.auth.getUser(); (3) if(!user) retorna {ok:false, erro:'Sessão expirada...'}; (4) usa user.id da SESSÃO (NUNCA id vindo do cliente, pois Server Actions são POST-callable); (5) retorna {ok:boolean, erro?:string}. RLS é a 'proteção final'.",
+        "ref": "src/app/pro/dashboard/acoes.ts:15-27"
+      },
+      {
+        "tema": "Helper sessao() reutilizável",
+        "detalhe": "Em cadastro/acoes.ts há um helper interno (não exportado) sessao() que retorna {supabase, uid, email}. Padrão limpo para reaproveitar em novas actions de salas.",
+        "ref": "src/app/cadastro/acoes.ts:18-24"
+      },
+      {
+        "tema": "Notificação por e-mail via Edge Function (avaliação)",
+        "detalhe": "enviarAvaliacao() insere em 'avaliacoes' (paciente_id=user.id) e DEPOIS notifica o dentista best-effort com await supabase.functions.invoke('send-rating-notification', {body:{dentistId, dentistName, specialty, patientName}}). Falha de notificação é só console.warn (não derruba o insert). A Edge Function resolve o e-mail pelo dentista_id no servidor.",
+        "ref": "src/app/dentista/[id]/acoes.ts:79-99"
+      },
+      {
+        "tema": "Notificação por e-mail via Edge Function (CRO inativa)",
+        "detalhe": "notificarCroInativa({email,nome,cro}) valida getUser() e chama supabase.functions.invoke('notificar-cro-inativa', {body:{email,nome,cro}}); retorna boolean (best-effort, try/catch). É o e-mail 'oficial de regularização' (suporte@). Invocada NO SERVIDOR com a sessão dos cookies.",
+        "ref": "src/app/pro/verificar-cro/[id]/acoes.ts:38-52"
+      },
+      {
+        "tema": "Como a UI dispara a notificação (conectar partes)",
+        "detalhe": "Componente 'use client' VerificarCroDetalheCliente importa a action de ./acoes e a chama: notificarDentista() => notificarCroInativa({email:pro.email, nome:pro.nome, cro}). pro.email vem carregado no objeto verificacao (join curadentespro). Padrão direto Server Action <- click handler do cliente.",
+        "ref": "src/app/pro/verificar-cro/[id]/VerificarCroDetalheCliente.tsx:52-55"
+      },
+      {
+        "tema": "Contato gated (login wall + registro de evento + abrir link) — analog locatário↔clínica",
+        "detalhe": "handleContactRequest(url,tipo): se não logado => pedirLoginPaciente() abre modal de login e aborta; se logado => window.open(url wa.me/tel:) e void registrarContato(perfil.id, tipo). É o padrão exato a reusar para 'solicitar reserva': muro de login + registro de evento + abertura do canal de contato com a clínica.",
+        "ref": "src/app/dentista/[id]/PerfilDentistaView.tsx:967-974"
+      },
+      {
+        "tema": "Registro de evento idempotente (upsert)",
+        "detalhe": "registrarContato/registrarVisualizacao usam supabase.from('perfil_contatos'/'perfil_visualizacoes').upsert({dentista_id, viewer_id:user.id, tipo}, {onConflict:'dentista_id,viewer_id,tipo,data_visita', ignoreDuplicates:true}). viewer_id da sessão; best-effort (try/catch vazio). Padrão para idempotência 1x/dia.",
+        "ref": "src/app/dentista/[id]/acoes.ts:28-31"
+      },
+      {
+        "tema": "Insert de evento anônimo fire-and-forget (logs_busca)",
+        "detalhe": "logarBusca() usa o cliente PÚBLICO (anon) e faz supabase.from('logs_busca').insert({query, cidade, estado, bairro, lat, lng, resultados_count, user_id:null}); nunca lança (console.warn). Padrão de log de demanda — relevante para registrar 'solicitações de sala' como evento de funil.",
+        "ref": "src/lib/log-busca.ts:25-41"
+      },
+      {
+        "tema": "Tabelas principais existentes (inventário do back-end)",
+        "detalhe": "curadentespro (dentistas; lgpd_aceito, deleted_at, cro_verificado), curadentespro_enderecos (clínicas: nome_clinica, logradouro/numero/bairro/cidade/estado/cep, telefone, whatsapp, atividades[], convenios[], formas_pagamento[], agenda JSON, atende_urgencias, estacionamento, observacoes, latitude/longitude), curadentespro_email/curadentespro_cpf (PII separada), clientes (pacientes), avaliacoes, cro_verificacoes, perfil_visualizacoes/perfil_contatos, logs_busca/logs_login, app_config.",
+        "ref": "docs/backend/README.md:13-24"
+      },
+      {
+        "tema": "Endereços de clínica = base de dados para 'sala'",
+        "detalhe": "curadentespro_enderecos JÁ modela a clínica física (com lat/long geocodificada no cliente, nome_clinica, agenda JSON, estacionamento, observacoes). EnderecoRow/montarEndereco em lib/dentistas.ts. Uma 'sala alugável' provavelmente referencia curadentespro_id + endereco_id como locador.",
+        "ref": "src/lib/dentistas.ts:48-110"
+      },
+      {
+        "tema": "CRUD de endereços (insert/update/delete por sessão)",
+        "detalhe": "salvarPerfil() mostra o padrão completo de CRUD multi-linha numa action: delete dos removidos (.in('id', ids)), insert dos novos (.insert(payload).select('id').single() devolvendo novosIds tempId->id) e update dos existentes, todos com curadentespro_id=uid da sessão. Geocoding (lat/lng) calculado no CLIENTE e passado no payload.",
+        "ref": "src/app/pro/perfil/acoes.ts:56-104"
+      },
+      {
+        "tema": "RPC como fonte da verdade gated em superuser",
+        "detalhe": "marcarVerificacaoCro() chama supabase.rpc('marcar_verificacao_cro', {p_dentista_id, p_verificado, p_observacao}) e lê data.success. Padrão para operações que exigem regra de negócio/privilegio no banco (não só RLS de tabela). RPCs existentes: is_superuser(), taxa_sucesso_contato(p_dias), meu_telefone()/meu_cpf() (PII via RPC).",
+        "ref": "src/app/pro/verificar-cro/[id]/acoes.ts:24-34"
+      },
+      {
+        "tema": "PII protegida — só via RPC, nunca REST",
+        "detalhe": "email/telefone/cpf de curadentespro NÃO podem ser lidos/gravados via REST (RLS bloqueia). Leitura via rpc('meu_telefone')/rpc('meu_cpf'); gravação de CPF em tabela separada curadentespro_cpf (upsert onConflict curadentespro_id). CAMPOS_PRO em dentistas.ts OMITE email/cpf de propósito (LGPD).",
+        "ref": "src/app/cadastro/acoes.ts:68-69"
+      },
+      {
+        "tema": "Storage de imagens (bucket público, caminho fixo)",
+        "detalhe": "uploadFotoDentista(formData) Server Action: valida sessão+tamanho(2MB)+tipo, supabase.storage.from('fotos-dentistas').upload(`${user.id}/foto.webp`, {upsert:true}), getPublicUrl + ?v= cache-bust, e update curadentespro.foto_url. Bucket 'fotos-dentistas' (WebP, público, RLS owner-only). Reaproveitável para fotos de sala.",
+        "ref": "src/lib/upload-foto.ts:21-57"
+      },
+      {
+        "tema": "Como o RLS é aplicado (comentários no código)",
+        "detalhe": "Padrão repetido: 'RLS como proteção final'; ações validam getUser() E usam id da sessão porque Server Actions são POST-callable (cita doc Next 'Always verify authentication and authorization inside every Server Function'). Leituras de analytics só funcionam para superuser por RLS das tabelas (logs_busca/login, perfil_visualizacoes/contatos). Upload é 'owner-only' por RLS.",
+        "ref": "src/app/pro/dashboard/acoes.ts:5-9"
+      },
+      {
+        "tema": "Pendências de RLS conhecidas no back-end compartilhado",
+        "detalhe": "logs_login aceita user_id do cliente (forjável) — recomendam WITH CHECK (user_id=auth.uid() OR user_id IS NULL) e DEFAULT auth.uid(). is_superuser() deve ler só auth.jwt()->>'email' top-level, nunca user_metadata (escalonamento). Lições diretas ao desenhar RLS de tabelas novas de salas/reservas.",
+        "ref": "docs/backend/README.md:50-59"
+      },
+      {
+        "tema": "Back-end é compartilhado e não recriado no repo",
+        "detalhe": "Mesmo projeto Supabase do site-k11 (ref dsnzgxjuqlalysyfiion). NÃO há arquivos .sql/migrations no repo site-R0; o schema/RLS/Edge Functions vivem no Supabase. Tabelas e RPCs novas para salas precisam ser criadas via Supabase (migration no projeto compartilhado), não neste repositório.",
+        "ref": "docs/backend/README.md:3-9"
+      }
+    ],
+    "reuso_para_salas": [
+      "Server Action de RESERVA: criar src/app/salas/.../acoes.ts seguindo o padrão exato (\"use server\" + criarClienteServidor() + auth.getUser() + locatario_id=user.id da sessão + retorno {ok,erro}). Nunca confiar em id vindo do cliente.",
+      "Tabela de salas pode reusar/referenciar curadentespro_enderecos (já tem nome_clinica, lat/long, agenda JSON, estacionamento, observacoes). Nova tabela 'salas' com FK curadentespro_id + endereco_id como locador, e 'reservas_sala' com locatario_id (sessão), sala_id, status, datas.",
+      "Fluxo 'solicitar reserva' = clonar handleContactRequest (PerfilDentistaView.tsx:967): muro de login (pedirLogin) + registro do evento (upsert idempotente em tabela de solicitações) + abertura/registro do canal de contato com a clínica.",
+      "Notificar a clínica = padrão functions.invoke de uma Edge Function nova (ex.: 'notificar-reserva-sala') chamada NO SERVIDOR dentro da action, best-effort com try/catch e console.warn, body com os ids; a Edge Function resolve o e-mail do locador pelo id (PII fica no servidor, igual send-rating-notification/notificar-cro-inativa).",
+      "Conectar locatário↔clínica (contato): reusar a mecânica de contato gated com wa.me/tel: (urlWhatsapp) + registro do clique, e/ou trocar e-mails via Edge Function; e-mail/telefone NUNCA via REST — expor por RPC tipo meu_telefone() ou só dentro da Edge Function.",
+      "Upload de fotos da sala: clonar uploadFotoDentista (FormData + Storage bucket + caminho fixo {id}/... + update da tabela). Criar bucket público novo (ex.: 'fotos-salas') com RLS owner-only.",
+      "Registro/funil de demanda de salas: clonar logarBusca/registrarContato para logar solicitações e visualizações de sala (upsert idempotente com onConflict; best-effort fire-and-forget).",
+      "Operação sensível (confirmar/recusar reserva, alterar status) = RPC fonte-da-verdade no banco (padrão marcar_verificacao_cro via supabase.rpc), com gate de papel, em vez de update REST direto."
+    ],
+    "lacunas": [
+      "Não existem tabelas de salas/reservas — precisam ser CRIADAS no Supabase compartilhado (salas, reservas_sala/solicitacoes) com colunas e RLS próprias; nenhuma migration .sql existe no repo para servir de molde, só os manuais em docs/backend.",
+      "Nenhuma Edge Function de reserva existe; 'notificar-reserva-sala' (e templates de e-mail locador/locatário) precisa ser nova. As Edge Functions atuais (send-rating-notification, notificar-cro-inativa, lembrete-cadastro) estão no Supabase, não versionadas neste repo — não há código de exemplo de Edge Function para copiar aqui.",
+      "Não há integração de e-mail visível no front (Resend não aparece no repo); todo envio passa por Edge Functions opacas. O provedor/credencial de e-mail (Resend?) e os templates ficam no Supabase — precisam ser confirmados/estendidos lá.",
+      "RLS das tabelas novas precisa ser desenhada do zero: políticas para locador (dono via curadentespro_id) vs locatário (auth.uid()) vs leitura pública de salas disponíveis. Atenção às pendências já conhecidas (DEFAULT auth.uid(), WITH CHECK, is_superuser só por jwt top-level).",
+      "Não há máquina de estados de reserva (pendente/confirmada/recusada/cancelada), nem agenda/disponibilidade de sala por data-hora — a 'agenda' atual é só JSON de horários de atendimento do endereço, não slots reserváveis com conflito.",
+      "Sem pagamento/cobrança de locação no código atual (só cobranca_aviso_aceita do cadastro); locação pontual B2B pode exigir fluxo financeiro inexistente.",
+      "Geocodificação é feita no CLIENTE (lat/lng vêm no payload); a busca/listagem de salas por proximidade precisaria de RPC (existe get_dentistas_urgencia_proximos como referência, mas não para salas)."
+    ]
+  }
+]
