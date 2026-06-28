@@ -7,7 +7,20 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import { criarClienteServidor } from "@/lib/supabase/server";
-import type { SalaForm, SalaStatus, MinhaSala, EnderecoResumo } from "@/lib/salas";
+import type {
+  SalaForm,
+  SalaStatus,
+  MinhaSala,
+  EnderecoResumo,
+  SolicitacaoReserva,
+  ContatoReserva,
+} from "@/lib/salas";
+
+/** Solicitação enriquecida com o título/local da sala (para listar nos painéis). */
+export interface SolicitacaoItem extends SolicitacaoReserva {
+  sala_titulo: string | null;
+  sala_local: string | null;
+}
 
 async function sessao() {
   const supabase = await criarClienteServidor();
@@ -97,4 +110,115 @@ export async function atualizarStatusSala(
   const { error } = await supabase.from("salas").update({ status }).eq("id", id);
   if (error) return { ok: false, erro: error.message || "Não foi possível atualizar a sala." };
   return { ok: true };
+}
+
+// ─── Solicitações de reserva ─────────────────────────────────────────────────────
+// A RLS só deixa cada parte LER as suas (sol_select); toda escrita é via RPC gated.
+
+/** Solicitações RECEBIDAS (anfitrião): título da sala vem por embed (ele é o dono). */
+export async function carregarRecebidas(): Promise<{
+  ok: boolean;
+  semSessao?: boolean;
+  itens: SolicitacaoItem[];
+}> {
+  const { supabase, uid } = await sessao();
+  if (!uid) return { ok: true, semSessao: true, itens: [] };
+  const { data } = await supabase
+    .from("solicitacoes_reserva")
+    .select("*, sala:salas(titulo, cidade, bairro)")
+    .eq("anfitriao_id", uid)
+    .order("created_at", { ascending: false });
+  const itens = ((data as Record<string, unknown>[]) ?? []).map((r) => {
+    const sala = (r.sala ?? {}) as { titulo?: string; cidade?: string; bairro?: string };
+    return {
+      ...(r as unknown as SolicitacaoReserva),
+      sala_titulo: sala.titulo ?? null,
+      sala_local: [sala.bairro, sala.cidade].filter(Boolean).join(", ") || null,
+    };
+  });
+  return { ok: true, itens };
+}
+
+/** Solicitações ENVIADAS (locatário): a base `salas` é owner-only, então o título
+ *  vem da view pública `salas_publicas` (só ativas; pausada cai para "Sala"). */
+export async function carregarEnviadas(): Promise<{
+  ok: boolean;
+  semSessao?: boolean;
+  itens: SolicitacaoItem[];
+}> {
+  const { supabase, uid } = await sessao();
+  if (!uid) return { ok: true, semSessao: true, itens: [] };
+  const { data } = await supabase
+    .from("solicitacoes_reserva")
+    .select("*")
+    .eq("locatario_id", uid)
+    .order("created_at", { ascending: false });
+  const rows = (data as SolicitacaoReserva[]) ?? [];
+
+  const ids = [...new Set(rows.map((r) => r.sala_id))];
+  const mapa = new Map<string, { titulo: string; local: string | null }>();
+  if (ids.length) {
+    const { data: pubs } = await supabase
+      .from("salas_publicas")
+      .select("id, titulo, cidade, bairro")
+      .in("id", ids);
+    for (const p of (pubs as { id: string; titulo: string; cidade?: string; bairro?: string }[]) ?? []) {
+      mapa.set(p.id, {
+        titulo: p.titulo,
+        local: [p.bairro, p.cidade].filter(Boolean).join(", ") || null,
+      });
+    }
+  }
+  const itens = rows.map((r) => ({
+    ...r,
+    sala_titulo: mapa.get(r.sala_id)?.titulo ?? null,
+    sala_local: mapa.get(r.sala_id)?.local ?? null,
+  }));
+  return { ok: true, itens };
+}
+
+/** Anfitrião aprova/recusa (RPC revalida CRO na aprovação). Notifica best-effort. */
+export async function decidirSolicitacao(
+  id: string,
+  decisao: "aprovada" | "recusada",
+  observacao?: string,
+): Promise<{ ok: boolean; erro?: string }> {
+  const { supabase, uid } = await sessao();
+  if (!uid) return { ok: false, erro: "Sessão expirada." };
+  const { error } = await supabase.rpc("decidir_solicitacao_reserva", {
+    p_id: id,
+    p_decisao: decisao,
+    p_observacao: observacao?.trim() || null,
+  });
+  if (error) return { ok: false, erro: error.message || "Não foi possível registrar a decisão." };
+  try {
+    await supabase.functions.invoke("notificar-reserva-sala", {
+      body: { tipo: decisao, solicitacao_id: id },
+    });
+  } catch (e) {
+    console.warn("[decidirSolicitacao] notificação:", e);
+  }
+  return { ok: true };
+}
+
+/** Locatário cancela a própria solicitação (só enquanto pendente; RPC valida). */
+export async function cancelarSolicitacao(id: string): Promise<{ ok: boolean; erro?: string }> {
+  const { supabase, uid } = await sessao();
+  if (!uid) return { ok: false, erro: "Sessão expirada." };
+  const { error } = await supabase.rpc("cancelar_solicitacao", { p_id: id });
+  if (error) return { ok: false, erro: error.message || "Não foi possível cancelar." };
+  return { ok: true };
+}
+
+/** Contato da contraparte — só após aprovação. A RPC devolve a linha conforme o papel. */
+export async function verContato(
+  id: string,
+): Promise<{ ok: boolean; erro?: string; contato?: ContatoReserva }> {
+  const { supabase, uid } = await sessao();
+  if (!uid) return { ok: false, erro: "Sessão expirada." };
+  const { data, error } = await supabase.rpc("contato_da_reserva", { p_id: id });
+  if (error) return { ok: false, erro: error.message || "Contato indisponível." };
+  const row = (Array.isArray(data) ? data[0] : data) as ContatoReserva | undefined;
+  if (!row) return { ok: false, erro: "Contato indisponível." };
+  return { ok: true, contato: row };
 }

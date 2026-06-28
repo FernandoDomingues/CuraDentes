@@ -11,7 +11,7 @@ import Image from "next/image";
 import Link from "next/link";
 import Container from "@/components/Container";
 import Estrelas from "@/components/Estrelas";
-import { Eye, MessageCircle, Phone, Check, AlertCircle, Trophy, CalendarClock, Building2, MapPin, Settings } from "lucide-react";
+import { Eye, MessageCircle, Phone, Check, AlertCircle, Trophy, CalendarClock, Building2, MapPin, Settings, DoorOpen } from "lucide-react";
 import { redirect } from "next/navigation";
 import { getUsuario } from "@/lib/auth";
 import { criarClienteServidor } from "@/lib/supabase/server";
@@ -263,6 +263,40 @@ export default async function DashboardPage() {
           <section className="rounded-2xl border border-white/60 bg-white/90 shadow-[0_2px_8px_rgba(16,24,64,0.05)] backdrop-blur p-5">
             <h2 className="mb-3 text-lg font-bold text-brand-navy">Sua bio</h2>
             <BioEditor bioInicial={pro.bio ?? ""} />
+          </section>
+
+          {/* Locação de salas (B2B) — anfitrião e locatário */}
+          <section className="rounded-2xl border border-white/60 bg-white/90 shadow-[0_2px_8px_rgba(16,24,64,0.05)] backdrop-blur p-5">
+            <div className="mb-3 flex items-center gap-2">
+              <DoorOpen size={16} style={{ color: "#007AFF" }} />
+              <h2 className="text-lg font-bold text-brand-navy">Locação de salas</h2>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Link
+                href="/pro/salas"
+                className="flex min-h-[44px] items-center justify-between rounded-[12px] bg-black/[0.03] px-3 py-2 text-[14px] font-semibold text-ink transition-colors hover:bg-brand-blue/10 hover:text-brand-blue"
+              >
+                Anunciar / minhas salas <span aria-hidden>→</span>
+              </Link>
+              <Link
+                href="/pro/salas/solicitacoes"
+                className="flex min-h-[44px] items-center justify-between rounded-[12px] bg-black/[0.03] px-3 py-2 text-[14px] font-semibold text-ink transition-colors hover:bg-brand-blue/10 hover:text-brand-blue"
+              >
+                Solicitações recebidas <span aria-hidden>→</span>
+              </Link>
+              <Link
+                href="/pro/minhas-solicitacoes"
+                className="flex min-h-[44px] items-center justify-between rounded-[12px] bg-black/[0.03] px-3 py-2 text-[14px] font-semibold text-ink transition-colors hover:bg-brand-blue/10 hover:text-brand-blue"
+              >
+                Minhas solicitações <span aria-hidden>→</span>
+              </Link>
+              <Link
+                href="/salas"
+                className="mt-1 text-center text-[13px] font-medium text-ink-muted hover:text-brand-blue"
+              >
+                Procurar salas para alugar
+              </Link>
+            </div>
           </section>
 
           <section className="rounded-2xl border border-white/60 bg-white/90 shadow-[0_2px_8px_rgba(16,24,64,0.05)] backdrop-blur p-5">

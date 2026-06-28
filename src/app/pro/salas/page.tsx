@@ -4,7 +4,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import Link from "next/link";
-import { Plus, MapPin, Building2, Pencil } from "lucide-react";
+import { Plus, MapPin, Building2, Pencil, Inbox } from "lucide-react";
 import Container from "@/components/Container";
 import { carregarMinhasSalas } from "./acoes";
 import { formatarPreco } from "@/lib/salas";
@@ -24,15 +24,23 @@ export default async function MinhasSalasPage() {
             Anuncie uma sala ou cadeira ociosa para outros dentistas alugarem por atendimento.
           </p>
         </div>
-        {!semEndereco && (
+        <div className="flex items-center gap-2">
           <Link
-            href="/pro/salas/nova"
-            className="inline-flex min-h-[44px] items-center gap-2 rounded-[14px] px-5 py-3 text-[15px] font-semibold text-white transition-all hover:brightness-110"
-            style={{ background: "#007aff", boxShadow: "0 4px 16px rgba(0,122,255,0.25)" }}
+            href="/pro/salas/solicitacoes"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-[14px] border border-black/10 px-4 py-3 text-[14px] font-semibold text-brand-navy transition-colors hover:bg-black/[0.04]"
           >
-            <Plus size={18} /> Anunciar sala
+            <Inbox size={16} /> Solicitações
           </Link>
-        )}
+          {!semEndereco && (
+            <Link
+              href="/pro/salas/nova"
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-[14px] px-5 py-3 text-[15px] font-semibold text-white transition-all hover:brightness-110"
+              style={{ background: "#007aff", boxShadow: "0 4px 16px rgba(0,122,255,0.25)" }}
+            >
+              <Plus size={18} /> Anunciar sala
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Sem endereço cadastrado: não dá para anunciar (a sala fica num endereço seu). */}
