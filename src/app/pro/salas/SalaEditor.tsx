@@ -7,21 +7,25 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Check } from "lucide-react";
+import { Loader2, Check, X, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { salvarSala } from "./acoes";
 import {
   EQUIPAMENTOS_OPCOES,
   PRECO_UNIDADE_LABEL,
   disponibilidadePadrao,
+  normalizarBlocos,
+  dataLocalISO,
+  DIAS_SEMANA_LONGO,
   type EnderecoResumo,
   type MinhaSala,
   type PrecoUnidade,
   type SalaForm,
-  type DisponibilidadeDia,
+  type BlocoDisponibilidade,
 } from "@/lib/salas";
 
 const UNIDADES: PrecoUnidade[] = ["hora", "turno", "dia"];
+const HORAS = Array.from({ length: 24 }, (_, h) => `${String(h).padStart(2, "0")}:00`);
 
 export default function SalaEditor({
   enderecos,
@@ -40,7 +44,7 @@ export default function SalaEditor({
     preco_valor: salaInicial ? String(salaInicial.preco_valor) : "",
     preco_unidade: salaInicial?.preco_unidade ?? "hora",
     disponibilidade: salaInicial?.disponibilidade?.length
-      ? salaInicial.disponibilidade
+      ? normalizarBlocos(salaInicial.disponibilidade)
       : disponibilidadePadrao(),
     politica_cancelamento: salaInicial?.politica_cancelamento ?? "",
     contato_whatsapp: salaInicial?.contato_whatsapp ?? "",
@@ -60,11 +64,20 @@ export default function SalaEditor({
         : [...f.equipamentos, e],
     }));
   }
-  function setDia(i: number, patch: Partial<DisponibilidadeDia>) {
+  function addBloco() {
     setForm((f) => ({
       ...f,
-      disponibilidade: f.disponibilidade.map((d, idx) => (idx === i ? { ...d, ...patch } : d)),
+      disponibilidade: [
+        ...f.disponibilidade,
+        { tipo: "semanal", diaSemana: 5, inicio: "08:00", fim: "18:00" },
+      ],
     }));
+  }
+  function removeBloco(i: number) {
+    setForm((f) => ({ ...f, disponibilidade: f.disponibilidade.filter((_, idx) => idx !== i) }));
+  }
+  function setBloco(i: number, novo: BlocoDisponibilidade) {
+    setForm((f) => ({ ...f, disponibilidade: f.disponibilidade.map((b, idx) => (idx === i ? novo : b)) }));
   }
 
   async function salvar() {
@@ -181,49 +194,106 @@ export default function SalaEditor({
         </div>
       </Secao>
 
-      {/* Disponibilidade */}
-      <Secao titulo="Disponibilidade semanal">
-        <div className="flex flex-col gap-2">
-          {form.disponibilidade.map((d, i) => (
-            <div key={d.dia} className="flex flex-wrap items-center gap-3">
-              <label className="flex w-[150px] items-center gap-2 text-[14px] text-ink">
-                <input
-                  type="checkbox"
-                  checked={d.ativo}
-                  onChange={(e) => setDia(i, { ativo: e.target.checked })}
-                  className="h-4 w-4 accent-[#007aff]"
-                />
-                {d.dia}
-              </label>
-              {d.ativo ? (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="time"
-                    value={d.inicio}
-                    onChange={(e) => setDia(i, { inicio: e.target.value })}
-                    className="rounded-[10px] border border-black/15 px-2 py-1.5 text-[14px]"
-                  />
-                  <span className="text-ink-muted">até</span>
-                  <input
-                    type="time"
-                    value={d.fim}
-                    onChange={(e) => setDia(i, { fim: e.target.value })}
-                    className="rounded-[10px] border border-black/15 px-2 py-1.5 text-[14px]"
-                  />
-                </div>
+      {/* Disponibilidade (blocos: recorrente ou data específica) */}
+      <Secao titulo="Disponibilidade">
+        <p className="mb-3 text-[13px] text-ink-muted">
+          Quando a sala fica livre. Pode ser recorrente (<strong>toda sexta 14–19</strong>) ou uma{" "}
+          <strong>data específica</strong>. Adicione quantos blocos quiser — o dentista vê esses
+          horários no calendário ao solicitar.
+        </p>
+        <div className="flex flex-col gap-2.5">
+          {form.disponibilidade.length === 0 && (
+            <p className="text-[13px] text-ink-muted">Nenhum horário ainda. Adicione abaixo.</p>
+          )}
+          {form.disponibilidade.map((b, i) => (
+            <div
+              key={i}
+              className="flex flex-wrap items-center gap-2 rounded-[12px] border border-black/8 bg-black/[0.02] p-2.5"
+            >
+              <select
+                value={b.tipo}
+                onChange={(e) =>
+                  setBloco(
+                    i,
+                    e.target.value === "semanal"
+                      ? { tipo: "semanal", diaSemana: 5, inicio: b.inicio, fim: b.fim }
+                      : { tipo: "data", data: dataLocalISO(new Date()), inicio: b.inicio, fim: b.fim },
+                  )
+                }
+                className="rounded-[10px] border border-black/15 px-2 py-1.5 text-[13px]"
+              >
+                <option value="semanal">Toda semana</option>
+                <option value="data">Data específica</option>
+              </select>
+
+              {b.tipo === "semanal" ? (
+                <select
+                  value={b.diaSemana}
+                  onChange={(e) => setBloco(i, { ...b, diaSemana: Number(e.target.value) })}
+                  className="rounded-[10px] border border-black/15 px-2 py-1.5 text-[13px]"
+                >
+                  {DIAS_SEMANA_LONGO.map((d, idx) => (
+                    <option key={idx} value={idx}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
               ) : (
-                <span className="text-[13px] text-ink-muted">Fechado</span>
+                <input
+                  type="date"
+                  value={b.data}
+                  min={dataLocalISO(new Date())}
+                  onChange={(e) => setBloco(i, { ...b, data: e.target.value })}
+                  className="rounded-[10px] border border-black/15 px-2 py-1.5 text-[13px]"
+                />
               )}
+
+              <span className="text-[13px] text-ink-muted">das</span>
+              <select
+                value={b.inicio}
+                onChange={(e) => setBloco(i, { ...b, inicio: e.target.value })}
+                className="rounded-[10px] border border-black/15 px-2 py-1.5 text-[13px]"
+              >
+                {HORAS.map((h) => (
+                  <option key={h} value={h}>{h}</option>
+                ))}
+              </select>
+              <span className="text-[13px] text-ink-muted">às</span>
+              <select
+                value={b.fim}
+                onChange={(e) => setBloco(i, { ...b, fim: e.target.value })}
+                className="rounded-[10px] border border-black/15 px-2 py-1.5 text-[13px]"
+              >
+                {HORAS.map((h) => (
+                  <option key={h} value={h}>{h}</option>
+                ))}
+              </select>
+
+              <button
+                type="button"
+                onClick={() => removeBloco(i)}
+                className="ml-auto flex h-8 w-8 items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-black/5"
+                aria-label="Remover bloco"
+              >
+                <X size={15} />
+              </button>
             </div>
           ))}
         </div>
+        <button
+          type="button"
+          onClick={addBloco}
+          className="mt-3 inline-flex items-center gap-1.5 rounded-[12px] border border-brand-blue/30 px-3.5 py-2 text-[13px] font-semibold text-brand-blue transition-colors hover:bg-brand-blue/5"
+        >
+          <Plus size={15} /> Adicionar disponibilidade
+        </button>
       </Secao>
 
-      {/* Contato de locação (privado, revelado só após aprovar) */}
-      <Secao titulo="Contato de locação (privado)">
+      {/* Contato de locação (visível só dentro da comunidade de dentistas verificados) */}
+      <Secao titulo="Contato de locação">
         <p className="mb-3 text-[13px] text-ink-muted">
-          É revelado ao dentista <strong>só depois que você aprovar</strong> a solicitação. Pode ser
-          diferente do telefone público da sua clínica. Informe ao menos um.
+          Aparece no anúncio <strong>para dentistas com CRO verificado</strong> (a vitrine de salas é
+          fechada). Pode ser diferente do telefone público da sua clínica. Informe ao menos um.
         </p>
         <div className="flex flex-wrap gap-3">
           <div className="flex-1 min-w-[200px]">

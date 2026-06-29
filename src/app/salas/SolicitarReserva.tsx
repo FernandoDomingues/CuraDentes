@@ -2,48 +2,56 @@
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SolicitarReserva — ilha cliente no detalhe da sala. Muro de login: só dentista
-// logado solicita. Envia via Server Action solicitarReserva (RPC gated no banco).
+// com CRO verificado solicita. O horário é escolhido no calendário (AgendaSala);
+// cada faixa contígua selecionada vira uma solicitação (RPC criar_solicitacao_reserva).
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import { useState } from "react";
-import { Loader2, CheckCircle, CalendarClock } from "lucide-react";
+import { Loader2, CheckCircle, CalendarClock, CalendarDays, Pencil } from "lucide-react";
 import { useSessao } from "@/components/SessaoProvider";
+import { agruparHorasEmFaixas, type BlocoDisponibilidade } from "@/lib/salas";
 import { solicitarReserva } from "./acoes";
+import AgendaSala from "./AgendaSala";
 
-export default function SolicitarReserva({ salaId }: { salaId: string }) {
+export default function SolicitarReserva({
+  salaId,
+  disponibilidade,
+}: {
+  salaId: string;
+  disponibilidade: BlocoDisponibilidade[];
+}) {
   const { user, carregando, abrirModalDentista } = useSessao();
-  const [data, setData] = useState("");
-  const [inicio, setInicio] = useState("09:00");
-  const [fim, setFim] = useState("10:00");
+  const [modal, setModal] = useState(false);
+  const [sel, setSel] = useState<{ data: string; horas: number[] } | null>(null);
   const [mensagem, setMensagem] = useState("");
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState("");
   const [enviada, setEnviada] = useState(false);
 
-  const hoje = new Date().toISOString().slice(0, 10);
+  const card = "rounded-[18px] border border-gray-100 bg-white p-5 shadow-sm";
 
   async function enviar() {
+    if (!sel) return;
     setErro("");
-    if (!data) {
-      setErro("Escolha uma data.");
-      return;
-    }
-    if (fim <= inicio) {
-      setErro("O horário final precisa ser depois do inicial.");
-      return;
-    }
     setOcupado(true);
-    const res = await solicitarReserva({ salaId, data, horaInicio: inicio, horaFim: fim, mensagem });
+    const faixas = agruparHorasEmFaixas(sel.horas);
+    let falhou = "";
+    for (const f of faixas) {
+      const res = await solicitarReserva({
+        salaId, data: sel.data, horaInicio: f.inicio, horaFim: f.fim, mensagem,
+      });
+      if (!res.ok) {
+        falhou = res.erro || "Não foi possível enviar.";
+        break;
+      }
+    }
     setOcupado(false);
-    if (!res.ok) {
-      setErro(res.erro || "Não foi possível enviar.");
+    if (falhou) {
+      setErro(falhou);
       return;
     }
     setEnviada(true);
   }
-
-  const card =
-    "rounded-[18px] border border-gray-100 bg-white p-5 shadow-sm";
 
   if (carregando) {
     return (
@@ -70,7 +78,7 @@ export default function SolicitarReserva({ salaId }: { salaId: string }) {
     );
   }
 
-  // Logado, mas não é dentista com CRO aprovado (paciente/superuser/CRO pendente).
+  // Logado, mas não é dentista com CRO aprovado.
   if (!user.ehPro || !user.croVerificado) {
     return (
       <div className={card}>
@@ -89,8 +97,7 @@ export default function SolicitarReserva({ salaId }: { salaId: string }) {
           <div>
             <p className="text-[15px] font-semibold text-brand-navy">Solicitação enviada!</p>
             <p className="mt-1 text-[14px] text-ink-soft">
-              A clínica vai aprovar ou recusar. Se aprovar, vocês recebem o contato um do outro para
-              acertar os detalhes. Acompanhe em “Minhas solicitações”.
+              A clínica vai aprovar ou recusar. Acompanhe em “Minhas solicitações”.
             </p>
           </div>
         </div>
@@ -98,9 +105,8 @@ export default function SolicitarReserva({ salaId }: { salaId: string }) {
     );
   }
 
-  const inputBase =
-    "w-full rounded-[12px] border border-black/15 px-3 py-2.5 text-[15px] outline-none focus:border-brand-blue";
-  const label = "mb-1.5 block text-[13px] font-semibold text-ink-soft";
+  const faixas = sel ? agruparHorasEmFaixas(sel.horas) : [];
+  const resumo = faixas.map((f) => `${f.inicio}–${f.fim}`).join(", ");
 
   return (
     <div className={card}>
@@ -108,48 +114,72 @@ export default function SolicitarReserva({ salaId }: { salaId: string }) {
         <CalendarClock size={18} style={{ color: "#007aff" }} /> Solicitar um horário
       </h2>
 
-      <label className={label}>Data</label>
-      <input type="date" min={hoje} value={data} onChange={(e) => setData(e.target.value)} className={inputBase} />
+      {!sel ? (
+        <button
+          onClick={() => setModal(true)}
+          className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-[14px] py-3 text-[15px] font-semibold text-white transition-all hover:brightness-110"
+          style={{ background: "#007aff", boxShadow: "0 4px 16px rgba(0,122,255,0.25)" }}
+        >
+          <CalendarDays size={17} /> Ver agenda e escolher
+        </button>
+      ) : (
+        <>
+          <div className="mb-3 flex items-start justify-between gap-2 rounded-[12px] bg-brand-soft/50 p-3">
+            <div>
+              <p className="text-[13px] font-semibold text-brand-navy">
+                {sel.data.split("-").reverse().join("/")}
+              </p>
+              <p className="text-[13px] text-ink-soft">{resumo}</p>
+            </div>
+            <button
+              onClick={() => setModal(true)}
+              className="inline-flex items-center gap-1 text-[12px] font-semibold text-brand-blue"
+            >
+              <Pencil size={12} /> Alterar
+            </button>
+          </div>
 
-      <div className="mt-3 flex gap-3">
-        <div className="flex-1">
-          <label className={label}>Início</label>
-          <input type="time" value={inicio} onChange={(e) => setInicio(e.target.value)} className={inputBase} />
-        </div>
-        <div className="flex-1">
-          <label className={label}>Fim</label>
-          <input type="time" value={fim} onChange={(e) => setFim(e.target.value)} className={inputBase} />
-        </div>
-      </div>
+          <label className="mb-1.5 block text-[13px] font-semibold text-ink-soft">Mensagem (opcional)</label>
+          <textarea
+            value={mensagem}
+            onChange={(e) => setMensagem(e.target.value)}
+            rows={2}
+            maxLength={1000}
+            placeholder="Ex.: preciso para um atendimento de ortodontia."
+            className="w-full resize-none rounded-[12px] border border-black/15 px-3 py-2.5 text-[15px] outline-none focus:border-brand-blue"
+          />
 
-      <label className={`${label} mt-3`}>Mensagem (opcional)</label>
-      <textarea
-        value={mensagem}
-        onChange={(e) => setMensagem(e.target.value)}
-        rows={2}
-        maxLength={1000}
-        placeholder="Ex.: preciso para um atendimento de ortodontia."
-        className={`${inputBase} resize-none`}
-      />
+          {erro && (
+            <p role="alert" className="mt-2 text-[13px] text-danger">{erro}</p>
+          )}
 
-      {erro && (
-        <p role="alert" className="mt-2 text-[13px] text-danger">
-          {erro}
-        </p>
+          <button
+            onClick={enviar}
+            disabled={ocupado}
+            className="mt-4 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-[14px] py-3 text-[15px] font-semibold text-white transition-all hover:brightness-110 disabled:opacity-50"
+            style={{ background: "#007aff", boxShadow: "0 4px 16px rgba(0,122,255,0.25)" }}
+          >
+            {ocupado && <Loader2 size={16} className="animate-spin" />}
+            Solicitar horário
+          </button>
+        </>
       )}
 
-      <button
-        onClick={enviar}
-        disabled={ocupado}
-        className="mt-4 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-[14px] py-3 text-[15px] font-semibold text-white transition-all hover:brightness-110 disabled:opacity-50"
-        style={{ background: "#007aff", boxShadow: "0 4px 16px rgba(0,122,255,0.25)" }}
-      >
-        {ocupado && <Loader2 size={16} className="animate-spin" />}
-        Solicitar horário
-      </button>
       <p className="mt-2 text-center text-[12px] text-ink-muted">
         O pagamento é combinado direto com a clínica após a aprovação.
       </p>
+
+      {modal && (
+        <AgendaSala
+          disponibilidade={disponibilidade}
+          onFechar={() => setModal(false)}
+          onConfirmar={(s) => {
+            setSel(s);
+            setModal(false);
+            setErro("");
+          }}
+        />
+      )}
     </div>
   );
 }

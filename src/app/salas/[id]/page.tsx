@@ -17,7 +17,8 @@ import { supabase as supabasePublic } from "@/lib/supabase/public";
 import { criarClienteServidor } from "@/lib/supabase/server";
 import { getUsuario } from "@/lib/auth";
 import {
-  PRECO_UNIDADE_LABEL, type SalaPublica, type SalaDetalhe, type DisponibilidadeDia,
+  PRECO_UNIDADE_LABEL, normalizarBlocos, descreverBloco,
+  type SalaPublica, type SalaDetalhe,
 } from "@/lib/salas";
 import SolicitarReserva from "../SolicitarReserva";
 import MuroSalas from "../MuroSalas";
@@ -63,7 +64,8 @@ export default async function SalaDetalhePage({ params }: { params: Promise<{ id
     .order("created_at", { ascending: false }).limit(3);
   const outras = (outrasData as SalaPublica[]) ?? [];
 
-  const dias = (sala.disponibilidade ?? []).filter((d: DisponibilidadeDia) => d.ativo);
+  const blocos = normalizarBlocos(sala.disponibilidade ?? []);
+  const nDiasDisp = new Set(blocos.map((b) => (b.tipo === "semanal" ? `s${b.diaSemana}` : `d${b.data}`))).size;
   const temContato = !!(sala.contato_whatsapp || sala.contato_email);
   const temMapa = sala.latitude != null && sala.longitude != null;
   const mapsUrl = temMapa ? `https://www.google.com/maps/search/?api=1&query=${sala.latitude},${sala.longitude}` : null;
@@ -120,7 +122,7 @@ export default async function SalaDetalhePage({ params }: { params: Promise<{ id
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Spec icone={<Clock size={18} />} valor={sala.preco_unidade === "hora" ? "Por hora" : sala.preco_unidade === "turno" ? "Por turno" : "Por dia"} rotulo="Cobrança" />
             <Spec icone={<Layers size={18} />} valor={String(sala.equipamentos.length)} rotulo={sala.equipamentos.length === 1 ? "Equipamento" : "Equipamentos"} />
-            <Spec icone={<CalendarDays size={18} />} valor={String(dias.length)} rotulo={dias.length === 1 ? "Dia disponível" : "Dias disponíveis"} />
+            <Spec icone={<CalendarDays size={18} />} valor={String(nDiasDisp)} rotulo={nDiasDisp === 1 ? "Dia com horário" : "Dias com horário"} />
             <Spec icone={<MapPin size={18} />} valor={sala.cidade ?? "—"} rotulo="Cidade" />
           </div>
 
@@ -151,18 +153,15 @@ export default async function SalaDetalhePage({ params }: { params: Promise<{ id
             </section>
           )}
 
-          {/* Disponibilidade */}
-          {dias.length > 0 && (
+          {/* Disponibilidade (resumo dos blocos; o calendário fica no box de solicitar) */}
+          {blocos.length > 0 && (
             <section className={secao}>
               <h2 className="mb-3 flex items-center gap-2 text-[16px] font-bold text-brand-navy">
                 <Clock size={17} style={{ color: "#007aff" }} /> Disponibilidade
               </h2>
               <ul className="flex flex-col gap-1.5">
-                {dias.map((d) => (
-                  <li key={d.dia} className="flex justify-between text-[14px] text-ink-soft">
-                    <span>{d.dia}</span>
-                    <span className="font-medium text-ink">{d.inicio} – {d.fim}</span>
-                  </li>
+                {blocos.map((b, i) => (
+                  <li key={i} className="text-[14px] text-ink-soft">{descreverBloco(b)}</li>
                 ))}
               </ul>
             </section>
@@ -236,7 +235,7 @@ export default async function SalaDetalhePage({ params }: { params: Promise<{ id
 
         {/* Solicitar (sticky no desktop) */}
         <aside className="lg:sticky lg:top-24 lg:self-start">
-          <SolicitarReserva salaId={sala.id} />
+          <SolicitarReserva salaId={sala.id} disponibilidade={blocos} />
         </aside>
       </div>
 
