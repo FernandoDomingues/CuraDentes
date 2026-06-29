@@ -9,16 +9,18 @@
 import { useState } from "react";
 import { Loader2, CheckCircle, CalendarClock, CalendarDays, Pencil } from "lucide-react";
 import { useSessao } from "@/components/SessaoProvider";
-import { agruparHorasEmFaixas, type BlocoDisponibilidade } from "@/lib/salas";
+import { agruparHorasEmFaixas, type BlocoDisponibilidade, type SlotOcupado } from "@/lib/salas";
 import { solicitarReserva } from "./acoes";
 import AgendaSala from "./AgendaSala";
 
 export default function SolicitarReserva({
   salaId,
   disponibilidade,
+  ocupados,
 }: {
   salaId: string;
   disponibilidade: BlocoDisponibilidade[];
+  ocupados: SlotOcupado[];
 }) {
   const { user, carregando, abrirModalDentista } = useSessao();
   const [modal, setModal] = useState(false);
@@ -172,6 +174,7 @@ export default function SolicitarReserva({
       {modal && (
         <AgendaSala
           disponibilidade={disponibilidade}
+          ocupados={ocupados}
           onFechar={() => setModal(false)}
           onConfirmar={(s) => {
             setSel(s);

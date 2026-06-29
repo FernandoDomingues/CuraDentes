@@ -32,6 +32,13 @@ export interface BlocoData {
 }
 export type BlocoDisponibilidade = BlocoSemanal | BlocoData;
 
+/** Horário já alocado (reserva aprovada) — devolvido por slots_ocupados_sala. */
+export interface SlotOcupado {
+  data: string; // "YYYY-MM-DD"
+  hora_inicio: string; // "HH:MM[:SS]"
+  hora_fim: string;
+}
+
 /** Sala como exposta publicamente (view salas_publicas — sem endereco_id/contato). */
 export interface SalaPublica {
   id: string;

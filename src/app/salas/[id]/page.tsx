@@ -64,6 +64,10 @@ export default async function SalaDetalhePage({ params }: { params: Promise<{ id
     .order("created_at", { ascending: false }).limit(3);
   const outras = (outrasData as SalaPublica[]) ?? [];
 
+  // Horários já alocados (reservas aprovadas) — para a agenda pintar/bloquear.
+  const { data: ocupadosData } = await sb.rpc("slots_ocupados_sala", { p_sala_id: id });
+  const ocupados = (ocupadosData as { data: string; hora_inicio: string; hora_fim: string }[]) ?? [];
+
   const blocos = normalizarBlocos(sala.disponibilidade ?? []);
   const nDiasDisp = new Set(blocos.map((b) => (b.tipo === "semanal" ? `s${b.diaSemana}` : `d${b.data}`))).size;
   const temContato = !!(sala.contato_whatsapp || sala.contato_email);
@@ -235,7 +239,7 @@ export default async function SalaDetalhePage({ params }: { params: Promise<{ id
 
         {/* Solicitar (sticky no desktop) */}
         <aside className="lg:sticky lg:top-24 lg:self-start">
-          <SolicitarReserva salaId={sala.id} disponibilidade={blocos} />
+          <SolicitarReserva salaId={sala.id} disponibilidade={blocos} ocupados={ocupados} />
         </aside>
       </div>
 

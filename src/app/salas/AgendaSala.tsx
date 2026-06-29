@@ -13,19 +13,29 @@ import { useState } from "react";
 import { X, ChevronLeft, ChevronRight, ArrowLeft, Calendar as CalIcon } from "lucide-react";
 import {
   diaTemDisponibilidade, horasDoDia, dataLocalISO, parseDataLocal, formatarHora,
-  agruparHorasEmFaixas, DIAS_SEMANA_CURTO, type BlocoDisponibilidade,
+  agruparHorasEmFaixas, DIAS_SEMANA_CURTO, type BlocoDisponibilidade, type SlotOcupado,
 } from "@/lib/salas";
 
 export default function AgendaSala({
   disponibilidade,
+  ocupados,
   onFechar,
   onConfirmar,
 }: {
   disponibilidade: BlocoDisponibilidade[];
+  ocupados: SlotOcupado[];
   onFechar: () => void;
   onConfirmar: (sel: { data: string; horas: number[] }) => void;
 }) {
   const hojeISO = dataLocalISO(new Date());
+
+  // Horas já alocadas (reservas aprovadas): "YYYY-MM-DD|H".
+  const ocupadoSet = new Set<string>();
+  for (const o of ocupados) {
+    const a = parseInt(o.hora_inicio, 10);
+    const z = parseInt(o.hora_fim, 10);
+    if (Number.isFinite(a) && Number.isFinite(z)) for (let h = a; h < z; h++) ocupadoSet.add(`${o.data}|${h}`);
+  }
   const [tela, setTela] = useState<"mes" | "semana">("mes");
   const [mesRef, setMesRef] = useState(() => {
     const d = new Date();
@@ -214,39 +224,54 @@ export default function AgendaSala({
                   Sem horários nesta semana. Use as setas para navegar.
                 </p>
               ) : (
-                <div className="flex gap-2 overflow-x-auto pb-1">
-                  {colunas.map((iso) => {
-                    const dt = parseDataLocal(iso);
-                    const horas = horasDoDia(disponibilidade, iso);
-                    return (
-                      <div key={iso} className="flex min-w-[92px] flex-1 flex-col gap-2">
-                        <div className="text-center">
-                          <p className="text-[13px] font-bold text-brand-navy">{DIAS_SEMANA_CURTO[dt.getDay()]}</p>
-                          <p className="text-[12px] text-ink-muted">{iso.slice(8, 10)}/{iso.slice(5, 7)}</p>
+                <>
+                  {/* Legenda */}
+                  <div className="mb-3 flex items-center gap-4 text-[11px] text-ink-muted">
+                    <span className="flex items-center gap-1.5">
+                      <span className="inline-block h-3 w-3 rounded-full" style={{ background: "rgba(0,122,255,0.22)" }} /> Livre
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="inline-block h-3 w-3 rounded-full" style={{ background: "rgba(60,60,67,0.20)" }} /> Ocupado
+                    </span>
+                  </div>
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {colunas.map((iso) => {
+                      const dt = parseDataLocal(iso);
+                      const horas = horasDoDia(disponibilidade, iso);
+                      return (
+                        <div key={iso} className="flex min-w-[92px] flex-1 flex-col gap-2">
+                          <div className="text-center">
+                            <p className="text-[13px] font-bold text-brand-navy">{DIAS_SEMANA_CURTO[dt.getDay()]}</p>
+                            <p className="text-[12px] text-ink-muted">{iso.slice(8, 10)}/{iso.slice(5, 7)}</p>
+                          </div>
+                          <div className="flex flex-col gap-1.5">
+                            {horas.map((h) => {
+                              const ocup = ocupadoSet.has(`${iso}|${h}`);
+                              const on = !ocup && selData === iso && selHoras.includes(h);
+                              return (
+                                <button
+                                  key={h}
+                                  onClick={() => { if (!ocup) clicarSlot(iso, h); }}
+                                  disabled={ocup}
+                                  className="rounded-full py-2 text-center text-[13px] font-semibold transition-colors disabled:cursor-not-allowed"
+                                  style={
+                                    ocup
+                                      ? { background: "rgba(60,60,67,0.10)", color: "rgba(60,60,67,0.45)", textDecoration: "line-through" }
+                                      : on
+                                        ? { background: "#007aff", color: "#fff" }
+                                        : { background: "rgba(0,122,255,0.08)", color: "#0a2a66" }
+                                  }
+                                >
+                                  {formatarHora(h)}
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
-                        <div className="flex flex-col gap-1.5">
-                          {horas.map((h) => {
-                            const on = selData === iso && selHoras.includes(h);
-                            return (
-                              <button
-                                key={h}
-                                onClick={() => clicarSlot(iso, h)}
-                                className="rounded-full py-2 text-center text-[13px] font-semibold transition-colors"
-                                style={
-                                  on
-                                    ? { background: "#007aff", color: "#fff" }
-                                    : { background: "rgba(0,122,255,0.08)", color: "#0a2a66" }
-                                }
-                              >
-                                {formatarHora(h)}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                </>
               )}
             </>
           )}
