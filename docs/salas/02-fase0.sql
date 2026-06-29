@@ -2,6 +2,10 @@
 -- FASE 0 — Banco do subprojeto "Locação Pontual de Salas" (CuraDentes B2B)
 -- Rodar no SQL Editor do Supabase compartilhado (ref dsnzgxjuqlalysyfiion).
 -- ADITIVO: cria objetos novos, NÃO altera nada existente. Reversível (ver §8).
+--
+-- ⚠️ JÁ APLICADO. NÃO reaplicar isolado: o hardening de CRO vive em 04-hardening-cro.sql
+--    (salas_publicas / get_salas_proximas / decidir / contato passam a exigir o CRO
+--    VIGENTE). Reaplicar SÓ este arquivo regrediria aquele filtro — rode o 04 em seguida.
 -- v2 — pós revisão adversarial (4 lentes). Correções aplicadas: posse de
 -- endereco_id no UPDATE; campos desnormalizados derivados por TRIGGER (não pelo
 -- cliente); CRO do anfitrião revalidado na solicitação e na aprovação; contato de
