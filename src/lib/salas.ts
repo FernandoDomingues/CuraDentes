@@ -43,6 +43,17 @@ export interface MinhaSala extends SalaPublica {
   contato_email: string | null;
 }
 
+/** Detalhe members-only (RPC get_sala_detalhe): inclui contato + endereço completo,
+ *  visível só para dentista com CRO verificado. Ver docs/salas/05-detalhe-membros.sql. */
+export interface SalaDetalhe extends SalaPublica {
+  contato_whatsapp: string | null;
+  contato_email: string | null;
+  logradouro: string | null;
+  numero: string | null;
+  complemento: string | null;
+  cep: string | null;
+}
+
 /** Formulário de criação/edição da sala (no cliente). */
 export interface SalaForm {
   id?: string; // presente ao editar
