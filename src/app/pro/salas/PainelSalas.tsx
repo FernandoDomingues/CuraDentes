@@ -42,7 +42,7 @@ export default function PainelSalas({
   return (
     <div>
       {/* Abas */}
-      <div className="mb-6 flex flex-wrap gap-2 border-b border-gray-100">
+      <div className="mb-4 flex flex-wrap gap-2 border-b border-gray-100">
         {abas.map((t) => {
           const on = aba === t.id;
           return (
@@ -66,6 +66,16 @@ export default function PainelSalas({
           );
         })}
       </div>
+
+      {/* Texto-guia da aba ativa (desfaz a confusão locador/locatário) */}
+      <p className="mb-5 text-[13px] leading-relaxed text-ink-muted">
+        {aba === "recebidas" &&
+          "Pedidos que outros dentistas fizeram para alugar as SUAS salas. Aqui você aprova, recusa e confirma o pagamento recebido."}
+        {aba === "enviadas" &&
+          "Salas que VOCÊ pediu para alugar de outras clínicas. Acompanhe o status e veja o contato da clínica quando aprovado."}
+        {aba === "salas" &&
+          "Suas salas anunciadas. Edite, adicione fotos e gerencie a disponibilidade."}
+      </p>
 
       {/* RECEBIDAS (locador) */}
       {aba === "recebidas" && (
