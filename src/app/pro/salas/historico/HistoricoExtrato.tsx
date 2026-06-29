@@ -7,7 +7,8 @@
 // Botão no canto superior direito baixa tudo em planilha (CSV UTF-8, abre no Excel).
 // ═══════════════════════════════════════════════════════════════════════════════
 
-import { Download, Inbox, Send } from "lucide-react";
+import { useState } from "react";
+import { Download, Loader2, Inbox, Send } from "lucide-react";
 import type { StatusSolicitacao } from "@/lib/salas";
 import type { SolicitacaoItem } from "../acoes";
 
@@ -29,20 +30,49 @@ export default function HistoricoExtrato({
   recebidas: SolicitacaoItem[];
   enviadas: SolicitacaoItem[];
 }) {
-  function baixar() {
-    const linhas: string[][] = [["Papel", "Clínica", "Sala", "Dentista", "Data", "Horário", "Status"]];
-    for (const r of recebidas)
-      linhas.push(["Dono da sala", r.sala_clinica ?? "", r.sala_titulo ?? "", r.dentista_nome ?? "", dataBR(r.data), `${r.hora_inicio}-${r.hora_fim}`, LABEL[r.status]]);
-    for (const e of enviadas)
-      linhas.push(["Aluguei", e.sala_clinica ?? "", e.sala_titulo ?? "", "", dataBR(e.data), `${e.hora_inicio}-${e.hora_fim}`, LABEL[e.status]]);
-    const csv = "﻿" + linhas.map((l) => l.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\r\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "historico-locacao.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+  const [baixando, setBaixando] = useState(false);
+
+  async function baixar() {
+    // Cabeçalho em negrito; demais células são strings simples.
+    const cab = (cols: string[]) => cols.map((c) => ({ value: c, fontWeight: "bold" as const }));
+    const sheetDono = {
+      sheet: "Como dono da sala",
+      columns: [{ width: 26 }, { width: 30 }, { width: 24 }, { width: 22 }, { width: 13 }],
+      data: [
+        cab(["Clínica", "Sala", "Dentista", "Horário", "Status"]),
+        ...recebidas.map((r) => [
+          r.sala_clinica ?? "—",
+          r.sala_titulo ?? "Sala",
+          r.dentista_nome || "Dentista",
+          `${dataBR(r.data)} ${r.hora_inicio}–${r.hora_fim}`,
+          LABEL[r.status],
+        ]),
+      ],
+    };
+    const sheetAlug = {
+      sheet: "Como quem alugou",
+      columns: [{ width: 26 }, { width: 30 }, { width: 22 }, { width: 13 }],
+      data: [
+        cab(["Clínica", "Sala", "Horário", "Status"]),
+        ...enviadas.map((e) => [
+          e.sala_clinica ?? "—",
+          e.sala_titulo ?? "Sala",
+          `${dataBR(e.data)} ${e.hora_inicio}–${e.hora_fim}`,
+          LABEL[e.status],
+        ]),
+      ],
+    };
+    setBaixando(true);
+    try {
+      // Lib carregada só agora (dynamic import) — não pesa no carregamento da página.
+      const writeXlsxFile = (await import("write-excel-file/browser")).default;
+      const out = await writeXlsxFile([sheetDono, sheetAlug]);
+      await out.toFile("historico-locacao.xlsx");
+    } catch (e) {
+      console.error("[historico] xlsx:", e);
+    } finally {
+      setBaixando(false);
+    }
   }
 
   const temAlgo = recebidas.length > 0 || enviadas.length > 0;
@@ -56,11 +86,11 @@ export default function HistoricoExtrato({
         </div>
         <button
           onClick={baixar}
-          disabled={!temAlgo}
+          disabled={!temAlgo || baixando}
           className="inline-flex min-h-[40px] shrink-0 items-center gap-2 rounded-[12px] px-4 text-[14px] font-semibold text-white transition-all hover:brightness-110 disabled:opacity-40"
           style={{ background: "#0a2a66" }}
         >
-          <Download size={16} /> Baixar planilha
+          {baixando ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} Baixar Excel
         </button>
       </div>
 
