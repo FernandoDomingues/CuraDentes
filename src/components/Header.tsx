@@ -13,7 +13,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, Home, User, LogOut, BarChart2 } from "lucide-react";
+import { Menu, X, Home, User, LogOut, BarChart2, ArrowLeft } from "lucide-react";
 import { useSessao } from "./SessaoProvider";
 import { AVATAR_PADRAO } from "@/lib/site";
 
@@ -49,6 +49,8 @@ export default function Header() {
   if (pathname && pathname.startsWith("/pro")) {
     const proBtn =
       "inline-flex items-center gap-2 min-h-[40px] rounded-[12px] bg-black/5 px-3 py-2 text-[13px] font-medium text-ink-muted transition-colors hover:bg-brand-blue/10 hover:text-brand-blue";
+    // Em /pro/salas, o header troca Home + Meu Perfil por "Voltar ao meu Perfil".
+    const ehProSalas = pathname.startsWith("/pro/salas");
     return (
       <header
         style={{
@@ -68,12 +70,20 @@ export default function Header() {
               <Image src="/logos/logo-pro.png" alt="CuraDentes Pro" width={2480} height={926} priority className="h-7 w-auto" />
             </Link>
             <div className="flex items-center gap-2">
-              <Link href="/" className={proBtn}><Home size={16} /><span className="hidden sm:inline">Home</span></Link>
-              {user?.ehSuper && (
-                <Link href="/pro/dashboard-analytics" className={proBtn}><BarChart2 size={16} /><span className="hidden sm:inline">Analytics</span></Link>
-              )}
-              {user?.ehPro && pathname !== "/pro/dashboard" && (
-                <Link href="/pro/perfil" className={proBtn}><User size={16} /><span className="hidden sm:inline">Meu Perfil</span></Link>
+              {ehProSalas ? (
+                <Link href="/pro/dashboard" className={proBtn}>
+                  <ArrowLeft size={16} /><span className="hidden sm:inline">Voltar ao meu Perfil</span>
+                </Link>
+              ) : (
+                <>
+                  <Link href="/" className={proBtn}><Home size={16} /><span className="hidden sm:inline">Home</span></Link>
+                  {user?.ehSuper && (
+                    <Link href="/pro/dashboard-analytics" className={proBtn}><BarChart2 size={16} /><span className="hidden sm:inline">Analytics</span></Link>
+                  )}
+                  {user?.ehPro && pathname !== "/pro/dashboard" && (
+                    <Link href="/pro/editar-perfil" className={proBtn}><User size={16} /><span className="hidden sm:inline">Meu Perfil</span></Link>
+                  )}
+                </>
               )}
               <button
                 onClick={sair}

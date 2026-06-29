@@ -57,7 +57,7 @@ export default function EnderecoCard({ endereco }: { endereco: EnderecoClinica }
           </div>
         </div>
         <Link
-          href={`/pro/perfil#endereco-${endereco.id}`}
+          href={`/pro/editar-perfil#endereco-${endereco.id}`}
           className="flex flex-shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 transition-colors hover:bg-brand-blue/10 hover:text-brand-blue"
           style={{ background: "rgba(60,60,67,0.06)", color: "#8E8E93", border: "0.5px solid rgba(60,60,67,0.12)" }}
           title="Editar informações deste endereço"

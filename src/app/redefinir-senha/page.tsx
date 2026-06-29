@@ -110,7 +110,7 @@ export default function RedefinirSenhaPage() {
             Solicite um novo link na sua área de perfil.
           </p>
           <button
-            onClick={() => router.push("/pro/perfil")}
+            onClick={() => router.push("/pro/editar-perfil")}
             className="w-full py-3 rounded-[12px] font-semibold text-[15px] text-white transition-all"
             style={{ background: "#007AFF" }}
           >

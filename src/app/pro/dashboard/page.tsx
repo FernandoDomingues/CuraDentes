@@ -147,7 +147,7 @@ export default async function DashboardPage() {
         <div className="flex justify-center">
           {/* Engrenagem → edição de perfil (lá também se troca a foto). */}
           <Link
-            href="/pro/perfil"
+            href="/pro/editar-perfil"
             aria-label="Meu perfil"
             title="Meu perfil"
             className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-brand-navy transition-colors hover:bg-white/90"

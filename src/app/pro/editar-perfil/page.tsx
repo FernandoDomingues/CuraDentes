@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// MEU PERFIL — /pro/perfil (Server Component → carrega os dados + casca).
+// MEU PERFIL — /pro/editar-perfil (Server Component → carrega os dados + casca).
 //
 // O acesso já foi garantido pelo layout /pro. Aqui carregamos no SERVIDOR (cliente
 // autenticado por cookies) os dados do dentista, o CPF (RPC protegida meu_cpf) e os

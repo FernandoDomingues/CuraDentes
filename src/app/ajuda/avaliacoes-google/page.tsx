@@ -77,7 +77,7 @@ function Passo({
 export default function AjudaAvaliacoesGooglePage() {
   return (
     <Container className="max-w-2xl space-y-6 py-8">
-      <Link href="/pro/perfil" className="inline-flex items-center gap-1 text-sm text-brand-blue hover:underline">
+      <Link href="/pro/editar-perfil" className="inline-flex items-center gap-1 text-sm text-brand-blue hover:underline">
         <ArrowLeft size={15} /> Voltar ao meu perfil
       </Link>
 

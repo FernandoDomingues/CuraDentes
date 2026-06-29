@@ -36,8 +36,8 @@ export default function PainelSalas({
   const aPagar = enviadas.filter((e) => e.status === "aprovada" && !e.pagamento_resolvido).length;
 
   const abas: { id: Aba; label: string; icone: React.ReactNode; badge: number }[] = [
-    { id: "recebidas", label: "Recebidas", icone: <Inbox size={15} />, badge: recPend.length },
-    { id: "enviadas", label: "Minhas solicitações", icone: <Send size={15} />, badge: aPagar },
+    { id: "recebidas", label: "Caixa de entrada", icone: <Inbox size={15} />, badge: recPend.length },
+    { id: "enviadas", label: "Salas Contratadas", icone: <Send size={15} />, badge: aPagar },
     { id: "salas", label: "Minhas salas", icone: <DoorOpen size={15} />, badge: 0 },
   ];
 
@@ -130,7 +130,7 @@ export default function PainelSalas({
               icone={<Building2 size={34} />}
               titulo="Cadastre um endereço primeiro"
               texto="Uma sala fica vinculada a um dos seus endereços de clínica. Adicione um endereço no seu perfil para poder anunciar."
-              acao={<Link href="/pro/perfil" className="mt-2 rounded-[14px] px-6 py-3 text-[14px] font-semibold text-white" style={{ background: "#007aff" }}>Ir para o perfil</Link>}
+              acao={<Link href="/pro/editar-perfil" className="mt-2 rounded-[14px] px-6 py-3 text-[14px] font-semibold text-white" style={{ background: "#007aff" }}>Ir para o perfil</Link>}
             />
           ) : salas.length === 0 ? (
             <Vazio icone={<MapPin size={34} />} titulo="Nenhuma sala anunciada ainda" texto="Clique em “Anunciar sala” para criar a primeira." />

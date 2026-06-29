@@ -22,7 +22,7 @@ export default async function NovaSalaPage() {
       {enderecos.length === 0 ? (
         <p className="text-[15px] text-ink-soft">
           Cadastre um endereço de clínica no seu{" "}
-          <Link href="/pro/perfil" className="font-semibold text-brand-blue hover:underline">
+          <Link href="/pro/editar-perfil" className="font-semibold text-brand-blue hover:underline">
             perfil
           </Link>{" "}
           antes de anunciar uma sala.
