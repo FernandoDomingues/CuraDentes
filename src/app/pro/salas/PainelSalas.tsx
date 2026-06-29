@@ -29,13 +29,15 @@ export default function PainelSalas({
   abaInicial: Aba;
 }) {
   const [aba, setAba] = useState<Aba>(abaInicial);
+  // Painel = só o ATIVO (pendente + aprovada). Recusadas/canceladas vão ao Histórico.
   const recPend = recebidas.filter((r) => r.status === "pendente");
-  const recOutras = recebidas.filter((r) => r.status !== "pendente");
-  const pagPend = enviadas.filter((e) => e.status === "aprovada" && !e.pagamento_resolvido).length;
+  const recAprov = recebidas.filter((r) => r.status === "aprovada");
+  const envAtivas = enviadas.filter((e) => e.status === "pendente" || e.status === "aprovada");
+  const aPagar = enviadas.filter((e) => e.status === "aprovada" && !e.pagamento_resolvido).length;
 
   const abas: { id: Aba; label: string; icone: React.ReactNode; badge: number }[] = [
     { id: "recebidas", label: "Recebidas", icone: <Inbox size={15} />, badge: recPend.length },
-    { id: "enviadas", label: "Minhas solicitações", icone: <Send size={15} />, badge: pagPend },
+    { id: "enviadas", label: "Minhas solicitações", icone: <Send size={15} />, badge: aPagar },
     { id: "salas", label: "Minhas salas", icone: <DoorOpen size={15} />, badge: 0 },
   ];
 
@@ -77,38 +79,38 @@ export default function PainelSalas({
           "Suas salas anunciadas. Edite, adicione fotos e gerencie a disponibilidade."}
       </p>
 
-      {/* RECEBIDAS (locador) */}
+      {/* RECEBIDAS (locador) — só ativas */}
       {aba === "recebidas" && (
-        recebidas.length === 0 ? (
-          <Vazio icone={<Inbox size={34} />} titulo="Nenhuma solicitação recebida" texto="Quando um dentista pedir uma das suas salas, aparece aqui." />
+        recPend.length + recAprov.length === 0 ? (
+          <Vazio icone={<Inbox size={34} />} titulo="Nenhuma solicitação ativa" texto="Pedidos pendentes e reservas aprovadas aparecem aqui. O histórico fica no botão “Histórico”." />
         ) : (
           <div className="flex flex-col gap-6">
             {recPend.length > 0 && (
-              <Secao titulo={`Pendentes (${recPend.length})`}>
+              <Secao titulo={`Aguardando sua resposta (${recPend.length})`}>
                 {recPend.map((i) => <SolicitacaoCard key={i.id} item={i} modo="recebida" />)}
               </Secao>
             )}
-            {recOutras.length > 0 && (
-              <Secao titulo="Histórico">
-                {recOutras.map((i) => <SolicitacaoCard key={i.id} item={i} modo="recebida" />)}
+            {recAprov.length > 0 && (
+              <Secao titulo="Aprovadas">
+                {recAprov.map((i) => <SolicitacaoCard key={i.id} item={i} modo="recebida" />)}
               </Secao>
             )}
           </div>
         )
       )}
 
-      {/* ENVIADAS (locatário) */}
+      {/* ENVIADAS (locatário) — só ativas */}
       {aba === "enviadas" && (
-        enviadas.length === 0 ? (
+        envAtivas.length === 0 ? (
           <Vazio
             icone={<Send size={32} />}
-            titulo="Você ainda não solicitou salas"
-            texto=""
+            titulo="Você não tem solicitações ativas"
+            texto="Pedidos recusados ou cancelados ficam no Histórico."
             acao={<Link href="/salas" className="mt-2 inline-flex items-center gap-2 rounded-[14px] px-6 py-3 text-[14px] font-semibold text-white" style={{ background: "#007aff" }}>Procurar salas</Link>}
           />
         ) : (
           <div className="flex flex-col gap-3">
-            {enviadas.map((i) => <SolicitacaoCard key={i.id} item={i} modo="enviada" />)}
+            {envAtivas.map((i) => <SolicitacaoCard key={i.id} item={i} modo="enviada" />)}
           </div>
         )
       )}

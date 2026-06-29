@@ -17,10 +17,12 @@ import type {
   ContatoSolicitante,
 } from "@/lib/salas";
 
-/** Solicitação enriquecida com o título/local da sala (para listar nos painéis). */
+/** Solicitação enriquecida com título/local/clínica da sala + nome do solicitante. */
 export interface SolicitacaoItem extends SolicitacaoReserva {
   sala_titulo: string | null;
   sala_local: string | null;
+  sala_clinica: string | null;
+  dentista_nome: string | null; // nome do solicitante (para o histórico do locador)
 }
 
 async function sessao() {
@@ -126,15 +128,27 @@ export async function carregarRecebidas(): Promise<{
   if (!uid) return { ok: true, semSessao: true, itens: [] };
   const { data } = await supabase
     .from("solicitacoes_reserva")
-    .select("*, sala:salas(titulo, cidade, bairro)")
+    .select("*, sala:salas(titulo, cidade, bairro, nome_clinica)")
     .eq("anfitriao_id", uid)
     .order("created_at", { ascending: false });
-  const itens = ((data as Record<string, unknown>[]) ?? []).map((r) => {
-    const sala = (r.sala ?? {}) as { titulo?: string; cidade?: string; bairro?: string };
+  const rows = (data as Record<string, unknown>[]) ?? [];
+
+  // Nomes dos solicitantes (dentistas), em lote — nome é público (perfil completo).
+  const locIds = [...new Set(rows.map((r) => r.locatario_id as string))];
+  const nomes = new Map<string, string>();
+  if (locIds.length) {
+    const { data: dents } = await supabase.from("curadentespro").select("id, nome").in("id", locIds);
+    for (const d of (dents as { id: string; nome: string | null }[]) ?? []) nomes.set(d.id, d.nome ?? "");
+  }
+
+  const itens = rows.map((r) => {
+    const sala = (r.sala ?? {}) as { titulo?: string; cidade?: string; bairro?: string; nome_clinica?: string };
     return {
       ...(r as unknown as SolicitacaoReserva),
       sala_titulo: sala.titulo ?? null,
       sala_local: [sala.bairro, sala.cidade].filter(Boolean).join(", ") || null,
+      sala_clinica: sala.nome_clinica ?? null,
+      dentista_nome: nomes.get(r.locatario_id as string) || null,
     };
   });
   return { ok: true, itens };
@@ -157,16 +171,17 @@ export async function carregarEnviadas(): Promise<{
   const rows = (data as SolicitacaoReserva[]) ?? [];
 
   const ids = [...new Set(rows.map((r) => r.sala_id))];
-  const mapa = new Map<string, { titulo: string; local: string | null }>();
+  const mapa = new Map<string, { titulo: string; local: string | null; clinica: string | null }>();
   if (ids.length) {
     const { data: pubs } = await supabase
       .from("salas_publicas")
-      .select("id, titulo, cidade, bairro")
+      .select("id, titulo, cidade, bairro, nome_clinica")
       .in("id", ids);
-    for (const p of (pubs as { id: string; titulo: string; cidade?: string; bairro?: string }[]) ?? []) {
+    for (const p of (pubs as { id: string; titulo: string; cidade?: string; bairro?: string; nome_clinica?: string }[]) ?? []) {
       mapa.set(p.id, {
         titulo: p.titulo,
         local: [p.bairro, p.cidade].filter(Boolean).join(", ") || null,
+        clinica: p.nome_clinica ?? null,
       });
     }
   }
@@ -174,6 +189,8 @@ export async function carregarEnviadas(): Promise<{
     ...r,
     sala_titulo: mapa.get(r.sala_id)?.titulo ?? null,
     sala_local: mapa.get(r.sala_id)?.local ?? null,
+    sala_clinica: mapa.get(r.sala_id)?.clinica ?? null,
+    dentista_nome: null,
   }));
   return { ok: true, itens };
 }
