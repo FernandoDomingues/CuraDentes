@@ -15,6 +15,16 @@ import type { SolicitacaoItem } from "../acoes";
 function valorDe(it: SolicitacaoItem) {
   return it.sala_preco != null ? formatarPreco(it.sala_preco, (it.sala_unidade ?? "hora") as PrecoUnidade) : "—";
 }
+function horasDe(it: SolicitacaoItem) {
+  const a = parseInt(it.hora_inicio, 10);
+  const z = parseInt(it.hora_fim, 10);
+  return Number.isFinite(a) && Number.isFinite(z) ? Math.max(0, z - a) : 0;
+}
+/** Custo total: por hora = valor × horas; por turno/dia = o valor da unidade. */
+function totalDe(it: SolicitacaoItem) {
+  if (it.sala_preco == null) return 0;
+  return it.sala_unidade === "hora" ? it.sala_preco * horasDe(it) : it.sala_preco;
+}
 
 const LABEL: Record<StatusSolicitacao, string> = {
   pendente: "Pendente",
@@ -37,43 +47,64 @@ export default function HistoricoExtrato({
   const [baixando, setBaixando] = useState(false);
 
   async function baixar() {
-    // Cabeçalho em negrito; demais células são strings simples.
+    // Célula numérica em R$ (Number de verdade → soma/ordena no Excel).
+    const rs = (v: number, bold = false) =>
+      ({ value: Number(v.toFixed(2)), type: Number, format: '"R$" #,##0.00', ...(bold ? { fontWeight: "bold" as const } : {}) });
     const cab = (cols: string[]) => cols.map((c) => ({ value: c, fontWeight: "bold" as const }));
-    const sheetDono = {
-      sheet: "Como dono da sala",
-      columns: [{ width: 26 }, { width: 30 }, { width: 24 }, { width: 22 }, { width: 18 }, { width: 13 }],
-      data: [
-        cab(["Clínica", "Sala", "Dentista", "Horário", "Valor", "Status"]),
-        ...recebidas.map((r) => [
-          r.sala_clinica ?? "—",
-          r.sala_titulo ?? "Sala",
-          r.dentista_nome || "Dentista",
-          `${dataBR(r.data)} ${r.hora_inicio}–${r.hora_fim}`,
-          valorDe(r),
-          LABEL[r.status],
-        ]),
-      ],
-    };
-    const sheetAlug = {
-      sheet: "Como quem alugou",
-      columns: [{ width: 26 }, { width: 30 }, { width: 22 }, { width: 18 }, { width: 13 }],
-      data: [
-        cab(["Clínica", "Sala", "Horário", "Valor", "Status"]),
-        ...enviadas.map((e) => [
-          e.sala_clinica ?? "—",
-          e.sala_titulo ?? "Sala",
-          `${dataBR(e.data)} ${e.hora_inicio}–${e.hora_fim}`,
-          valorDe(e),
-          LABEL[e.status],
-        ]),
-      ],
-    };
+    const vazia = (n: number) => Array.from({ length: n }, () => ({ value: "" }));
+
+    // Só reservas APROVADAS (as que aconteceram). Documento financeiro p/ IR.
+    const despesas = enviadas.filter((e) => e.status === "aprovada");
+    const receitas = recebidas.filter((r) => r.status === "aprovada");
+
+    type Sheet = { sheet: string; columns: { width: number }[]; data: unknown[][] };
+    const sheets: Sheet[] = [];
+
+    if (despesas.length) {
+      let soma = 0;
+      const linhas = despesas.map((e) => {
+        const t = totalDe(e);
+        soma += t;
+        return [dataBR(e.data), e.sala_clinica ?? "—", e.sala_titulo ?? "Sala", `${e.hora_inicio}–${e.hora_fim}`, horasDe(e), rs(e.sala_preco ?? 0), rs(t)];
+      });
+      sheets.push({
+        sheet: "Despesas (aluguei)",
+        columns: [{ width: 12 }, { width: 26 }, { width: 28 }, { width: 16 }, { width: 8 }, { width: 15 }, { width: 15 }],
+        data: [
+          cab(["Data", "Clínica", "Sala", "Horário", "Horas", "Valor/hora", "Total"]),
+          ...linhas,
+          [...vazia(5), { value: "TOTAL", fontWeight: "bold" as const }, rs(soma, true)],
+        ],
+      });
+    }
+
+    if (receitas.length) {
+      let soma = 0;
+      const linhas = receitas.map((r) => {
+        const t = totalDe(r);
+        soma += t;
+        return [dataBR(r.data), r.sala_titulo ?? "Sala", r.dentista_nome || "Dentista", `${r.hora_inicio}–${r.hora_fim}`, horasDe(r), rs(r.sala_preco ?? 0), rs(t)];
+      });
+      sheets.push({
+        sheet: "Receitas (minhas salas)",
+        columns: [{ width: 12 }, { width: 28 }, { width: 24 }, { width: 16 }, { width: 8 }, { width: 15 }, { width: 15 }],
+        data: [
+          cab(["Data", "Sala", "Dentista", "Horário", "Horas", "Valor/hora", "Total"]),
+          ...linhas,
+          [...vazia(5), { value: "TOTAL", fontWeight: "bold" as const }, rs(soma, true)],
+        ],
+      });
+    }
+
+    if (!sheets.length) return; // nada aprovado para exportar
+
     setBaixando(true);
     try {
       // Lib carregada só agora (dynamic import) — não pesa no carregamento da página.
       const writeXlsxFile = (await import("write-excel-file/browser")).default;
-      const out = await writeXlsxFile([sheetDono, sheetAlug]);
-      await out.toFile("historico-locacao.xlsx");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const out = await writeXlsxFile(sheets as any);
+      await out.toFile("extrato-locacao.xlsx");
     } catch (e) {
       console.error("[historico] xlsx:", e);
     } finally {
