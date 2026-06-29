@@ -265,7 +265,9 @@ export default async function DashboardPage() {
             <BioEditor bioInicial={pro.bio ?? ""} />
           </section>
 
-          {/* Locação de salas (B2B) — anfitrião e locatário */}
+          {/* Locação de salas (B2B) — SÓ com CRO aprovado (regra de produto: a feature
+              fica invisível até a verificação; o gate real vive nas rotas e no banco). */}
+          {pro.cro_verificado && (
           <section className="rounded-2xl border border-white/60 bg-white/90 shadow-[0_2px_8px_rgba(16,24,64,0.05)] backdrop-blur p-5">
             <div className="mb-3 flex items-center gap-2">
               <DoorOpen size={16} style={{ color: "#007AFF" }} />
@@ -298,6 +300,7 @@ export default async function DashboardPage() {
               </Link>
             </div>
           </section>
+          )}
 
           <section className="rounded-2xl border border-white/60 bg-white/90 shadow-[0_2px_8px_rgba(16,24,64,0.05)] backdrop-blur p-5">
             <h2 className="mb-3 text-lg font-bold text-brand-navy">Conta</h2>

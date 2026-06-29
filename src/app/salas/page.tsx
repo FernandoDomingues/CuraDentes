@@ -8,14 +8,16 @@ import Link from "next/link";
 import { Search, MapPin, DoorOpen } from "lucide-react";
 import Container from "@/components/Container";
 import { supabase } from "@/lib/supabase/public";
+import { getUsuario } from "@/lib/auth";
 import { formatarPreco, type SalaPublica } from "@/lib/salas";
+import MuroSalas from "./MuroSalas";
 
 export const dynamic = "force-dynamic";
 
+// Members-only (regra de produto): área só para dentista com CRO aprovado → noindex.
 export const metadata: Metadata = {
-  title: "Alugar sala odontológica por proximidade | CuraDentes",
-  description:
-    "Encontre salas e consultórios odontológicos para locação pontual perto de você. Alugue por hora, turno ou dia para um atendimento específico.",
+  title: "Locação de salas | CuraDentes Pro",
+  robots: { index: false, follow: false },
 };
 
 export default async function SalasPage({
@@ -23,6 +25,10 @@ export default async function SalasPage({
 }: {
   searchParams: Promise<{ cidade?: string }>;
 }) {
+  // Gate members-only ANTES de buscar dados: só dentista com CRO aprovado vê a vitrine.
+  const usuario = await getUsuario();
+  if (!usuario?.croVerificado) return <MuroSalas modo={usuario ? "sem-cro" : "anonimo"} />;
+
   const { cidade } = await searchParams;
   const termo = (cidade ?? "").trim();
 

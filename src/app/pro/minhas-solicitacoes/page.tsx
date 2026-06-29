@@ -6,12 +6,18 @@
 import Link from "next/link";
 import { Send, Search } from "lucide-react";
 import Container from "@/components/Container";
+import { getUsuario } from "@/lib/auth";
 import { carregarEnviadas } from "../salas/acoes";
 import SolicitacaoCard from "../salas/SolicitacaoCard";
+import MuroCro from "../salas/MuroCro";
 
 export const dynamic = "force-dynamic";
 
 export default async function MinhasSolicitacoesPage() {
+  // Mesmo gate de CRO da área /pro/salas (esta rota fica fora daquele layout).
+  const usuario = await getUsuario();
+  if (!usuario?.croVerificado) return <MuroCro />;
+
   const { itens } = await carregarEnviadas();
 
   return (

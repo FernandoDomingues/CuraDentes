@@ -70,8 +70,8 @@ export default function SolicitarReserva({ salaId }: { salaId: string }) {
     );
   }
 
-  // Logado, mas não é dentista (paciente/superuser).
-  if (!user.ehPro) {
+  // Logado, mas não é dentista com CRO aprovado (paciente/superuser/CRO pendente).
+  if (!user.ehPro || !user.croVerificado) {
     return (
       <div className={card}>
         <p className="text-[14px] text-ink-soft">

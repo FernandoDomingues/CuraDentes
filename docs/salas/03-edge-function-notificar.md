@@ -11,9 +11,15 @@ painéis (`/pro/salas/solicitacoes` e `/pro/minhas-solicitacoes`) em tempo real.
 é só uma conveniência (avisar a contraparte sem ela precisar abrir o site). Crie isto
 quando quiser, escolhendo o provedor de e-mail.
 
-> **Decisão pendente sua:** qual provedor de e-mail. O template abaixo usa **Resend**
-> (`RESEND_API_KEY`) por ser o mais simples no Supabase Edge. Se você já tiver SMTP/outro
-> provedor para os e-mails do site, troque só o bloco `enviarEmail()`.
+> **Provedor definido: Resend** (já é o do projeto). O template abaixo já usa Resend
+> (`RESEND_API_KEY`) chamado de dentro da Edge Function do Supabase — não precisa de
+> função na Vercel. Caixas de `@curadentes.com.br` ficam na **Hostinger** (isso é o MX /
+> e-mail que *chega*, não tem a ver com o envio transacional).
+>
+> **Pré-requisito de entrega (uma vez):** verificar o domínio `curadentes.com.br` na Resend
+> com **SPF + DKIM** (e DMARC) na zona DNS do domínio. Atenção: só pode haver **um** registro
+> SPF — se a Hostinger já tem um, **mescle** o `include` da Resend nele (não crie outro).
+> Remetente sugerido: `no-reply@curadentes.com.br`.
 
 ## Secrets necessários (Supabase → Edge Functions → Secrets)
 

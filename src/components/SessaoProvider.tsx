@@ -30,6 +30,7 @@ interface UsuarioSessao {
   foto: string | null; // foto do Google (avatar) quando disponível
   ehPro: boolean;
   ehSuper: boolean;
+  croVerificado: boolean; // CRO aprovado pela equipe (gateia features pro, ex.: Locação de Salas)
 }
 
 interface SessaoCtx {

@@ -28,6 +28,7 @@ export async function GET() {
         foto: u.foto,
         ehPro: u.papel === "dentista",
         ehSuper: u.papel === "superuser",
+        croVerificado: u.croVerificado,
       },
     },
     { headers },

@@ -3,17 +3,30 @@
 // (sem endereco_id/contato). O contato só é revelado após aprovação (RPC).
 // ═══════════════════════════════════════════════════════════════════════════════
 
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, MapPin, Clock, Wrench } from "lucide-react";
 import Container from "@/components/Container";
 import { supabase } from "@/lib/supabase/public";
+import { getUsuario } from "@/lib/auth";
 import { formatarPreco, type SalaPublica, type DisponibilidadeDia } from "@/lib/salas";
 import SolicitarReserva from "../SolicitarReserva";
+import MuroSalas from "../MuroSalas";
 
 export const dynamic = "force-dynamic";
 
+// Members-only (regra de produto) → noindex.
+export const metadata: Metadata = {
+  title: "Sala odontológica | CuraDentes Pro",
+  robots: { index: false, follow: false },
+};
+
 export default async function SalaDetalhePage({ params }: { params: Promise<{ id: string }> }) {
+  // Gate members-only ANTES de buscar dados.
+  const usuario = await getUsuario();
+  if (!usuario?.croVerificado) return <MuroSalas modo={usuario ? "sem-cro" : "anonimo"} />;
+
   const { id } = await params;
   const { data } = await supabase.from("salas_publicas").select("*").eq("id", id).maybeSingle();
   const sala = data as SalaPublica | null;

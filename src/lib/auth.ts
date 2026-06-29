@@ -23,6 +23,9 @@ export interface Usuario {
   email: string;
   foto: string;
   papel: Papel;
+  /** CRO aprovado pela equipe. Superuser = true; paciente = false. Gateia features pro
+   *  que exigem verificação (ex.: Locação de Salas). Lido de curadentespro.cro_verificado. */
+  croVerificado: boolean;
 }
 
 /**
@@ -39,16 +42,16 @@ export async function getUsuario(): Promise<Usuario | null> {
 
   // 1) Superuser (SuperDom): não tem registro de dentista nem de paciente.
   if (isSuperuserEmail(user.email)) {
-    return { id: user.id, nome: "SuperDom", email: user.email ?? "", foto: "", papel: "superuser" };
+    return { id: user.id, nome: "SuperDom", email: user.email ?? "", foto: "", papel: "superuser", croVerificado: true };
   }
 
   // 2) Dentista: existe em curadentespro (mesmo UUID do Auth) e não excluído.
   const { data: dent } = await supabase
     .from("curadentespro")
-    .select("id, nome, foto_url")
+    .select("id, nome, foto_url, cro_verificado")
     .eq("id", user.id)
     .is("deleted_at", null)
-    .maybeSingle<{ id: string; nome: string | null; foto_url: string | null }>();
+    .maybeSingle<{ id: string; nome: string | null; foto_url: string | null; cro_verificado: boolean | null }>();
 
   if (dent) {
     return {
@@ -59,6 +62,7 @@ export async function getUsuario(): Promise<Usuario | null> {
       email: user.email ?? "",
       foto: dent.foto_url ?? "",
       papel: "dentista",
+      croVerificado: dent.cro_verificado === true,
     };
   }
 
@@ -70,6 +74,7 @@ export async function getUsuario(): Promise<Usuario | null> {
     email: user.email ?? "",
     foto: meta.avatar_url ?? "",
     papel: "paciente",
+    croVerificado: false,
   };
 }
 
