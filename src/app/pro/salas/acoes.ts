@@ -77,9 +77,18 @@ export async function salvarSala(
   if (!input.titulo.trim()) return { ok: false, erro: "Dê um título à sala." };
   const preco = Number(String(input.preco_valor).replace(",", "."));
   if (!Number.isFinite(preco) || preco < 0) return { ok: false, erro: "Informe um preço válido." };
-  if (!input.contato_whatsapp.trim() && !input.contato_email.trim()) {
-    return { ok: false, erro: "Informe ao menos um contato de locação (WhatsApp ou e-mail)." };
-  }
+  if (!input.fotos?.length) return { ok: false, erro: "Adicione ao menos uma foto da sala." };
+
+  // O contato de locação agora é o da CLÍNICA (endereço). Buscamos o telefone/WhatsApp
+  // dela para preencher a coluna antiga da sala — a constraint salas_tem_contato segue
+  // existindo até a limpeza final. O detalhe lê o contato pela get_sala_detalhe (clínica).
+  const { data: end } = await supabase
+    .from("curadentespro_enderecos")
+    .select("whatsapp, telefone")
+    .eq("id", input.endereco_id)
+    .eq("curadentespro_id", uid)
+    .maybeSingle<{ whatsapp: string | null; telefone: string | null }>();
+  const contatoClinica = end?.whatsapp || end?.telefone || "definir-no-perfil";
 
   const payload = {
     anfitriao_id: uid,
@@ -91,8 +100,9 @@ export async function salvarSala(
     preco_unidade: input.preco_unidade,
     disponibilidade: input.disponibilidade,
     politica_cancelamento: input.politica_cancelamento.trim() || null,
-    contato_whatsapp: input.contato_whatsapp.trim() || null,
-    contato_email: input.contato_email.trim() || null,
+    fotos: input.fotos,
+    contato_whatsapp: contatoClinica,
+    contato_email: null,
   };
 
   if (input.id) {

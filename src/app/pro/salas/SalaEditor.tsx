@@ -9,6 +9,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Check, X, Plus } from "lucide-react";
 import { toast } from "sonner";
+import UploadFotos from "@/components/UploadFotos";
 import { salvarSala } from "./acoes";
 import {
   EQUIPAMENTOS_OPCOES,
@@ -47,8 +48,7 @@ export default function SalaEditor({
       ? normalizarBlocos(salaInicial.disponibilidade)
       : disponibilidadePadrao(),
     politica_cancelamento: salaInicial?.politica_cancelamento ?? "",
-    contato_whatsapp: salaInicial?.contato_whatsapp ?? "",
-    contato_email: salaInicial?.contato_email ?? "",
+    fotos: salaInicial?.fotos ?? [],
   }));
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState("");
@@ -289,35 +289,15 @@ export default function SalaEditor({
         </button>
       </Secao>
 
-      {/* Contato de locação (visível só dentro da comunidade de dentistas verificados) */}
-      <Secao titulo="Contato de locação">
+      {/* Fotos da sala (obrigatório, 1–3). Fachada/recepção da clínica ficam no perfil. */}
+      <Secao titulo="Fotos da sala">
         <p className="mb-3 text-[13px] text-ink-muted">
-          Aparece no anúncio <strong>para dentistas com CRO verificado</strong> (a vitrine de salas é
-          fechada). Pode ser diferente do telefone público da sua clínica. Informe ao menos um.
+          Adicione de 1 a 3 fotos da sala. A <strong>fachada</strong> e a <strong>recepção</strong> da
+          clínica você cadastra uma vez no seu{" "}
+          <a href="/pro/editar-perfil" className="font-semibold text-brand-blue hover:underline">perfil</a>{" "}
+          (valem para todas as salas do mesmo endereço). O contato de locação é o da clínica.
         </p>
-        <div className="flex flex-wrap gap-3">
-          <div className="flex-1 min-w-[200px]">
-            <label className={label}>WhatsApp</label>
-            <input
-              type="tel"
-              inputMode="numeric"
-              value={form.contato_whatsapp}
-              onChange={(e) => set("contato_whatsapp", e.target.value)}
-              placeholder="5515999999999"
-              className={inputBase}
-            />
-          </div>
-          <div className="flex-1 min-w-[200px]">
-            <label className={label}>E-mail</label>
-            <input
-              type="email"
-              value={form.contato_email}
-              onChange={(e) => set("contato_email", e.target.value)}
-              placeholder="contato@clinica.com"
-              className={inputBase}
-            />
-          </div>
-        </div>
+        <UploadFotos fotos={form.fotos} onChange={(f) => set("fotos", f)} max={3} escopo="salas" />
       </Secao>
 
       {/* Política de cancelamento */}

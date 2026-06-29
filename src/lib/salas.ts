@@ -89,8 +89,7 @@ export interface SalaForm {
   preco_unidade: PrecoUnidade;
   disponibilidade: BlocoDisponibilidade[];
   politica_cancelamento: string;
-  contato_whatsapp: string;
-  contato_email: string;
+  fotos: string[]; // URLs no bucket fotos-salas (1..3, obrigatório)
 }
 
 /** Endereço resumido do anfitrião (seletor de "onde fica a sala"). */
