@@ -40,6 +40,9 @@ export default function Header() {
   const pathname = usePathname();
   // /salas é ambiente CuraDentes Pro (comunidade de dentistas verificados) → marca Pro.
   const ehSalas = !!pathname && pathname.startsWith("/salas");
+  // Páginas-tarefa (locação e busca) escondem os links institucionais do header.
+  const ehBusca = !!pathname && pathname.startsWith("/busca");
+  const ocultarNav = ehSalas || ehBusca;
 
   // ── Cabeçalho da ÁREA PRO (logado) — porte do header do dashboard do k11:
   // logo Pro à esquerda; à direita Home / Meu Perfil / Sair (texto some no mobile).
@@ -118,12 +121,14 @@ export default function Header() {
             </Link>
           )}
 
-          {/* Nav — desktop */}
-          <nav className="hidden items-center gap-8 lg:flex">
-            {NAV_LINKS.map((link) => (
-              <Link key={link.href} href={link.href} className="text-[15px] font-medium text-ink-soft transition-colors duration-200 hover:text-brand-blue">{link.label}</Link>
-            ))}
-          </nav>
+          {/* Nav — desktop (oculto em locação/busca) */}
+          {!ocultarNav && (
+            <nav className="hidden items-center gap-8 lg:flex">
+              {NAV_LINKS.map((link) => (
+                <Link key={link.href} href={link.href} className="text-[15px] font-medium text-ink-soft transition-colors duration-200 hover:text-brand-blue">{link.label}</Link>
+              ))}
+            </nav>
+          )}
 
           {/* Ações — desktop */}
           <div className="hidden items-center gap-3 lg:flex">
@@ -164,9 +169,10 @@ export default function Header() {
       {/* Gaveta mobile */}
       {menuOpen && (
         <div className="flex flex-col gap-1 px-5 pb-6 pt-2 lg:hidden" style={{ borderTop: "0.5px solid rgba(60,60,67,0.10)", background: "rgba(255,255,255,0.98)" }}>
-          {NAV_LINKS.map((link) => (
-            <Link key={link.href} href={link.href} onClick={() => setMenuOpen(false)} className="flex min-h-[48px] items-center rounded-xl px-3 py-3 text-[16px] font-medium" style={{ color: "#1C1C1E" }}>{link.label}</Link>
-          ))}
+          {!ocultarNav &&
+            NAV_LINKS.map((link) => (
+              <Link key={link.href} href={link.href} onClick={() => setMenuOpen(false)} className="flex min-h-[48px] items-center rounded-xl px-3 py-3 text-[16px] font-medium" style={{ color: "#1C1C1E" }}>{link.label}</Link>
+            ))}
           <div className="mt-3 flex flex-col gap-2">
             {user ? (
               <div className="flex flex-col gap-3 rounded-2xl border border-gray-100 bg-gray-50 p-3 text-left">
