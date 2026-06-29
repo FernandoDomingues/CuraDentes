@@ -104,6 +104,9 @@ create view public.salas_publicas as
 grant select on public.salas_publicas to anon, authenticated;
 
 -- ─── 4. get_salas_proximas: geo vem do ENDEREÇO ──────────────────────────────────
+-- DROP antes: o RETURNS TABLE mudou (ganhou clinica_slug/numero) e o Postgres não
+-- deixa o create-or-replace alterar o tipo de retorno.
+drop function if exists public.get_salas_proximas(double precision, double precision, double precision);
 create or replace function public.get_salas_proximas(
   lat double precision, lng double precision, raio_km double precision default 30
 ) returns table (
@@ -136,6 +139,8 @@ grant execute on function public.get_salas_proximas(double precision,double prec
 -- ─── 5. get_sala_detalhe: clínica + contato vêm do ENDEREÇO ───────────────────────
 -- Contato de locação = telefone/WhatsApp do endereço (reuso). Mesmas colunas de saída
 -- (contato_whatsapp/contato_email) + clinica_slug e numero_na_clinica.
+-- DROP antes: o RETURNS TABLE mudou (ganhou clinica_slug/numero).
+drop function if exists public.get_sala_detalhe(uuid);
 create or replace function public.get_sala_detalhe(p_id uuid)
 returns table (
   id uuid, titulo text, descricao text, equipamentos text[],
