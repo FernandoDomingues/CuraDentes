@@ -10,7 +10,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   ArrowLeft, MapPin, Clock, BadgeCheck, Check, CalendarDays, Layers,
-  MessageCircle, Mail, ExternalLink, Wrench,
+  MessageCircle, Mail, ExternalLink, Wrench, Building2,
 } from "lucide-react";
 import Container from "@/components/Container";
 import { supabase as supabasePublic } from "@/lib/supabase/public";
@@ -85,10 +85,10 @@ export default async function SalaDetalhePage({ params }: { params: Promise<{ id
   return (
     <Container className="py-8 md:py-10">
       <Link
-        href="/salas"
+        href={sala.clinica_slug ? `/salas/clinica/${sala.clinica_slug}` : "/salas"}
         className="mb-4 inline-flex items-center gap-1.5 text-[14px] font-semibold text-ink-muted hover:text-ink"
       >
-        <ArrowLeft size={16} /> Todas as salas
+        <ArrowLeft size={16} /> {sala.clinica_slug ? "Voltar à clínica" : "Todas as clínicas"}
       </Link>
 
       {/* Galeria */}
@@ -114,6 +114,14 @@ export default async function SalaDetalhePage({ params }: { params: Promise<{ id
               <MapPin size={15} />
               {[sala.bairro, sala.cidade, sala.estado].filter(Boolean).join(", ") || sala.nome_clinica}
             </p>
+            {sala.clinica_slug && (
+              <Link
+                href={`/salas/clinica/${sala.clinica_slug}`}
+                className="mt-1.5 inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand-blue hover:underline"
+              >
+                <Building2 size={14} /> {sala.nome_clinica || "Ver a clínica"} · outras salas
+              </Link>
+            )}
             <p className="mt-3">
               <span className="text-[26px] font-bold text-brand-blue">
                 {sala.preco_valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}

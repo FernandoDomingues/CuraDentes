@@ -56,6 +56,8 @@ export interface SalaPublica {
   estado: string | null;
   latitude: number | null;
   longitude: number | null;
+  clinica_slug?: string | null;
+  numero_na_clinica?: number | null;
   created_at: string;
 }
 
@@ -65,6 +67,39 @@ export interface MinhaSala extends SalaPublica {
   status: SalaStatus;
   contato_whatsapp: string | null;
   contato_email: string | null;
+}
+
+/** Clínica no catálogo (RPC get_clinicas_publicas) — card com fachada + agregados. */
+export interface ClinicaPublica {
+  slug: string;
+  nome_clinica: string | null;
+  cidade: string | null;
+  bairro: string | null;
+  estado: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  foto_fachada: string | null;
+  qtd_salas: number;
+  preco_min: number | null;
+}
+
+/** Clínica completa (RPC get_clinica_por_slug) — página da clínica. */
+export interface ClinicaDetalhe {
+  slug: string;
+  nome_clinica: string | null;
+  logradouro: string | null;
+  numero: string | null;
+  complemento: string | null;
+  bairro: string | null;
+  cidade: string | null;
+  estado: string | null;
+  cep: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  telefone: string | null;
+  whatsapp: string | null;
+  foto_fachada: string | null;
+  fotos_recepcao: string[];
 }
 
 /** Detalhe members-only (RPC get_sala_detalhe): inclui contato + endereço completo,
