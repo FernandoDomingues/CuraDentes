@@ -5,7 +5,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import type { Metadata } from "next";
-import { Search, DoorOpen, MapPin } from "lucide-react";
+import Link from "next/link";
+import { Search, DoorOpen, MapPin, ArrowLeft } from "lucide-react";
 import Container from "@/components/Container";
 import { supabase } from "@/lib/supabase/public";
 import { getUsuario } from "@/lib/auth";
@@ -52,6 +53,12 @@ export default async function SalasPage({
         }}
       >
         <Container className="py-12 md:py-16">
+          <Link
+            href="/pro/dashboard"
+            className="mb-6 inline-flex items-center gap-1.5 text-[13px] font-semibold text-white/80 transition-colors hover:text-white"
+          >
+            <ArrowLeft size={15} /> Voltar ao painel
+          </Link>
           <div className="mx-auto max-w-3xl text-center">
             <h1 className="text-[30px] font-bold leading-tight text-white md:text-[36px]">
               Alugue uma sala odontológica

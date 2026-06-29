@@ -72,7 +72,7 @@ export default function Header() {
               {user?.ehSuper && (
                 <Link href="/pro/dashboard-analytics" className={proBtn}><BarChart2 size={16} /><span className="hidden sm:inline">Analytics</span></Link>
               )}
-              {user?.ehPro && (
+              {user?.ehPro && pathname !== "/pro/dashboard" && (
                 <Link href="/pro/perfil" className={proBtn}><User size={16} /><span className="hidden sm:inline">Meu Perfil</span></Link>
               )}
               <button
