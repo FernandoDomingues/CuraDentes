@@ -260,10 +260,11 @@ export async function contarPendencias(): Promise<{
       .select("id", { count: "exact", head: true })
       .eq("anfitriao_id", uid)
       .eq("status", "pendente"),
+    // Pagamento a confirmar é tarefa do DONO DA SALA (anfitrião): aprovadas não pagas.
     supabase
       .from("solicitacoes_reserva")
       .select("id", { count: "exact", head: true })
-      .eq("locatario_id", uid)
+      .eq("anfitriao_id", uid)
       .eq("status", "aprovada")
       .eq("pagamento_resolvido", false),
   ]);

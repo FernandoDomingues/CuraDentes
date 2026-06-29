@@ -186,6 +186,24 @@ export default function SolicitacaoCard({ item, modo }: { item: SolicitacaoItem;
               </div>
             </div>
           )}
+
+          {/* pagamento — quem confirma o recebimento é o dono da sala */}
+          {status === "aprovada" && (
+            pago ? (
+              <p className="mt-3 inline-flex items-center gap-1.5 text-[13px] font-semibold text-green-700">
+                <CheckCircle2 size={15} style={{ color: "#34c759" }} /> Pagamento confirmado
+              </p>
+            ) : (
+              <div className="mt-3 rounded-[14px] border border-amber-200 bg-amber-50 p-3">
+                <p className="mb-2 text-[13px] text-ink-soft">
+                  Recebeu o pagamento do dentista? Confirme aqui (o acerto é direto, fora da plataforma).
+                </p>
+                <button onClick={marcarPago} disabled={!!ocupado} className={`${btn} w-full`} style={{ background: "#0a2a66", color: "#fff" }}>
+                  {ocupado === "pago" ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} Confirmar pagamento recebido
+                </button>
+              </div>
+            )
+          )}
         </>
       )}
 
@@ -213,20 +231,15 @@ export default function SolicitacaoCard({ item, modo }: { item: SolicitacaoItem;
                 )}
               </div>
 
-              {/* pagamento */}
+              {/* pagamento — status read-only (quem confirma é a clínica) */}
               {pago ? (
                 <p className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-green-700">
-                  <CheckCircle2 size={15} style={{ color: "#34c759" }} /> Pagamento resolvido
+                  <CheckCircle2 size={15} style={{ color: "#34c759" }} /> Pagamento confirmado pela clínica
                 </p>
               ) : (
-                <div className="rounded-[14px] border border-amber-200 bg-amber-50 p-3">
-                  <p className="mb-2 text-[13px] text-ink-soft">
-                    Combine o pagamento direto com a clínica (WhatsApp acima). O CuraDentes não intermedia.
-                  </p>
-                  <button onClick={marcarPago} disabled={!!ocupado} className={`${btn} w-full`} style={{ background: "#0a2a66", color: "#fff" }}>
-                    {ocupado === "pago" ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} Marcar pagamento como resolvido
-                  </button>
-                </div>
+                <p className="rounded-[14px] border border-amber-200 bg-amber-50 p-3 text-[13px] text-ink-soft">
+                  Combine o pagamento direto com a clínica (WhatsApp acima). A clínica confirma o recebimento.
+                </p>
               )}
             </div>
           )}

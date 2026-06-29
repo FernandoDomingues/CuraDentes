@@ -29,21 +29,22 @@ end; $$;
 revoke all on function public.contato_solicitante(uuid) from public;
 grant execute on function public.contato_solicitante(uuid) to authenticated;
 
--- 2) pagamento_resolvido: o LOCATÁRIO marca que acertou o pagamento (off-platform).
---    Só faz sentido após aprovação. Mantém o card até resolver; depois vira histórico.
+-- 2) pagamento_resolvido: o DONO DA SALA (anfitrião) confirma que recebeu o pagamento
+--    (off-platform). Só faz sentido após aprovação. Vira histórico depois.
+--    NOTA: se você já rodou a versão anterior (gate no locatário), rode 08-pagamento-locador.sql.
 alter table public.solicitacoes_reserva
   add column if not exists pagamento_resolvido boolean not null default false;
 
 create or replace function public.marcar_pagamento_resolvido(p_id uuid)
 returns void language plpgsql security definer set search_path = public, pg_temp
 as $$
-declare v_uid uuid := auth.uid(); v_loc uuid; v_status text;
+declare v_uid uuid := auth.uid(); v_anf uuid; v_status text;
 begin
   if v_uid is null then raise exception 'nao autenticado'; end if;
-  select locatario_id, status into v_loc, v_status
+  select anfitriao_id, status into v_anf, v_status
     from public.solicitacoes_reserva where id = p_id;
-  if v_loc is null then raise exception 'Solicitacao inexistente.'; end if;
-  if v_loc <> v_uid then raise exception 'Apenas o solicitante pode marcar o pagamento.'; end if;
+  if v_anf is null then raise exception 'Solicitacao inexistente.'; end if;
+  if v_anf <> v_uid then raise exception 'Apenas o dono da sala pode confirmar o pagamento.'; end if;
   if v_status <> 'aprovada' then raise exception 'So apos a aprovacao.'; end if;
   update public.solicitacoes_reserva set pagamento_resolvido = true where id = p_id;
 end; $$;
