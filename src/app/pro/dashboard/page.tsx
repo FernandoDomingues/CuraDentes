@@ -15,6 +15,7 @@ import { Eye, MessageCircle, Phone, Check, AlertCircle, Trophy, CalendarClock, B
 import { redirect } from "next/navigation";
 import { getUsuario } from "@/lib/auth";
 import { criarClienteServidor } from "@/lib/supabase/server";
+import { contarPendencias } from "../salas/acoes";
 import { montarEndereco, nomeExibicao, type DentistaRow, type EnderecoRow } from "@/lib/dentistas";
 import BioEditor from "./BioEditor";
 import AcoesConta from "./AcoesConta";
@@ -81,6 +82,9 @@ export default async function DashboardPage() {
   const foto = pro.foto_url && !pro.foto_url.startsWith("blob:") ? pro.foto_url : AVATAR_PADRAO;
   const completo = !!pro.lgpd_aceito;
   const temAvaliacoes = !!resumo && resumo.total_avaliacoes > 0;
+  const pendencias = pro.cro_verificado
+    ? await contarPendencias()
+    : { total: 0, recebidasPendentes: 0, pagamentosPendentes: 0 };
 
   return (
     <Container className="py-10 md:py-12">
@@ -265,41 +269,38 @@ export default async function DashboardPage() {
             <BioEditor bioInicial={pro.bio ?? ""} />
           </section>
 
-          {/* Locação de salas (B2B) — SÓ com CRO aprovado (regra de produto: a feature
-              fica invisível até a verificação; o gate real vive nas rotas e no banco). */}
+          {/* Locação de salas (B2B) — SÓ com CRO aprovado. Botão único → painel, com
+              badge de pendências (recebidas pendentes + pagamentos a resolver). */}
           {pro.cro_verificado && (
-          <section className="rounded-2xl border border-white/60 bg-white/90 shadow-[0_2px_8px_rgba(16,24,64,0.05)] backdrop-blur p-5">
-            <div className="mb-3 flex items-center gap-2">
-              <DoorOpen size={16} style={{ color: "#007AFF" }} />
-              <h2 className="text-lg font-bold text-brand-navy">Locação de salas</h2>
-            </div>
-            <div className="flex flex-col gap-2">
+            <section className="rounded-2xl border border-white/60 bg-white/90 shadow-[0_2px_8px_rgba(16,24,64,0.05)] backdrop-blur p-5">
               <Link
                 href="/pro/salas"
-                className="flex min-h-[44px] items-center justify-between rounded-[12px] bg-black/[0.03] px-3 py-2 text-[14px] font-semibold text-ink transition-colors hover:bg-brand-blue/10 hover:text-brand-blue"
+                className="flex min-h-[52px] items-center justify-between gap-3 rounded-[14px] px-4 py-3 transition-colors hover:bg-brand-blue/5"
               >
-                Anunciar / minhas salas <span aria-hidden>→</span>
-              </Link>
-              <Link
-                href="/pro/salas/solicitacoes"
-                className="flex min-h-[44px] items-center justify-between rounded-[12px] bg-black/[0.03] px-3 py-2 text-[14px] font-semibold text-ink transition-colors hover:bg-brand-blue/10 hover:text-brand-blue"
-              >
-                Solicitações recebidas <span aria-hidden>→</span>
-              </Link>
-              <Link
-                href="/pro/minhas-solicitacoes"
-                className="flex min-h-[44px] items-center justify-between rounded-[12px] bg-black/[0.03] px-3 py-2 text-[14px] font-semibold text-ink transition-colors hover:bg-brand-blue/10 hover:text-brand-blue"
-              >
-                Minhas solicitações <span aria-hidden>→</span>
+                <span className="flex items-center gap-2.5">
+                  <DoorOpen size={18} style={{ color: "#007AFF" }} />
+                  <span className="text-[15px] font-bold text-brand-navy">Locação de salas</span>
+                </span>
+                <span className="flex items-center gap-2">
+                  {pendencias.total > 0 && (
+                    <span
+                      className="inline-flex h-6 min-w-[24px] items-center justify-center rounded-full px-2 text-[12px] font-bold text-white"
+                      style={{ background: "#e6004c" }}
+                      title="Pendências"
+                    >
+                      {pendencias.total}
+                    </span>
+                  )}
+                  <span aria-hidden className="text-ink-muted">→</span>
+                </span>
               </Link>
               <Link
                 href="/salas"
-                className="mt-1 text-center text-[13px] font-medium text-ink-muted hover:text-brand-blue"
+                className="mt-2 block text-center text-[13px] font-medium text-ink-muted hover:text-brand-blue"
               >
                 Procurar salas para alugar
               </Link>
-            </div>
-          </section>
+            </section>
           )}
 
           <section className="rounded-2xl border border-white/60 bg-white/90 shadow-[0_2px_8px_rgba(16,24,64,0.05)] backdrop-blur p-5">

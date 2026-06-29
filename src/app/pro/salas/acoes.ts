@@ -14,6 +14,7 @@ import type {
   EnderecoResumo,
   SolicitacaoReserva,
   ContatoReserva,
+  ContatoSolicitante,
 } from "@/lib/salas";
 
 /** Solicitação enriquecida com o título/local da sala (para listar nos painéis). */
@@ -221,4 +222,52 @@ export async function verContato(
   const row = (Array.isArray(data) ? data[0] : data) as ContatoReserva | undefined;
   if (!row) return { ok: false, erro: "Contato indisponível." };
   return { ok: true, contato: row };
+}
+
+/** Locador vê o contato do SOLICITANTE (inclusive antes de decidir). RPC gated. */
+export async function contatoSolicitante(
+  id: string,
+): Promise<{ ok: boolean; erro?: string; contato?: ContatoSolicitante }> {
+  const { supabase, uid } = await sessao();
+  if (!uid) return { ok: false, erro: "Sessão expirada." };
+  const { data, error } = await supabase.rpc("contato_solicitante", { p_id: id });
+  if (error) return { ok: false, erro: error.message || "Contato indisponível." };
+  const row = (Array.isArray(data) ? data[0] : data) as ContatoSolicitante | undefined;
+  if (!row) return { ok: false, erro: "Contato indisponível." };
+  return { ok: true, contato: row };
+}
+
+/** Locatário marca o pagamento como resolvido (off-platform). RPC gated. */
+export async function marcarPagamentoResolvido(id: string): Promise<{ ok: boolean; erro?: string }> {
+  const { supabase, uid } = await sessao();
+  if (!uid) return { ok: false, erro: "Sessão expirada." };
+  const { error } = await supabase.rpc("marcar_pagamento_resolvido", { p_id: id });
+  if (error) return { ok: false, erro: error.message || "Não foi possível marcar." };
+  return { ok: true };
+}
+
+/** Contadores de pendência p/ o badge do dashboard (locador + locatário). */
+export async function contarPendencias(): Promise<{
+  recebidasPendentes: number;
+  pagamentosPendentes: number;
+  total: number;
+}> {
+  const { supabase, uid } = await sessao();
+  if (!uid) return { recebidasPendentes: 0, pagamentosPendentes: 0, total: 0 };
+  const [rec, pag] = await Promise.all([
+    supabase
+      .from("solicitacoes_reserva")
+      .select("id", { count: "exact", head: true })
+      .eq("anfitriao_id", uid)
+      .eq("status", "pendente"),
+    supabase
+      .from("solicitacoes_reserva")
+      .select("id", { count: "exact", head: true })
+      .eq("locatario_id", uid)
+      .eq("status", "aprovada")
+      .eq("pagamento_resolvido", false),
+  ]);
+  const recebidasPendentes = rec.count ?? 0;
+  const pagamentosPendentes = pag.count ?? 0;
+  return { recebidasPendentes, pagamentosPendentes, total: recebidasPendentes + pagamentosPendentes };
 }

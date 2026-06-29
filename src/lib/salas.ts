@@ -107,8 +107,16 @@ export interface SolicitacaoReserva {
   status: StatusSolicitacao;
   observacao_anfitriao: string | null;
   contato_liberado: boolean;
+  pagamento_resolvido: boolean;
   created_at: string;
   decidida_em: string | null;
+}
+
+/** Contato do solicitante visto pelo locador (RPC contato_solicitante). */
+export interface ContatoSolicitante {
+  nome: string | null;
+  telefone: string | null;
+  email: string | null;
 }
 
 /** Contato liberado após aprovação (retorno da RPC contato_da_reserva). */
