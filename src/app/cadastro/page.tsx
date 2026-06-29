@@ -104,6 +104,8 @@ function rowParaEndereco(e: EnderecoRow): EnderecoForm {
     politica_cancelamento: (e as { politica_cancelamento?: string }).politica_cancelamento ?? POLITICA_PADRAO,
     observacoes: e.observacoes ?? "",
     agenda: normalizarAgenda(e.agenda),
+    foto_fachada: (e as { foto_fachada?: string }).foto_fachada ?? "",
+    fotos_recepcao: (e as { fotos_recepcao?: string[] }).fotos_recepcao ?? [],
   };
 }
 

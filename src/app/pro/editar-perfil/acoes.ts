@@ -86,6 +86,8 @@ export async function salvarPerfil(input: {
       agenda: end.agenda,
       latitude: end.latitude,
       longitude: end.longitude,
+      foto_fachada: end.foto_fachada || null,
+      fotos_recepcao: end.fotos_recepcao ?? [],
     };
     if (end._isNew) {
       const { data: novo, error } = await supabase

@@ -346,6 +346,7 @@ export default function PerfilEditor({
             enderecos={enderecos}
             onChange={setEnderecos}
             onRemover={(id) => setRemovidos((prev) => [...prev, id])}
+            mostrarFotos
           />
         </section>
 

@@ -14,6 +14,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Check, Plus, Save, Trash2 } from "lucide-react";
 import { ESPECIALIDADES } from "@/lib/especialidades";
+import UploadFotos from "@/components/UploadFotos";
 import { buscarCep } from "@/lib/cep";
 
 export interface AgendaDiaForm {
@@ -44,6 +45,8 @@ export interface EnderecoForm {
   politica_cancelamento: string;
   observacoes: string;
   agenda: AgendaDiaForm[];
+  foto_fachada: string; // URL única (locação) — bucket fotos-salas
+  fotos_recepcao: string[]; // 0..3 URLs (locação)
   _isNew?: boolean;
 }
 
@@ -77,6 +80,7 @@ export function novoEndereco(): EnderecoForm {
       dia, inicio: "08:00", fim: "18:00",
       ativo: ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira"].includes(dia),
     })),
+    foto_fachada: "", fotos_recepcao: [],
     _isNew: true,
   };
 }
@@ -93,6 +97,7 @@ export default function EnderecosEditor({
   onSalvarProgresso,
   max = 8,
   mostrarPendencias = false,
+  mostrarFotos = false,
 }: {
   enderecos: EnderecoForm[];
   onChange: (lista: EnderecoForm[]) => void;
@@ -103,6 +108,8 @@ export default function EnderecosEditor({
   max?: number;
   /** Quando true, destaca em laranja os campos obrigatórios ainda vazios. */
   mostrarPendencias?: boolean;
+  /** Quando true, mostra o upload de fachada/recepção da clínica (locação de salas). */
+  mostrarFotos?: boolean;
 }) {
   // Índice do endereço que acabou de exibir o feedback "Salvo" (some após 2,5s).
   const [salvoIdx, setSalvoIdx] = useState<number | null>(null);
@@ -127,6 +134,11 @@ export default function EnderecosEditor({
   }, [enderecos]);
 
   function atualizar(idx: number, campo: keyof EnderecoForm, valor: string | boolean) {
+    const n = [...enderecos];
+    n[idx] = { ...n[idx], [campo]: valor };
+    onChange(n);
+  }
+  function setFotos(idx: number, campo: "foto_fachada" | "fotos_recepcao", valor: string | string[]) {
     const n = [...enderecos];
     n[idx] = { ...n[idx], [campo]: valor };
     onChange(n);
@@ -308,6 +320,31 @@ export default function EnderecosEditor({
             <ChipGroup titulo="Procedimentos realizados neste local" opcoes={ESPECIALIDADES} selecionadas={end.atividades} cor="bg-brand-blue" onToggle={(v) => toggleOpcao(idx, "atividades", v)} />
             <ChipGroup titulo="Convênios aceitos" opcoes={CONVENIOS_OPCOES} selecionadas={end.convenios} cor="bg-success" onToggle={(v) => toggleOpcao(idx, "convenios", v)} />
             <ChipGroup titulo="Formas de pagamento" opcoes={PAGAMENTOS_OPCOES} selecionadas={end.formas_pagamento} cor="bg-[#FF9500]" onToggle={(v) => toggleOpcao(idx, "formas_pagamento", v)} />
+
+            {mostrarFotos && (
+              <div className="rounded-[12px] border border-brand-blue/20 p-3" style={{ background: "rgba(0,122,255,0.03)" }}>
+                <p className="text-xs font-bold text-brand-navy">Fotos da clínica (locação de salas)</p>
+                <p className="mb-3 mt-0.5 text-[11px] text-ink-muted">
+                  Valem para todas as salas deste endereço. A foto de cada sala fica no anúncio da sala.
+                </p>
+                <div className="flex flex-col gap-3">
+                  <UploadFotos
+                    label="Fachada (1)"
+                    fotos={end.foto_fachada ? [end.foto_fachada] : []}
+                    onChange={(f) => setFotos(idx, "foto_fachada", f[0] ?? "")}
+                    max={1}
+                    escopo="clinicas"
+                  />
+                  <UploadFotos
+                    label="Recepção (até 3)"
+                    fotos={end.fotos_recepcao}
+                    onChange={(f) => setFotos(idx, "fotos_recepcao", f)}
+                    max={3}
+                    escopo="clinicas"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       ))}

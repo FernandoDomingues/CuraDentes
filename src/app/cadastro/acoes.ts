@@ -184,6 +184,8 @@ export async function salvarEnderecosCadastro(enderecos: EnderecoComCoord[]): Pr
       agenda: end.agenda,
       latitude: end.latitude,
       longitude: end.longitude,
+      foto_fachada: end.foto_fachada || null,
+      fotos_recepcao: end.fotos_recepcao ?? [],
     });
     if (error) return { ok: false, erro: error.message };
   }
