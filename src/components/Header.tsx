@@ -38,6 +38,8 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const primeiroNome = user?.nome ? user.nome.split(" ")[0] : "";
   const pathname = usePathname();
+  // /salas é ambiente CuraDentes Pro (comunidade de dentistas verificados) → marca Pro.
+  const ehSalas = !!pathname && pathname.startsWith("/salas");
 
   // ── Cabeçalho da ÁREA PRO (logado) — porte do header do dashboard do k11:
   // logo Pro à esquerda; à direita Home / Meu Perfil / Sair (texto some no mobile).
@@ -99,16 +101,22 @@ export default function Header() {
     >
       <div className="container mx-auto px-5 md:px-8 lg:px-16">
         <div className="flex h-[64px] items-center justify-between gap-4">
-          {/* Logo */}
-          <Link href="/" className="flex flex-shrink-0 items-center gap-2" aria-label="CuraDentes — início">
-            <Image src="/logos/logo-com-nome.png" alt="CuraDentes" width={2480} height={926} priority className="hidden h-8 w-auto lg:block" />
-            <span className="flex items-center gap-2 lg:hidden">
-              <Image src="/logos/logo-icon.png" alt="" width={500} height={500} className="h-8 w-8" />
-              <span style={{ fontFamily: "var(--font-brand)", fontSize: "18px", color: "#0A2A66", letterSpacing: "-0.01em" }}>
-                <span style={{ fontWeight: 700 }}>Cura</span><span style={{ fontWeight: 300 }}>Dentes</span>
+          {/* Logo — Pro nas páginas /salas (ambiente CuraDentes Pro); consumer no resto */}
+          {ehSalas ? (
+            <Link href="/salas" className="flex flex-shrink-0 items-center" aria-label="CuraDentes Pro — salas">
+              <Image src="/logos/logo-pro-nome.png" alt="CuraDentes Pro" width={2480} height={926} priority className="h-8 w-auto" />
+            </Link>
+          ) : (
+            <Link href="/" className="flex flex-shrink-0 items-center gap-2" aria-label="CuraDentes — início">
+              <Image src="/logos/logo-com-nome.png" alt="CuraDentes" width={2480} height={926} priority className="hidden h-8 w-auto lg:block" />
+              <span className="flex items-center gap-2 lg:hidden">
+                <Image src="/logos/logo-icon.png" alt="" width={500} height={500} className="h-8 w-8" />
+                <span style={{ fontFamily: "var(--font-brand)", fontSize: "18px", color: "#0A2A66", letterSpacing: "-0.01em" }}>
+                  <span style={{ fontWeight: 700 }}>Cura</span><span style={{ fontWeight: 300 }}>Dentes</span>
+                </span>
               </span>
-            </span>
-          </Link>
+            </Link>
+          )}
 
           {/* Nav — desktop */}
           <nav className="hidden items-center gap-8 lg:flex">

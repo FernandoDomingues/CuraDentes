@@ -10,11 +10,10 @@
 import Link from "next/link";
 import Container from "./Container";
 import FooterAcessoDentista from "./FooterAcessoDentista";
+import FooterLogo from "./FooterLogo";
 import { SITE_NOME } from "@/lib/site";
 
 const ANO = 2026;
-
-const LOGO_FULL = "/logos/logo-com-nome.png";
 
 // Colunas de links. Destinos ajustados às rotas do R0.
 // `acessoDentista: true` marca o item que abre o MODAL de login do dentista
@@ -53,14 +52,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-8 mb-10">
           {/* Marca */}
           <div className="sm:col-span-2 lg:col-span-2">
-            <Link href="/" className="inline-block mb-4">
-              <img
-                src={LOGO_FULL}
-                alt="CuraDentes"
-                className="h-9 w-auto"
-                style={{ filter: "brightness(0) invert(1)" }}
-              />
-            </Link>
+            <FooterLogo />
             <p
               className="text-[14px] leading-relaxed max-w-[300px]"
               style={{ color: "rgba(255,255,255,0.65)" }}
