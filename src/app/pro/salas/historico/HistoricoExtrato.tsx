@@ -9,8 +9,12 @@
 
 import { useState } from "react";
 import { Download, Loader2, Inbox, Send } from "lucide-react";
-import type { StatusSolicitacao } from "@/lib/salas";
+import { formatarPreco, type StatusSolicitacao, type PrecoUnidade } from "@/lib/salas";
 import type { SolicitacaoItem } from "../acoes";
+
+function valorDe(it: SolicitacaoItem) {
+  return it.sala_preco != null ? formatarPreco(it.sala_preco, (it.sala_unidade ?? "hora") as PrecoUnidade) : "—";
+}
 
 const LABEL: Record<StatusSolicitacao, string> = {
   pendente: "Pendente",
@@ -37,27 +41,29 @@ export default function HistoricoExtrato({
     const cab = (cols: string[]) => cols.map((c) => ({ value: c, fontWeight: "bold" as const }));
     const sheetDono = {
       sheet: "Como dono da sala",
-      columns: [{ width: 26 }, { width: 30 }, { width: 24 }, { width: 22 }, { width: 13 }],
+      columns: [{ width: 26 }, { width: 30 }, { width: 24 }, { width: 22 }, { width: 18 }, { width: 13 }],
       data: [
-        cab(["Clínica", "Sala", "Dentista", "Horário", "Status"]),
+        cab(["Clínica", "Sala", "Dentista", "Horário", "Valor", "Status"]),
         ...recebidas.map((r) => [
           r.sala_clinica ?? "—",
           r.sala_titulo ?? "Sala",
           r.dentista_nome || "Dentista",
           `${dataBR(r.data)} ${r.hora_inicio}–${r.hora_fim}`,
+          valorDe(r),
           LABEL[r.status],
         ]),
       ],
     };
     const sheetAlug = {
       sheet: "Como quem alugou",
-      columns: [{ width: 26 }, { width: 30 }, { width: 22 }, { width: 13 }],
+      columns: [{ width: 26 }, { width: 30 }, { width: 22 }, { width: 18 }, { width: 13 }],
       data: [
-        cab(["Clínica", "Sala", "Horário", "Status"]),
+        cab(["Clínica", "Sala", "Horário", "Valor", "Status"]),
         ...enviadas.map((e) => [
           e.sala_clinica ?? "—",
           e.sala_titulo ?? "Sala",
           `${dataBR(e.data)} ${e.hora_inicio}–${e.hora_fim}`,
+          valorDe(e),
           LABEL[e.status],
         ]),
       ],
@@ -103,23 +109,25 @@ export default function HistoricoExtrato({
           <Tabela
             titulo="Como dono da sala"
             icone={<Inbox size={16} />}
-            colunas={["Clínica", "Sala", "Dentista", "Horário", "Status"]}
+            colunas={["Clínica", "Sala", "Dentista", "Horário", "Valor", "Status"]}
             linhas={recebidas.map((r) => [
               r.sala_clinica ?? "—",
               r.sala_titulo ?? "Sala",
               r.dentista_nome || "Dentista",
               `${dataBR(r.data)} · ${r.hora_inicio}–${r.hora_fim}`,
+              valorDe(r),
               <StatusTag key={r.id} status={r.status} />,
             ])}
           />
           <Tabela
             titulo="Como quem alugou"
             icone={<Send size={16} />}
-            colunas={["Clínica", "Sala", "Horário", "Status"]}
+            colunas={["Clínica", "Sala", "Horário", "Valor", "Status"]}
             linhas={enviadas.map((e) => [
               e.sala_clinica ?? "—",
               e.sala_titulo ?? "Sala",
               `${dataBR(e.data)} · ${e.hora_inicio}–${e.hora_fim}`,
+              valorDe(e),
               <StatusTag key={e.id} status={e.status} />,
             ])}
           />
