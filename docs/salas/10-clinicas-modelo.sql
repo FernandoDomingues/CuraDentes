@@ -15,14 +15,17 @@ alter table public.curadentespro_enderecos
   add column if not exists foto_fachada   text,
   add column if not exists fotos_recepcao text[] not null default '{}';
 
--- slug = nome-CEP (sem acento, único). CONGELADO: gera no insert; no update só (re)gera
--- se ainda estiver vazio. Assim, renomear a clínica não quebra URLs antigas.
+-- slug = nome-CEP (sem acento, único). SEGUE O NOME (ver 15-slug-segue-nome.sql):
+-- regenera no insert e quando o nome/CEP mudam. Mantém só quando nada que o compõe muda.
 create or replace function public.endereco_slug() returns trigger
 language plpgsql security definer set search_path = public, pg_temp as $$
 declare v_base text; v_cand text; v_n int := 1;
 begin
-  if new.slug is not null and btrim(new.slug) <> '' then
-    return new;  -- já tem slug → mantém (congelado)
+  if tg_op = 'UPDATE'
+     and new.nome_clinica is not distinct from old.nome_clinica
+     and new.cep          is not distinct from old.cep
+     and new.slug is not null and btrim(new.slug) <> '' then
+    return new;  -- nome e CEP iguais → mantém o slug
   end if;
   v_base := lower(unaccent(coalesce(nullif(btrim(new.nome_clinica), ''), 'clinica')));
   v_base := btrim(regexp_replace(v_base, '[^a-z0-9]+', '-', 'g'), '-');
