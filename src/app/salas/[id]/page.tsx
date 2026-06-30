@@ -17,7 +17,7 @@ import { supabase as supabasePublic } from "@/lib/supabase/public";
 import { criarClienteServidor } from "@/lib/supabase/server";
 import { getUsuario } from "@/lib/auth";
 import {
-  PRECO_UNIDADE_LABEL, normalizarBlocos, descreverBloco,
+  normalizarBlocos, descreverBloco,
   type SalaPublica, type SalaDetalhe,
 } from "@/lib/salas";
 import SolicitarReserva from "../SolicitarReserva";
@@ -122,11 +122,16 @@ export default async function SalaDetalhePage({ params }: { params: Promise<{ id
                 <Building2 size={14} /> {sala.nome_clinica || "Ver a clínica"} · outras salas
               </Link>
             )}
-            <p className="mt-3">
+            <p className="mt-3 flex flex-wrap items-baseline gap-x-2">
               <span className="text-[26px] font-bold text-brand-blue">
                 {sala.preco_valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
               </span>
-              <span className="text-[15px] font-medium text-ink-muted"> {PRECO_UNIDADE_LABEL[sala.preco_unidade]}</span>
+              <span className="text-[15px] font-medium text-ink-muted">por hora</span>
+              {sala.preco_diaria != null && (
+                <span className="text-[15px] text-ink-soft">
+                  · <strong className="text-brand-navy">{sala.preco_diaria.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</strong> a diária
+                </span>
+              )}
             </p>
           </div>
 

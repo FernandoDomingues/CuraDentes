@@ -15,19 +15,16 @@ import UploadFotos from "@/components/UploadFotos";
 import { salvarSala } from "./acoes";
 import {
   EQUIPAMENTOS_OPCOES,
-  PRECO_UNIDADE_LABEL,
   disponibilidadePadrao,
   normalizarBlocos,
   dataLocalISO,
   DIAS_SEMANA_LONGO,
   type EnderecoResumo,
   type MinhaSala,
-  type PrecoUnidade,
   type SalaForm,
   type BlocoDisponibilidade,
 } from "@/lib/salas";
 
-const UNIDADES: PrecoUnidade[] = ["hora", "turno", "dia"];
 const HORAS = Array.from({ length: 24 }, (_, h) => `${String(h).padStart(2, "0")}:00`);
 const inputBase = "w-full rounded-[12px] border border-black/15 px-4 py-3 text-[15px] outline-none focus:border-brand-blue";
 const labelCls = "mb-1.5 block text-[13px] font-semibold text-ink-soft";
@@ -37,16 +34,16 @@ interface RoomForm {
   titulo: string;
   descricao: string;
   equipamentos: string[];
-  preco_valor: string;
-  preco_unidade: PrecoUnidade;
+  preco_valor: string; // por hora
+  preco_diaria: string; // opcional
   disponibilidade: BlocoDisponibilidade[];
   fotos: string[];
 }
 
 function salaVazia(): RoomForm {
   return {
-    titulo: "", descricao: "", equipamentos: [], preco_valor: "",
-    preco_unidade: "hora", disponibilidade: disponibilidadePadrao(), fotos: [],
+    titulo: "", descricao: "", equipamentos: [], preco_valor: "", preco_diaria: "",
+    disponibilidade: disponibilidadePadrao(), fotos: [],
   };
 }
 
@@ -69,7 +66,7 @@ export default function SalaEditor({
           descricao: salaInicial.descricao ?? "",
           equipamentos: salaInicial.equipamentos ?? [],
           preco_valor: String(salaInicial.preco_valor),
-          preco_unidade: salaInicial.preco_unidade,
+          preco_diaria: salaInicial.preco_diaria != null ? String(salaInicial.preco_diaria) : "",
           disponibilidade: salaInicial.disponibilidade?.length
             ? normalizarBlocos(salaInicial.disponibilidade)
             : disponibilidadePadrao(),
@@ -103,7 +100,8 @@ export default function SalaEditor({
         descricao: r.descricao,
         equipamentos: r.equipamentos,
         preco_valor: r.preco_valor,
-        preco_unidade: r.preco_unidade,
+        preco_unidade: "hora",
+        preco_diaria: r.preco_diaria,
         disponibilidade: r.disponibilidade,
         politica_cancelamento: politica,
         fotos: r.fotos,
@@ -251,16 +249,12 @@ function SalaBloco({
 
       <div className="mt-4 flex flex-wrap items-end gap-3">
         <div className="flex-1 min-w-[140px]">
-          <label className={labelCls}>Valor (R$)</label>
+          <label className={labelCls}>Valor por hora (R$)</label>
           <input type="number" min={0} step="0.01" value={room.preco_valor} onChange={(e) => set("preco_valor", e.target.value)} placeholder="120,00" className={inputBase} />
         </div>
-        <div className="min-w-[140px]">
-          <label className={labelCls}>Unidade</label>
-          <select value={room.preco_unidade} onChange={(e) => set("preco_unidade", e.target.value as PrecoUnidade)} className={inputBase}>
-            {UNIDADES.map((u) => (
-              <option key={u} value={u}>{PRECO_UNIDADE_LABEL[u]}</option>
-            ))}
-          </select>
+        <div className="flex-1 min-w-[140px]">
+          <label className={labelCls}>Valor da diária (R$) <span className="font-normal text-ink-muted">— opcional</span></label>
+          <input type="number" min={0} step="0.01" value={room.preco_diaria} onChange={(e) => set("preco_diaria", e.target.value)} placeholder="800,00" className={inputBase} />
         </div>
       </div>
 

@@ -47,6 +47,7 @@ export interface SalaPublica {
   equipamentos: string[];
   preco_valor: number;
   preco_unidade: PrecoUnidade;
+  preco_diaria: number | null;
   disponibilidade: BlocoDisponibilidade[];
   politica_cancelamento: string | null;
   fotos: string[];
@@ -120,8 +121,9 @@ export interface SalaForm {
   titulo: string;
   descricao: string;
   equipamentos: string[];
-  preco_valor: string; // string no form; convertido no salvar
-  preco_unidade: PrecoUnidade;
+  preco_valor: string; // valor por HORA (string no form; convertido no salvar)
+  preco_unidade: PrecoUnidade; // sempre "hora" no modelo atual (hora + diária)
+  preco_diaria: string; // valor da DIÁRIA (opcional)
   disponibilidade: BlocoDisponibilidade[];
   politica_cancelamento: string;
   fotos: string[]; // URLs no bucket fotos-salas (1..3, obrigatório)

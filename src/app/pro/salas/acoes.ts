@@ -90,6 +90,9 @@ export async function salvarSala(
     .maybeSingle<{ whatsapp: string | null; telefone: string | null }>();
   const contatoClinica = end?.whatsapp || end?.telefone || "definir-no-perfil";
 
+  const diariaNum = input.preco_diaria?.trim() ? Number(String(input.preco_diaria).replace(",", ".")) : null;
+  const preco_diaria = diariaNum != null && Number.isFinite(diariaNum) && diariaNum >= 0 ? diariaNum : null;
+
   const payload = {
     anfitriao_id: uid,
     endereco_id: input.endereco_id,
@@ -98,6 +101,7 @@ export async function salvarSala(
     equipamentos: input.equipamentos,
     preco_valor: preco,
     preco_unidade: input.preco_unidade,
+    preco_diaria,
     disponibilidade: input.disponibilidade,
     politica_cancelamento: input.politica_cancelamento.trim() || null,
     fotos: input.fotos,
