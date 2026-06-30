@@ -114,7 +114,9 @@ begin
     -- endereco REPRESENTATIVO: o que tem foto de fachada; senao o 1o (id estavel).
     -- Retornar os campos dele DIRETO evita array_agg em colunas que sao arrays
     -- (fotos_recepcao/estrutura) — que viram array-de-array e quebram.
-    select * from grp order by (foto_fachada is null or foto_fachada = ''), id limit 1
+    -- grp.* qualificado: os nomes do RETURNS TABLE viram variaveis no plpgsql
+    -- (foto_fachada etc.) e colidiriam com as colunas sem o prefixo (erro 42702).
+    select * from grp order by (grp.foto_fachada is null or grp.foto_fachada = ''), grp.id limit 1
   )
   select
     p_chave,
