@@ -18,6 +18,8 @@ import { ESPECIALIDADES } from "@/lib/especialidades";
 import { ESTRUTURA_CLINICA_OPCOES } from "@/lib/salas";
 import UploadFotos from "@/components/UploadFotos";
 import { buscarCep } from "@/lib/cep";
+import { sugerirClinicas } from "@/lib/clinicas-sugestao";
+import { type ClinicaSugestao } from "@/lib/salas";
 
 export interface AgendaDiaForm {
   dia: string;
@@ -129,6 +131,26 @@ export default function EnderecosEditor({
 }) {
   // Índice do endereço que acabou de exibir o feedback "Salvo" (some após 2,5s).
   const [salvoIdx, setSalvoIdx] = useState<number | null>(null);
+  // Sugestão "você quis dizer": clínicas já existentes no mesmo prédio (por id do endereço).
+  const [sugestoes, setSugestoes] = useState<Record<string, ClinicaSugestao[]>>({});
+  const [sugFechadas, setSugFechadas] = useState<Set<string>>(new Set());
+
+  async function buscarSugestoes(idx: number) {
+    const end = enderecos[idx];
+    if (!end) return;
+    const r = await sugerirClinicas(end.cep, end.numero);
+    setSugestoes((p) => ({ ...p, [end.id]: r }));
+  }
+  function adotarClinica(idx: number, sug: ClinicaSugestao) {
+    const n = [...enderecos];
+    n[idx] = {
+      ...n[idx],
+      nome_clinica: sug.nome_clinica ?? n[idx].nome_clinica,
+      complemento: sug.complemento ?? n[idx].complemento,
+    };
+    onChange(n);
+    setSugFechadas((p) => new Set(p).add(enderecos[idx].id));
+  }
 
   async function salvarProgresso(idx: number) {
     try {
@@ -255,12 +277,36 @@ export default function EnderecosEditor({
               </div>
               <div>
                 <label className={labelCls}>Número *</label>
-                <input inputMode="numeric" value={end.numero} onChange={(e) => atualizar(idx, "numero", e.target.value)} className={inputCls} />
+                <input inputMode="numeric" value={end.numero} onChange={(e) => atualizar(idx, "numero", e.target.value)} onBlur={() => buscarSugestoes(idx)} className={inputCls} />
               </div>
               <div>
-                <label className={labelCls}>Complemento</label>
-                <input value={end.complemento} onChange={(e) => atualizar(idx, "complemento", e.target.value)} className={inputCls} />
+                <label className={labelCls}>Complemento <span className="font-normal text-ink-muted">— sala/conjunto, se houver</span></label>
+                <input value={end.complemento} onChange={(e) => atualizar(idx, "complemento", e.target.value)} onBlur={() => buscarSugestoes(idx)} className={inputCls} />
               </div>
+
+              {/* "Você quis dizer?" — clínicas já existentes neste endereço (padroniza o nome). */}
+              {!sugFechadas.has(end.id) && (sugestoes[end.id]?.length ?? 0) > 0 && (
+                <div className="md:col-span-2 rounded-[12px] border p-3" style={{ borderColor: "rgba(0,122,255,0.30)", background: "rgba(0,122,255,0.05)" }}>
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-[13px] font-semibold text-brand-navy">Já existe clínica neste endereço — é a sua?</p>
+                    <button type="button" onClick={() => setSugFechadas((p) => new Set(p).add(end.id))} aria-label="Fechar" className="shrink-0 text-ink-muted hover:text-ink">✕</button>
+                  </div>
+                  <div className="mt-2 flex flex-col gap-1.5">
+                    {sugestoes[end.id]!.map((s) => (
+                      <button key={s.clinica_key} type="button" onClick={() => adotarClinica(idx, s)} className="flex items-center justify-between gap-3 rounded-[10px] border border-black/10 bg-white px-3 py-2 text-left text-[13px] transition-colors hover:border-brand-blue">
+                        <span className="min-w-0">
+                          <strong className="text-brand-navy">{s.nome_clinica || "Clínica"}</strong>
+                          {s.complemento ? <span className="text-ink-muted"> · {s.complemento}</span> : null}
+                        </span>
+                        <span className="shrink-0 text-[12px] font-semibold text-brand-blue">Usar este nome</span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-2 text-[11px] text-ink-muted">
+                    Se a sua é <strong>outra</strong> clínica no mesmo prédio, informe sua sala/conjunto no <strong>complemento</strong> para diferenciar.
+                  </p>
+                </div>
+              )}
               <div className="md:col-span-2">
                 <label className={labelCls}>Bairro *</label>
                 <input value={end.bairro} onChange={(e) => atualizar(idx, "bairro", e.target.value)} className={inputCls} style={mostrarPendencias && !end.bairro.trim() ? pendenteStyle : undefined} />

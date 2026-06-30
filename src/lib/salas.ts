@@ -161,6 +161,14 @@ export interface SolicitacaoReserva {
   decidida_em: string | null;
 }
 
+/** Sugestão de clínica já existente no prédio (RPC clinicas_no_predio) — cartão "você quis dizer". */
+export interface ClinicaSugestao {
+  clinica_key: string;
+  nome_clinica: string | null;
+  complemento: string | null;
+  qtd: number;
+}
+
 /** Contato do solicitante visto pelo locador (RPC contato_solicitante). */
 export interface ContatoSolicitante {
   nome: string | null;
