@@ -14,7 +14,7 @@ export default async function EditarSalaPage({ params }: { params: Promise<{ id:
   return (
     <Container className="py-10 md:py-12">
       <Link
-        href="/pro/salas"
+        href="/pro/negocios"
         className="mb-4 inline-flex items-center gap-1.5 text-[14px] font-semibold text-ink-muted hover:text-ink"
       >
         <ArrowLeft size={16} /> Minhas salas

@@ -115,7 +115,7 @@ export default function SalaEditor({
     setOcupado(false);
     if (falhou) return setErro(falhou);
     toast.success(editando ? "Sala atualizada!" : salas.length > 1 ? "Salas anunciadas!" : "Sala anunciada!");
-    router.push("/pro/salas");
+    router.push("/pro/negocios");
     router.refresh();
   }
 
@@ -184,7 +184,7 @@ export default function SalaEditor({
           {ocupado && <Loader2 size={16} className="animate-spin" />}
           {editando ? "Salvar alterações" : salas.length > 1 ? `Anunciar ${salas.length} salas` : "Anunciar sala"}
         </button>
-        <button onClick={() => router.push("/pro/salas")} className="text-[14px] font-semibold text-ink-muted hover:text-ink">
+        <button onClick={() => router.push("/pro/negocios")} className="text-[14px] font-semibold text-ink-muted hover:text-ink">
           Cancelar
         </button>
       </div>

@@ -12,6 +12,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import Link from "next/link";
 import { Check, Plus, Save, Trash2 } from "lucide-react";
 import { ESPECIALIDADES } from "@/lib/especialidades";
 import UploadFotos from "@/components/UploadFotos";
@@ -48,6 +49,15 @@ export interface EnderecoForm {
   foto_fachada: string; // URL única (locação) — bucket fotos-salas
   fotos_recepcao: string[]; // 0..3 URLs (locação)
   _isNew?: boolean;
+}
+
+/** Resumo de uma sala da clínica (atalho de edição na página do perfil). */
+export interface SalaResumoClinica {
+  id: string;
+  endereco_id: string;
+  titulo: string;
+  numero_na_clinica: number | null;
+  fotos: string[];
 }
 
 export const CONVENIOS_OPCOES = [
@@ -98,10 +108,12 @@ export default function EnderecosEditor({
   max = 8,
   mostrarPendencias = false,
   mostrarFotos = false,
+  salas = [],
 }: {
   enderecos: EnderecoForm[];
   onChange: (lista: EnderecoForm[]) => void;
   onRemover?: (id: string) => void;
+  salas?: SalaResumoClinica[];
   /** Opcional: persiste o endereço de índice `idx` (a página decide como). Se
    *  ausente, o botão "Salvar progresso" só dá feedback visual local. */
   onSalvarProgresso?: (idx: number) => void | Promise<void>;
@@ -342,6 +354,42 @@ export default function EnderecosEditor({
                     max={3}
                     escopo="clinicas"
                   />
+                </div>
+              </div>
+            )}
+
+            {mostrarFotos && salas.filter((s) => s.endereco_id === end.id).length > 0 && (
+              <div className="rounded-[12px] border border-black/8 p-3">
+                <p className="text-xs font-bold text-brand-navy">Salas desta clínica</p>
+                <p className="mb-3 mt-0.5 text-[11px] text-ink-muted">
+                  Clique para editar a sala sem sair desta página.
+                </p>
+                <div className="flex flex-wrap gap-2.5">
+                  {salas
+                    .filter((s) => s.endereco_id === end.id)
+                    .map((s) => (
+                      <Link
+                        key={s.id}
+                        href={`/pro/negocios/${s.id}/editar`}
+                        title={`Editar ${s.titulo}`}
+                        className="group flex w-28 flex-col overflow-hidden rounded-[10px] border border-gray-100 bg-white transition-shadow hover:shadow-md"
+                      >
+                        <span className="aspect-[4/3] w-full overflow-hidden bg-brand-soft">
+                          {s.fotos[0] ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={s.fotos[0]} alt={s.titulo} referrerPolicy="no-referrer" className="h-full w-full object-cover" />
+                          ) : (
+                            <span className="flex h-full w-full items-center justify-center text-[10px] text-ink-muted">sem foto</span>
+                          )}
+                        </span>
+                        <span className="px-2 py-1.5">
+                          <span className="block text-[10px] font-bold uppercase text-brand-blue">
+                            {s.numero_na_clinica != null ? `Sala ${String(s.numero_na_clinica).padStart(2, "0")}` : "Sala"}
+                          </span>
+                          <span className="block truncate text-[11px] font-semibold text-ink">{s.titulo}</span>
+                        </span>
+                      </Link>
+                    ))}
                 </div>
               </div>
             )}

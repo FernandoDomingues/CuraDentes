@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// Layout da área /pro/salas — GATE DE CRO. Além do guard de papel (ProLayout),
+// Layout da área /pro/negocios — GATE DE CRO. Além do guard de papel (ProLayout),
 // a Locação de Salas só é visível para dentista com CRO aprovado (regra de produto).
-// Superuser passa (croVerificado=true em getUsuario). Cobre /pro/salas e subrotas
+// Superuser passa (croVerificado=true em getUsuario). Cobre /pro/negocios e subrotas
 // (/nova, /[id]/editar, /solicitacoes). /pro/minhas-solicitacoes gateia na própria página.
 // ═══════════════════════════════════════════════════════════════════════════════
 

@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// /pro/salas — PAINEL único de Locação de Salas (locador + locatário).
-// Guarda de CRO herdada de /pro/salas/layout.tsx. Carrega salas + solicitações
+// /pro/negocios — PAINEL único de Locação de Salas (locador + locatário).
+// Guarda de CRO herdada de /pro/negocios/layout.tsx. Carrega salas + solicitações
 // recebidas + enviadas e entrega ao PainelSalas (abas com contadores).
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -35,7 +35,7 @@ export default async function PainelPage({
           </p>
         </div>
         <Link
-          href="/pro/salas/historico"
+          href="/pro/negocios/historico"
           className="inline-flex min-h-[40px] shrink-0 items-center gap-2 rounded-[12px] border border-black/10 px-4 text-[14px] font-semibold text-brand-navy transition-colors hover:bg-black/[0.04]"
         >
           <History size={16} /> Histórico
@@ -43,6 +43,7 @@ export default async function PainelPage({
       </div>
       <PainelSalas
         salas={minhas.salas}
+        enderecos={minhas.enderecos}
         recebidas={rec.itens}
         enviadas={env.itens}
         semEndereco={minhas.enderecos.length === 0}

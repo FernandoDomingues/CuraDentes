@@ -15,7 +15,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Trash2, ShieldCheck, Mail, KeyRound } from "lucide-react";
 import Container from "@/components/Container";
-import EnderecosEditor, { type EnderecoForm } from "@/components/pro/EnderecosEditor";
+import EnderecosEditor, { type EnderecoForm, type SalaResumoClinica } from "@/components/pro/EnderecosEditor";
 import { criarClienteNavegador } from "@/lib/supabase/client";
 import { excluirContaDentista } from "@/lib/conta-acoes";
 import { salvarPerfil } from "./acoes";
@@ -51,9 +51,11 @@ const inputCls = "w-full rounded-[10px] border border-black/15 px-3.5 py-2.5 tex
 export default function PerfilEditor({
   perfil,
   enderecosIniciais,
+  salasResumo = [],
 }: {
   perfil: PerfilForm;
   enderecosIniciais: EnderecoForm[];
+  salasResumo?: SalaResumoClinica[];
 }) {
   const router = useRouter();
   const supabase = criarClienteNavegador();
@@ -347,6 +349,7 @@ export default function PerfilEditor({
             onChange={setEnderecos}
             onRemover={(id) => setRemovidos((prev) => [...prev, id])}
             mostrarFotos
+            salas={salasResumo}
           />
         </section>
 

@@ -15,7 +15,7 @@ import { Eye, MessageCircle, Phone, Check, AlertCircle, Trophy, CalendarClock, B
 import { redirect } from "next/navigation";
 import { getUsuario } from "@/lib/auth";
 import { criarClienteServidor } from "@/lib/supabase/server";
-import { contarPendencias } from "../salas/acoes";
+import { contarPendencias } from "../negocios/acoes";
 import { montarEndereco, nomeExibicao, type DentistaRow, type EnderecoRow } from "@/lib/dentistas";
 import BioEditor from "./BioEditor";
 import AcoesConta from "./AcoesConta";
@@ -274,7 +274,7 @@ export default async function DashboardPage() {
           {pro.cro_verificado && (
             <section className="rounded-2xl border border-white/60 bg-white/90 shadow-[0_2px_8px_rgba(16,24,64,0.05)] backdrop-blur p-5">
               <Link
-                href="/pro/salas"
+                href="/pro/negocios"
                 className="flex min-h-[52px] items-center justify-between gap-3 rounded-[14px] px-4 py-3 transition-colors hover:bg-brand-blue/5"
               >
                 <span className="flex items-center gap-2.5">

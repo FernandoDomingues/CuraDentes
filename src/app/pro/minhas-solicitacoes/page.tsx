@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-// Consolidado no painel /pro/salas (aba Minhas solicitações).
+// Consolidado no painel /pro/negocios (aba Minhas solicitações).
 export default function MinhasSolicitacoesRedirect() {
-  redirect("/pro/salas?aba=enviadas");
+  redirect("/pro/negocios?aba=enviadas");
 }

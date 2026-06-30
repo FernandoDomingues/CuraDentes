@@ -49,8 +49,8 @@ export default function Header() {
   if (pathname && pathname.startsWith("/pro")) {
     const proBtn =
       "inline-flex items-center gap-2 min-h-[40px] rounded-[12px] bg-black/5 px-3 py-2 text-[13px] font-medium text-ink-muted transition-colors hover:bg-brand-blue/10 hover:text-brand-blue";
-    // Em /pro/salas, o header troca Home + Meu Perfil por "Voltar ao meu Perfil".
-    const ehProSalas = pathname.startsWith("/pro/salas");
+    // Em /pro/negocios, o header troca Home + Meu Perfil por "Voltar ao meu Perfil".
+    const ehProSalas = pathname.startsWith("/pro/negocios");
     return (
       <header
         style={{

@@ -51,7 +51,7 @@ export default async function MeuPerfilPage() {
   const supabase = await criarClienteServidor();
   const id = usuario!.id;
 
-  const [perfilRes, cpfRes, telRes, endsRes, prefsRes] = await Promise.all([
+  const [perfilRes, cpfRes, telRes, endsRes, prefsRes, salasRes] = await Promise.all([
     supabase
       .from("curadentespro")
       .select("id, nome, tratamento, nome_completo, cro, ano_formacao, foto_url, bio, instagram, especialidade, google_review_url, lgpd_aceito")
@@ -66,6 +66,7 @@ export default async function MeuPerfilPage() {
     supabase.rpc("meu_telefone"),
     supabase.from("curadentespro_enderecos").select("*").eq("curadentespro_id", id),
     supabase.from("curadentespro_email").select("prefs").eq("curadentespro_id", id).maybeSingle<{ prefs: { desempenho?: boolean; novidades?: boolean; parceiros?: boolean } | null }>(),
+    supabase.from("salas").select("id, endereco_id, titulo, numero_na_clinica, fotos").eq("anfitriao_id", id).neq("status", "removida"),
   ]);
 
   const pro = perfilRes.data;
@@ -119,5 +120,10 @@ export default async function MeuPerfilPage() {
     fotos_recepcao: (e as { fotos_recepcao?: string[] }).fotos_recepcao ?? [],
   }));
 
-  return <PerfilEditor perfil={perfil} enderecosIniciais={enderecos} />;
+  const salasResumo = ((salasRes.data as { id: string; endereco_id: string; titulo: string; numero_na_clinica: number | null; fotos: string[] | null }[]) ?? []).map((s) => ({
+    id: s.id, endereco_id: s.endereco_id, titulo: s.titulo,
+    numero_na_clinica: s.numero_na_clinica, fotos: s.fotos ?? [],
+  }));
+
+  return <PerfilEditor perfil={perfil} enderecosIniciais={enderecos} salasResumo={salasResumo} />;
 }

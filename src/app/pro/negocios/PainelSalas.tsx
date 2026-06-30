@@ -8,8 +8,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Plus, MapPin, Building2, Pencil, Inbox, Send, DoorOpen } from "lucide-react";
-import { formatarPreco, type MinhaSala } from "@/lib/salas";
+import { Plus, MapPin, Building2, Inbox, Send, DoorOpen, Settings } from "lucide-react";
+import { formatarPreco, type MinhaSala, type EnderecoResumo } from "@/lib/salas";
 import SolicitacaoCard from "./SolicitacaoCard";
 import type { SolicitacaoItem } from "./acoes";
 
@@ -17,12 +17,14 @@ type Aba = "recebidas" | "enviadas" | "salas";
 
 export default function PainelSalas({
   salas,
+  enderecos,
   recebidas,
   enviadas,
   semEndereco,
   abaInicial,
 }: {
   salas: MinhaSala[];
+  enderecos: EnderecoResumo[];
   recebidas: SolicitacaoItem[];
   enviadas: SolicitacaoItem[];
   semEndereco: boolean;
@@ -115,12 +117,12 @@ export default function PainelSalas({
         )
       )}
 
-      {/* MINHAS SALAS */}
+      {/* MINHAS SALAS — agrupadas por CLÍNICA (engrenagem na clínica e em cada sala) */}
       {aba === "salas" && (
-        <div>
-          <div className="mb-5 flex items-center justify-end">
+        <div className="flex flex-col gap-5">
+          <div className="flex items-center justify-end">
             {!semEndereco && (
-              <Link href="/pro/salas/nova" className="inline-flex min-h-[44px] items-center gap-2 rounded-[14px] px-5 py-3 text-[15px] font-semibold text-white transition-all hover:brightness-110" style={{ background: "#007aff", boxShadow: "0 4px 16px rgba(0,122,255,0.25)" }}>
+              <Link href="/pro/negocios/nova" className="inline-flex min-h-[44px] items-center gap-2 rounded-[14px] px-5 py-3 text-[15px] font-semibold text-white transition-all hover:brightness-110" style={{ background: "#007aff", boxShadow: "0 4px 16px rgba(0,122,255,0.25)" }}>
                 <Plus size={18} /> Anunciar sala
               </Link>
             )}
@@ -132,37 +134,78 @@ export default function PainelSalas({
               texto="Uma sala fica vinculada a um dos seus endereços de clínica. Adicione um endereço no seu perfil para poder anunciar."
               acao={<Link href="/pro/editar-perfil" className="mt-2 rounded-[14px] px-6 py-3 text-[14px] font-semibold text-white" style={{ background: "#007aff" }}>Ir para o perfil</Link>}
             />
-          ) : salas.length === 0 ? (
-            <Vazio icone={<MapPin size={34} />} titulo="Nenhuma sala anunciada ainda" texto="Clique em “Anunciar sala” para criar a primeira." />
           ) : (
-            <div className="grid gap-4 md:grid-cols-2">
-              {salas.map((s) => (
-                <div key={s.id} className="flex flex-col gap-3 rounded-[20px] border border-gray-100 bg-white p-5 shadow-sm">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <h2 className="truncate text-[17px] font-bold text-brand-navy">{s.titulo}</h2>
-                      <p className="mt-0.5 flex items-center gap-1 text-[13px] text-ink-muted">
-                        <MapPin size={13} />
-                        {[s.bairro, s.cidade].filter(Boolean).join(", ") || s.nome_clinica || "—"}
-                      </p>
-                    </div>
-                    <span className="shrink-0 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider" style={s.status === "ativa" ? { background: "rgba(52,199,89,0.12)", color: "#2a8a3e" } : { background: "rgba(255,149,0,0.14)", color: "#b56a00" }}>
+            enderecos.map((end) => (
+              <ClinicaPainelCard key={end.id} endereco={end} salas={salas.filter((s) => s.endereco_id === end.id)} />
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Card da CLÍNICA com as salas dentro. Engrenagem na clínica → editar perfil daquele
+// endereço; engrenagem em cada sala → editar a sala.
+function ClinicaPainelCard({ endereco, salas }: { endereco: EnderecoResumo; salas: MinhaSala[] }) {
+  const rs = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  return (
+    <div className="rounded-[22px] border border-gray-100 bg-white p-5 shadow-sm">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="flex items-center gap-2 text-[18px] font-bold text-brand-navy">
+            <Building2 size={18} style={{ color: "#007aff" }} />
+            <span className="truncate">{endereco.nome_clinica || "Clínica"}</span>
+          </h2>
+          <p className="mt-0.5 flex items-center gap-1 text-[13px] text-ink-muted">
+            <MapPin size={13} /> {[endereco.bairro, endereco.cidade].filter(Boolean).join(", ") || "—"}
+          </p>
+        </div>
+        <Link
+          href={`/pro/editar-perfil#endereco-${endereco.id}`}
+          title="Editar a clínica"
+          aria-label="Editar a clínica"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-black/[0.05] hover:text-brand-blue"
+        >
+          <Settings size={18} />
+        </Link>
+      </div>
+
+      {salas.length === 0 ? (
+        <p className="rounded-[12px] border border-dashed border-black/12 bg-black/[0.02] px-4 py-4 text-center text-[13px] text-ink-muted">
+          Nenhuma sala neste endereço.{" "}
+          <Link href="/pro/negocios/nova" className="font-semibold text-brand-blue hover:underline">Anunciar</Link>
+        </p>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {salas.map((s) => {
+            const numero = s.numero_na_clinica != null ? `Sala ${String(s.numero_na_clinica).padStart(2, "0")}` : "Sala";
+            return (
+              <div key={s.id} className="flex flex-col gap-2 rounded-[14px] border border-gray-100 bg-black/[0.015] p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-brand-blue">{numero}</span>
+                    <h3 className="truncate text-[15px] font-bold text-brand-navy">{s.titulo}</h3>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <span className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase" style={s.status === "ativa" ? { background: "rgba(52,199,89,0.12)", color: "#2a8a3e" } : { background: "rgba(255,149,0,0.14)", color: "#b56a00" }}>
                       {s.status === "ativa" ? "Ativa" : "Pausada"}
                     </span>
-                  </div>
-                  <p className="text-[15px] font-bold text-brand-blue">{formatarPreco(s.preco_valor, s.preco_unidade)}</p>
-                  <div className="mt-1 flex items-center gap-2 border-t border-gray-100 pt-3">
-                    <Link href={`/pro/salas/${s.id}/editar`} className="inline-flex items-center gap-1.5 rounded-[10px] px-3 py-2 text-[13px] font-semibold text-brand-navy transition-colors hover:bg-black/[0.04]">
-                      <Pencil size={14} /> Editar / fotos
-                    </Link>
-                    <Link href={`/salas/${s.id}`} className="inline-flex items-center gap-1.5 rounded-[10px] px-3 py-2 text-[13px] font-semibold text-ink-muted transition-colors hover:bg-black/[0.04]">
-                      Ver anúncio
+                    <Link href={`/pro/negocios/${s.id}/editar`} title="Editar a sala" aria-label="Editar a sala" className="flex h-8 w-8 items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-black/[0.06] hover:text-brand-blue">
+                      <Settings size={16} />
                     </Link>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+                <p className="text-[14px] font-bold text-brand-blue">
+                  {formatarPreco(s.preco_valor, s.preco_unidade)}
+                  {s.preco_diaria != null && (
+                    <span className="text-[12px] font-medium text-ink-muted"> · {rs(s.preco_diaria)}/dia</span>
+                  )}
+                </p>
+                <Link href={`/salas/${s.id}`} className="text-[12px] font-medium text-ink-muted hover:text-brand-blue">Ver anúncio →</Link>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
