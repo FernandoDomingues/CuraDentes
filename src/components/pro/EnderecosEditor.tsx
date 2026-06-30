@@ -15,11 +15,10 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { Check, Plus, Save, Trash2 } from "lucide-react";
 import { ESPECIALIDADES } from "@/lib/especialidades";
-import { ESTRUTURA_CLINICA_OPCOES } from "@/lib/salas";
+import { ESTRUTURA_CLINICA_OPCOES, clinicaKeyDe, type ClinicaSugestao } from "@/lib/salas";
 import UploadFotos from "@/components/UploadFotos";
 import { buscarCep } from "@/lib/cep";
-import { sugerirClinicas } from "@/lib/clinicas-sugestao";
-import { type ClinicaSugestao } from "@/lib/salas";
+import { sugerirClinicas, buscarDadosClinica } from "@/lib/clinicas-sugestao";
 
 export interface AgendaDiaForm {
   dia: string;
@@ -103,6 +102,8 @@ export function novoEndereco(): EnderecoForm {
 
 const labelCls = "mb-1 block text-xs font-semibold text-ink-soft";
 const inputCls = "w-full rounded-[10px] border border-black/15 px-3.5 py-2.5 text-sm outline-none focus:border-brand-blue";
+// Classe do input quando TRAVADO (campo da clínica, na adesão) — cinza + sem cursor.
+const inputTravCls = inputCls + " cursor-not-allowed bg-black/[0.04] text-ink-muted";
 // Estilo de borda/sombra laranja para campo obrigatório pendente (estilo k11).
 const pendenteStyle: React.CSSProperties = { borderColor: "#FF9500", boxShadow: "0 0 0 3px rgba(255,149,0,0.15)" };
 
@@ -135,21 +136,48 @@ export default function EnderecosEditor({
   const [sugestoes, setSugestoes] = useState<Record<string, ClinicaSugestao[]>>({});
   const [sugFechadas, setSugFechadas] = useState<Set<string>>(new Set());
 
+  // Endereços "aderidos" a uma clínica existente: id do endereço → clinica_key adotada.
+  // Enquanto adotado, os campos que DEFINEM a clínica ficam travados (só o complemento muda).
+  const [adotada, setAdotada] = useState<Record<string, string>>({});
+
   async function buscarSugestoes(idx: number) {
     const end = enderecos[idx];
     if (!end) return;
     const r = await sugerirClinicas(end.cep, end.numero);
     setSugestoes((p) => ({ ...p, [end.id]: r }));
   }
-  function adotarClinica(idx: number, sug: ClinicaSugestao) {
+  // "Usar este nome" = aderir: busca os dados da clínica do dono, preenche e TRAVA.
+  async function adotarClinica(idx: number, sug: ClinicaSugestao) {
+    const end = enderecos[idx];
+    const dados = await buscarDadosClinica(sug.clinica_key);
     const n = [...enderecos];
     n[idx] = {
       ...n[idx],
       nome_clinica: sug.nome_clinica ?? n[idx].nome_clinica,
       complemento: sug.complemento ?? n[idx].complemento,
+      ...(dados
+        ? {
+            foto_fachada: dados.foto_fachada ?? "",
+            fotos_recepcao: dados.fotos_recepcao ?? [],
+            estrutura: dados.estrutura ?? [],
+            estrutura_extra: dados.estrutura_extra ?? "",
+          }
+        : {}),
     };
     onChange(n);
-    setSugFechadas((p) => new Set(p).add(enderecos[idx].id));
+    setAdotada((p) => ({ ...p, [end.id]: sug.clinica_key }));
+    setSugFechadas((p) => new Set(p).add(end.id));
+  }
+  // Ao mudar o complemento de um endereço adotado: se a chave deixar de bater com a
+  // clínica adotada, é OUTRA unidade → DESTRAVA (clínica nova/distinta) e reavalia.
+  function mudarComplemento(idx: number, valor: string) {
+    const end = enderecos[idx];
+    atualizar(idx, "complemento", valor);
+    const chave = adotada[end.id];
+    if (chave && clinicaKeyDe(end.cep, end.numero, valor) !== chave) {
+      setAdotada((p) => { const c = { ...p }; delete c[end.id]; return c; });
+      buscarSugestoes(idx);
+    }
   }
 
   async function salvarProgresso(idx: number) {
@@ -262,30 +290,48 @@ export default function EnderecosEditor({
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
                 <label className={labelCls}>Nome da clínica / consultório *</label>
-                <input value={end.nome_clinica} onChange={(e) => atualizar(idx, "nome_clinica", e.target.value)} className={inputCls} style={mostrarPendencias && !end.nome_clinica.trim() ? pendenteStyle : undefined} />
+                <input value={end.nome_clinica} onChange={(e) => atualizar(idx, "nome_clinica", e.target.value)} disabled={!!adotada[end.id]} className={adotada[end.id] ? inputTravCls : inputCls} style={mostrarPendencias && !end.nome_clinica.trim() ? pendenteStyle : undefined} />
                 {mostrarPendencias && !end.nome_clinica.trim() && <p className="mt-1 text-[11px] font-medium" style={{ color: "#FF9500" }}>Campo obrigatório pendente</p>}
               </div>
               <div>
                 <label className={labelCls}>CEP *</label>
-                <input inputMode="numeric" value={end.cep} onChange={(e) => aplicarCep(idx, e.target.value)} placeholder="00000000" maxLength={8} className={inputCls} style={mostrarPendencias && !end.cep.trim() ? pendenteStyle : undefined} />
+                <input inputMode="numeric" value={end.cep} onChange={(e) => aplicarCep(idx, e.target.value)} placeholder="00000000" maxLength={8} disabled={!!adotada[end.id]} className={adotada[end.id] ? inputTravCls : inputCls} style={mostrarPendencias && !end.cep.trim() ? pendenteStyle : undefined} />
                 {mostrarPendencias && !end.cep.trim() && <p className="mt-1 text-[11px] font-medium" style={{ color: "#FF9500" }}>Campo obrigatório pendente</p>}
               </div>
               <div className="md:col-span-2">
                 <label className={labelCls}>Logradouro *</label>
-                <input value={end.logradouro} onChange={(e) => atualizar(idx, "logradouro", e.target.value)} className={inputCls} style={mostrarPendencias && !end.logradouro.trim() ? pendenteStyle : undefined} />
+                <input value={end.logradouro} onChange={(e) => atualizar(idx, "logradouro", e.target.value)} disabled={!!adotada[end.id]} className={adotada[end.id] ? inputTravCls : inputCls} style={mostrarPendencias && !end.logradouro.trim() ? pendenteStyle : undefined} />
                 {mostrarPendencias && !end.logradouro.trim() && <p className="mt-1 text-[11px] font-medium" style={{ color: "#FF9500" }}>Campo obrigatório pendente</p>}
               </div>
               <div>
                 <label className={labelCls}>Número *</label>
-                <input inputMode="numeric" value={end.numero} onChange={(e) => atualizar(idx, "numero", e.target.value)} onBlur={() => buscarSugestoes(idx)} className={inputCls} />
+                <input inputMode="numeric" value={end.numero} onChange={(e) => atualizar(idx, "numero", e.target.value)} onBlur={() => buscarSugestoes(idx)} disabled={!!adotada[end.id]} className={adotada[end.id] ? inputTravCls : inputCls} />
               </div>
               <div>
-                <label className={labelCls}>Complemento <span className="font-normal text-ink-muted">— sala/conjunto, se houver</span></label>
-                <input value={end.complemento} onChange={(e) => atualizar(idx, "complemento", e.target.value)} onBlur={() => buscarSugestoes(idx)} className={inputCls} />
+                <label className={labelCls}>
+                  Complemento{" "}
+                  {adotada[end.id]
+                    ? <span className="font-bold text-brand-blue">— é OUTRA sala/conjunto? edite aqui para diferenciar</span>
+                    : <span className="font-normal text-ink-muted">— sala/conjunto, se houver</span>}
+                </label>
+                <input value={end.complemento} onChange={(e) => mudarComplemento(idx, e.target.value)} onBlur={() => buscarSugestoes(idx)} className={inputCls}
+                  style={adotada[end.id] ? { borderColor: "#007aff", boxShadow: "0 0 0 3px rgba(0,122,255,0.18)" } : undefined} />
               </div>
 
+              {/* Banner: aderindo a uma clínica existente (campos travados). */}
+              {adotada[end.id] && (
+                <div className="md:col-span-2 rounded-[12px] border p-3" style={{ borderColor: "rgba(0,122,255,0.35)", background: "rgba(0,122,255,0.06)" }}>
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-[13px] text-ink-soft">
+                      🔒 Você está <strong className="text-brand-navy">aderindo a uma clínica existente</strong>. Os dados da clínica foram preenchidos e <strong>travados</strong>. Se você atende em <strong>outra sala/conjunto</strong> do prédio, edite o <strong className="text-brand-blue">complemento</strong>. Ao salvar, o <strong>dono da clínica</strong> recebe seu pedido para aprovar.
+                    </p>
+                    <button type="button" onClick={() => { setAdotada((p) => { const c = { ...p }; delete c[end.id]; return c; }); }} className="shrink-0 text-[12px] font-semibold text-ink-muted hover:text-ink" title="Não é a mesma clínica">Não é</button>
+                  </div>
+                </div>
+              )}
+
               {/* "Você quis dizer?" — clínicas já existentes neste endereço (padroniza o nome). */}
-              {!sugFechadas.has(end.id) && (sugestoes[end.id]?.length ?? 0) > 0 && (
+              {!adotada[end.id] && !sugFechadas.has(end.id) && (sugestoes[end.id]?.length ?? 0) > 0 && (
                 <div className="md:col-span-2 rounded-[12px] border p-3" style={{ borderColor: "rgba(0,122,255,0.30)", background: "rgba(0,122,255,0.05)" }}>
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-[13px] font-semibold text-brand-navy">Já existe clínica neste endereço — é a sua?</p>
@@ -309,17 +355,17 @@ export default function EnderecosEditor({
               )}
               <div className="md:col-span-2">
                 <label className={labelCls}>Bairro *</label>
-                <input value={end.bairro} onChange={(e) => atualizar(idx, "bairro", e.target.value)} className={inputCls} style={mostrarPendencias && !end.bairro.trim() ? pendenteStyle : undefined} />
+                <input value={end.bairro} onChange={(e) => atualizar(idx, "bairro", e.target.value)} disabled={!!adotada[end.id]} className={adotada[end.id] ? inputTravCls : inputCls} style={mostrarPendencias && !end.bairro.trim() ? pendenteStyle : undefined} />
                 {mostrarPendencias && !end.bairro.trim() && <p className="mt-1 text-[11px] font-medium" style={{ color: "#FF9500" }}>Campo obrigatório pendente</p>}
               </div>
               <div>
                 <label className={labelCls}>Cidade *</label>
-                <input value={end.cidade} onChange={(e) => atualizar(idx, "cidade", e.target.value)} className={inputCls} style={mostrarPendencias && !end.cidade.trim() ? pendenteStyle : undefined} />
+                <input value={end.cidade} onChange={(e) => atualizar(idx, "cidade", e.target.value)} disabled={!!adotada[end.id]} className={adotada[end.id] ? inputTravCls : inputCls} style={mostrarPendencias && !end.cidade.trim() ? pendenteStyle : undefined} />
                 {mostrarPendencias && !end.cidade.trim() && <p className="mt-1 text-[11px] font-medium" style={{ color: "#FF9500" }}>Campo obrigatório pendente</p>}
               </div>
               <div>
                 <label className={labelCls}>Estado *</label>
-                <input value={end.estado} maxLength={2} onChange={(e) => atualizar(idx, "estado", e.target.value.toUpperCase())} className={inputCls} style={mostrarPendencias && !end.estado.trim() ? pendenteStyle : undefined} />
+                <input value={end.estado} maxLength={2} onChange={(e) => atualizar(idx, "estado", e.target.value.toUpperCase())} disabled={!!adotada[end.id]} className={adotada[end.id] ? inputTravCls : inputCls} style={mostrarPendencias && !end.estado.trim() ? pendenteStyle : undefined} />
                 {mostrarPendencias && !end.estado.trim() && <p className="mt-1 text-[11px] font-medium" style={{ color: "#FF9500" }}>Campo obrigatório pendente</p>}
               </div>
               <div>
@@ -396,6 +442,7 @@ export default function EnderecosEditor({
                     onChange={(f) => setFotos(idx, "foto_fachada", f[0] ?? "")}
                     max={1}
                     escopo="clinicas"
+                    readOnly={!!adotada[end.id]}
                   />
                   <UploadFotos
                     label="Recepção (até 3)"
@@ -403,6 +450,7 @@ export default function EnderecosEditor({
                     onChange={(f) => setFotos(idx, "fotos_recepcao", f)}
                     max={3}
                     escopo="clinicas"
+                    readOnly={!!adotada[end.id]}
                   />
                 </div>
               </div>
@@ -417,12 +465,14 @@ export default function EnderecosEditor({
                 <div className="flex flex-wrap gap-2">
                   {ESTRUTURA_CLINICA_OPCOES.map((opt) => {
                     const on = end.estrutura.includes(opt);
+                    const trav = !!adotada[end.id];
                     return (
                       <button
                         key={opt}
                         type="button"
+                        disabled={trav}
                         onClick={() => toggleOpcao(idx, "estrutura", opt)}
-                        className="rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors"
+                        className={`rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors${trav ? " cursor-not-allowed opacity-60" : ""}`}
                         style={on ? { background: "#007aff", color: "#fff" } : { background: "#eef2fb", color: "#0a2a66" }}
                       >
                         {on && <Check size={13} className="mr-1 inline" />}
@@ -435,8 +485,9 @@ export default function EnderecosEditor({
                   value={end.estrutura_extra}
                   onChange={(e) => atualizar(idx, "estrutura_extra", e.target.value.slice(0, 150))}
                   maxLength={150}
+                  disabled={!!adotada[end.id]}
                   placeholder="Outras comodidades da clínica (separe por vírgula)"
-                  className={`${inputCls} mt-2.5`}
+                  className={`${adotada[end.id] ? inputTravCls : inputCls} mt-2.5`}
                 />
                 <p className="mt-1 text-right text-[11px] text-ink-muted">{end.estrutura_extra.length}/150</p>
               </div>

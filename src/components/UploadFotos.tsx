@@ -35,12 +35,15 @@ export default function UploadFotos({
   max,
   escopo = "salas",
   label,
+  readOnly = false,
 }: {
   fotos: string[];
   onChange: (fotos: string[]) => void;
   max: number;
   escopo?: "salas" | "clinicas";
   label?: string;
+  /** Só exibe as fotos (sem adicionar/remover) — usado quando o campo está travado (adesão). */
+  readOnly?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [ocupado, setOcupado] = useState(false);
@@ -74,21 +77,26 @@ export default function UploadFotos({
     <div>
       {label && <p className="mb-1.5 text-[13px] font-semibold text-ink-soft">{label}</p>}
       <div className="flex flex-wrap gap-2.5">
+        {fotos.length === 0 && readOnly && (
+          <div className="flex h-20 w-full items-center rounded-[10px] border border-dashed border-black/15 px-3 text-[12px] text-ink-muted">Sem foto cadastrada</div>
+        )}
         {fotos.map((url, i) => (
           <div key={url} className="relative h-20 w-20 overflow-hidden rounded-[10px] border border-black/10">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={url} alt={`Foto ${i + 1}`} className="h-full w-full object-cover" />
-            <button
-              type="button"
-              onClick={() => onChange(fotos.filter((_, idx) => idx !== i))}
-              className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white"
-              aria-label="Remover foto"
-            >
-              <X size={12} />
-            </button>
+            {!readOnly && (
+              <button
+                type="button"
+                onClick={() => onChange(fotos.filter((_, idx) => idx !== i))}
+                className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white"
+                aria-label="Remover foto"
+              >
+                <X size={12} />
+              </button>
+            )}
           </div>
         ))}
-        {fotos.length < max && (
+        {!readOnly && fotos.length < max && (
           <button
             type="button"
             onClick={() => inputRef.current?.click()}

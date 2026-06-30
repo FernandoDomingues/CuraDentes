@@ -160,8 +160,9 @@ export async function salvarEnderecosCadastro(enderecos: EnderecoComCoord[]): Pr
   if (!uid) return { ok: false, erro: "Sessão expirada." };
   const { error: delErr } = await supabase.from("curadentespro_enderecos").delete().eq("curadentespro_id", uid);
   if (delErr) return { ok: false, erro: delErr.message };
+  const pendentes: string[] = [];
   for (const end of enderecos) {
-    const { error } = await supabase.from("curadentespro_enderecos").insert({
+    const { data: novo, error } = await supabase.from("curadentespro_enderecos").insert({
       curadentespro_id: uid,
       nome_clinica: end.nome_clinica,
       logradouro: end.logradouro,
@@ -188,8 +189,20 @@ export async function salvarEnderecosCadastro(enderecos: EnderecoComCoord[]): Pr
       fotos_recepcao: end.fotos_recepcao ?? [],
       estrutura: end.estrutura ?? [],
       estrutura_extra: end.estrutura_extra?.trim() || null,
-    });
+    }).select("id").single();
     if (error) return { ok: false, erro: error.message };
+    // Define dono OU cria adesão pendente (best-effort).
+    if (novo) {
+      const { data: st } = await supabase.rpc("sincronizar_clinica", { p_endereco_id: novo.id });
+      if (st === "pendente") pendentes.push(novo.id as string);
+    }
+  }
+  for (const endId of pendentes) {
+    try {
+      await supabase.functions.invoke("notificar-adesao-clinica", { body: { endereco_id: endId } });
+    } catch (e) {
+      console.warn("[cadastro] notificar adesão:", e);
+    }
   }
   return { ok: true };
 }

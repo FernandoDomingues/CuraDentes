@@ -62,6 +62,7 @@ export async function salvarPerfil(input: {
 
   // 4) Insere/atualiza cada endereço (curadentespro_id da sessão).
   const novosIds: { tempId: string; id: string }[] = [];
+  const pendentes: string[] = []; // endereços que viraram adesão pendente (e-mail ao dono — passo 5)
   for (const end of input.enderecos) {
     const payload = {
       curadentespro_id: uid,
@@ -91,6 +92,7 @@ export async function salvarPerfil(input: {
       estrutura: end.estrutura ?? [],
       estrutura_extra: end.estrutura_extra?.trim() || null,
     };
+    let endId: string | null = null;
     if (end._isNew) {
       const { data: novo, error } = await supabase
         .from("curadentespro_enderecos")
@@ -98,10 +100,28 @@ export async function salvarPerfil(input: {
         .select("id")
         .single();
       if (error) return { ok: false, erro: error.message || "Erro ao salvar endereço." };
-      if (novo) novosIds.push({ tempId: end.id, id: novo.id as string });
+      if (novo) { novosIds.push({ tempId: end.id, id: novo.id as string }); endId = novo.id as string; }
     } else {
       const { error } = await supabase.from("curadentespro_enderecos").update(payload).eq("id", end.id);
       if (error) return { ok: false, erro: error.message || "Erro ao salvar endereço." };
+      endId = end.id;
+    }
+    // Define o dono da clínica (1º a registrar a chave) OU cria adesão pendente.
+    // Best-effort: nunca derruba o save. O e-mail ao dono (quando 'pendente') entra depois.
+    if (endId) {
+      const { data: st } = await supabase.rpc("sincronizar_clinica", { p_endereco_id: endId });
+      if (st === "pendente") pendentes.push(endId);
+    }
+  }
+
+  // E-mail ao DONO de cada clínica que ganhou adesão pendente (best-effort).
+  // Edge Function `notificar-adesao-clinica` (publicada no Supabase; resolve o e-mail
+  // do dono e chama o Resend). Falha engolida: nunca derruba o save. Ver passo 5.
+  for (const endId of pendentes) {
+    try {
+      await supabase.functions.invoke("notificar-adesao-clinica", { body: { endereco_id: endId } });
+    } catch (e) {
+      console.warn("[salvarPerfil] notificar adesão:", e);
     }
   }
 

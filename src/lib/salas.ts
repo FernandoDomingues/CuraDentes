@@ -169,6 +169,28 @@ export interface ClinicaSugestao {
   qtd: number;
 }
 
+/** Dados da clínica para auto-preencher o formulário na adesão (RPC dados_clinica_para_adesao). */
+export interface DadosClinicaAdesao {
+  nome_clinica: string | null;
+  foto_fachada: string | null;
+  fotos_recepcao: string[];
+  estrutura: string[];
+  estrutura_extra: string | null;
+}
+
+/** Réplica em JS da função SQL `clinica_key_de` (CEP+número+complemento normalizados).
+ *  Usada no formulário para detectar, ao mudar o complemento, se a clínica mudou.
+ *  DEVE espelhar `docs/salas/17-clinica-key.sql` — se mudar lá, mudar aqui. */
+export function clinicaKeyDe(cep: string, numero: string, complemento: string): string {
+  const c = (cep ?? "").replace(/\D/g, "");
+  const n = (numero ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+  const comp = (complemento ?? "")
+    .toLowerCase()
+    .replace(/\b(sala|salas|conjunto|conj|cj|apto|apt|apartamento|andar|bloco|loja|numero|nro|no)\b/g, "")
+    .replace(/[^a-z0-9]+/g, "");
+  return `${c}-${n}${comp ? `-${comp}` : ""}`;
+}
+
 /** Contato do solicitante visto pelo locador (RPC contato_solicitante). */
 export interface ContatoSolicitante {
   nome: string | null;
