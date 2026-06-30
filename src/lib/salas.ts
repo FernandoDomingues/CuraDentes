@@ -169,6 +169,16 @@ export interface ClinicaSugestao {
   qtd: number;
 }
 
+/** Pedido de adesão pendente que o DONO da clínica vê (RPC listar_adesoes_pendentes). */
+export interface AdesaoPendente {
+  id: string;
+  clinica_key: string;
+  nome_clinica: string | null;
+  solicitante_nome: string | null;
+  complemento: string | null;
+  criada_em: string;
+}
+
 /** Dados da clínica para auto-preencher o formulário na adesão (RPC dados_clinica_para_adesao). */
 export interface DadosClinicaAdesao {
   nome_clinica: string | null;

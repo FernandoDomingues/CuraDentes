@@ -11,11 +11,12 @@ import Image from "next/image";
 import Link from "next/link";
 import Container from "@/components/Container";
 import Estrelas from "@/components/Estrelas";
-import { Eye, MessageCircle, Phone, Check, AlertCircle, Trophy, CalendarClock, Building2, MapPin, Settings, DoorOpen } from "lucide-react";
+import { Eye, MessageCircle, Phone, Check, AlertCircle, Trophy, CalendarClock, Building2, MapPin, Settings, DoorOpen, UserPlus } from "lucide-react";
 import { redirect } from "next/navigation";
 import { getUsuario } from "@/lib/auth";
 import { criarClienteServidor } from "@/lib/supabase/server";
 import { contarPendencias } from "../negocios/acoes";
+import { contarAdesoesPendentes } from "../adesoes/acoes";
 import { montarEndereco, nomeExibicao, type DentistaRow, type EnderecoRow } from "@/lib/dentistas";
 import BioEditor from "./BioEditor";
 import AcoesConta from "./AcoesConta";
@@ -85,6 +86,9 @@ export default async function DashboardPage() {
   const pendencias = pro.cro_verificado
     ? await contarPendencias()
     : { total: 0, recebidasPendentes: 0, pagamentosPendentes: 0 };
+  // Pedidos de adesão à clínica deste dono — NÃO depende de CRO (qualquer dentista
+  // que tenha criado uma clínica pode receber pedidos).
+  const adesoesPendentes = await contarAdesoesPendentes();
 
   return (
     <Container className="py-10 md:py-12">
@@ -264,6 +268,30 @@ export default async function DashboardPage() {
 
         {/* Barra lateral */}
         <aside className="flex flex-col gap-6">
+          {/* Pedidos de adesão à clínica — destaque no topo quando houver pendência.
+              Independe de CRO (o dono pode não ter CRO e mesmo assim decidir quem entra). */}
+          {adesoesPendentes > 0 && (
+            <Link
+              href="/pro/adesoes"
+              className="flex min-h-[64px] items-center justify-between gap-3 rounded-2xl border p-4 transition-colors"
+              style={{ background: "rgba(0,122,255,0.06)", borderColor: "rgba(0,122,255,0.25)" }}
+            >
+              <span className="flex items-center gap-2.5">
+                <UserPlus size={18} style={{ color: "#007AFF" }} />
+                <span>
+                  <span className="block text-[15px] font-bold text-brand-navy">Pedidos de adesão</span>
+                  <span className="block text-[12px] text-ink-muted">Dentistas querem entrar na sua clínica</span>
+                </span>
+              </span>
+              <span
+                className="inline-flex h-7 min-w-[28px] items-center justify-center rounded-full px-2 text-[13px] font-bold text-white"
+                style={{ background: "#e6004c" }}
+              >
+                {adesoesPendentes}
+              </span>
+            </Link>
+          )}
+
           <section className="rounded-2xl border border-white/60 bg-white/90 shadow-[0_2px_8px_rgba(16,24,64,0.05)] backdrop-blur p-5">
             <h2 className="mb-3 text-lg font-bold text-brand-navy">Sua bio</h2>
             <BioEditor bioInicial={pro.bio ?? ""} />
