@@ -1,13 +1,14 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // /coworking/clinica/[slug] — página da CLÍNICA. Ordem (desktop, margens reduzidas p/
-// mais campo de visão): H1 nome → endereço escrito → fachada → mapa → as SALAS
-// (cards ricos com fotos, hora+diária, equipamentos e solicitar). Members-only.
+// mais campo de visão): H1 nome → endereço escrito → fachada → ESTRUTURA da clínica →
+// mapa → as SALAS (cards ricos com fotos, hora+diária, equipamentos e solicitar).
+// Members-only.
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, MapPin, MessageCircle, Phone, ExternalLink } from "lucide-react";
+import { ArrowLeft, MapPin, MessageCircle, Phone, ExternalLink, Check, Building2 } from "lucide-react";
 import { criarClienteServidor } from "@/lib/supabase/server";
 import { supabase as supabasePublic } from "@/lib/supabase/public";
 import { getUsuario } from "@/lib/auth";
@@ -114,9 +115,36 @@ export default async function ClinicaPage({ params }: { params: Promise<{ slug: 
         </div>
       )}
 
+      {/* 3.5) Estrutura da clínica (vale para todas as salas) — antes do mapa.
+           Acesso defensivo (?.): se a migration 16 ainda não rodou, a RPC não traz estes campos. */}
+      {((clinica.estrutura?.length ?? 0) > 0 || clinica.estrutura_extra) && (
+        <div className="mt-8">
+          <h2 className="mb-3 flex items-center gap-2 text-[16px] font-bold text-brand-navy">
+            <Building2 size={17} style={{ color: "#007aff" }} /> Estrutura da clínica
+          </h2>
+          {(clinica.estrutura?.length ?? 0) > 0 && (
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+              {clinica.estrutura.map((item) => (
+                <div key={item} className="flex items-center gap-2.5 text-[14px] text-ink-soft">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full" style={{ background: "rgba(52,199,89,0.12)" }}>
+                    <Check size={13} style={{ color: "#2a8a3e" }} />
+                  </span>
+                  {item}
+                </div>
+              ))}
+            </div>
+          )}
+          {clinica.estrutura_extra && (
+            <p className="mt-3 text-[14px] text-ink-soft">
+              <span className="font-semibold text-ink">Também:</span> {clinica.estrutura_extra}
+            </p>
+          )}
+        </div>
+      )}
+
       {/* 4) Mapa */}
       {temMapa && (
-        <div className="mt-6">
+        <div className="mt-8">
           <div className="mb-2 flex items-center justify-between gap-2">
             <h2 className="flex items-center gap-2 text-[16px] font-bold text-brand-navy"><MapPin size={17} style={{ color: "#007aff" }} /> Onde fica</h2>
             {mapsUrl && (

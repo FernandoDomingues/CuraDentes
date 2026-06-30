@@ -118,6 +118,8 @@ export default async function MeuPerfilPage() {
     agenda: normalizarAgenda(e.agenda),
     foto_fachada: (e as { foto_fachada?: string }).foto_fachada ?? "",
     fotos_recepcao: (e as { fotos_recepcao?: string[] }).fotos_recepcao ?? [],
+    estrutura: (e as { estrutura?: string[] }).estrutura ?? [],
+    estrutura_extra: (e as { estrutura_extra?: string }).estrutura_extra ?? "",
   }));
 
   const salasResumo = ((salasRes.data as { id: string; endereco_id: string; titulo: string; numero_na_clinica: number | null; fotos: string[] | null }[]) ?? []).map((s) => ({

@@ -157,22 +157,29 @@ export default async function SalaDetalhePage({ params }: { params: Promise<{ id
             </section>
           )}
 
-          {/* Comodidades */}
-          {sala.equipamentos.length > 0 && (
+          {/* Equipamentos da sala */}
+          {(sala.equipamentos.length > 0 || sala.equipamentos_extra) && (
             <section className={secao}>
               <h2 className="mb-4 flex items-center gap-2 text-[16px] font-bold text-brand-navy">
-                <Wrench size={17} style={{ color: "#007aff" }} /> Equipamentos e estrutura
+                <Wrench size={17} style={{ color: "#007aff" }} /> Equipamentos da sala
               </h2>
-              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-                {sala.equipamentos.map((e) => (
-                  <div key={e} className="flex items-center gap-2.5 text-[14px] text-ink-soft">
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full" style={{ background: "rgba(52,199,89,0.12)" }}>
-                      <Check size={13} style={{ color: "#2a8a3e" }} />
-                    </span>
-                    {e}
-                  </div>
-                ))}
-              </div>
+              {sala.equipamentos.length > 0 && (
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                  {sala.equipamentos.map((e) => (
+                    <div key={e} className="flex items-center gap-2.5 text-[14px] text-ink-soft">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full" style={{ background: "rgba(52,199,89,0.12)" }}>
+                        <Check size={13} style={{ color: "#2a8a3e" }} />
+                      </span>
+                      {e}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {sala.equipamentos_extra && (
+                <p className="mt-3 text-[14px] text-ink-soft">
+                  <span className="font-semibold text-ink">Também:</span> {sala.equipamentos_extra}
+                </p>
+              )}
             </section>
           )}
 

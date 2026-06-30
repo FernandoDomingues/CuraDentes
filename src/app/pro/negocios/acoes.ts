@@ -107,6 +107,7 @@ export async function salvarSala(
     titulo: input.titulo.trim(),
     descricao: input.descricao.trim() || null,
     equipamentos: input.equipamentos,
+    equipamentos_extra: input.equipamentos_extra?.trim() || null,
     preco_valor: preco,
     preco_unidade: input.preco_unidade,
     preco_diaria,

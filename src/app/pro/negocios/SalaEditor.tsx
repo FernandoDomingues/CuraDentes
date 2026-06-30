@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import UploadFotos from "@/components/UploadFotos";
 import { salvarSala } from "./acoes";
 import {
-  EQUIPAMENTOS_OPCOES,
+  EQUIPAMENTOS_SALA_OPCOES,
   disponibilidadePadrao,
   normalizarBlocos,
   dataLocalISO,
@@ -34,6 +34,7 @@ interface RoomForm {
   titulo: string;
   descricao: string;
   equipamentos: string[];
+  equipamentos_extra: string; // texto livre (≤150)
   preco_valor: string; // por hora
   preco_diaria: string; // opcional
   disponibilidade: BlocoDisponibilidade[];
@@ -42,7 +43,7 @@ interface RoomForm {
 
 function salaVazia(): RoomForm {
   return {
-    titulo: "", descricao: "", equipamentos: [], preco_valor: "", preco_diaria: "",
+    titulo: "", descricao: "", equipamentos: [], equipamentos_extra: "", preco_valor: "", preco_diaria: "",
     disponibilidade: disponibilidadePadrao(), fotos: [],
   };
 }
@@ -65,6 +66,7 @@ export default function SalaEditor({
           titulo: salaInicial.titulo,
           descricao: salaInicial.descricao ?? "",
           equipamentos: salaInicial.equipamentos ?? [],
+          equipamentos_extra: salaInicial.equipamentos_extra ?? "",
           preco_valor: String(salaInicial.preco_valor),
           preco_diaria: salaInicial.preco_diaria != null ? String(salaInicial.preco_diaria) : "",
           disponibilidade: salaInicial.disponibilidade?.length
@@ -99,6 +101,7 @@ export default function SalaEditor({
         titulo: r.titulo,
         descricao: r.descricao,
         equipamentos: r.equipamentos,
+        equipamentos_extra: r.equipamentos_extra,
         preco_valor: r.preco_valor,
         preco_unidade: "hora",
         preco_diaria: r.preco_diaria,
@@ -234,9 +237,9 @@ function SalaBloco({
       <label className={`${labelCls} mt-4`}>Descrição (opcional)</label>
       <textarea value={room.descricao} onChange={(e) => set("descricao", e.target.value)} rows={2} maxLength={2000} placeholder="Detalhes, regras, o que está incluso…" className={`${inputBase} resize-none`} />
 
-      <label className={`${labelCls} mt-4`}>Equipamentos / estrutura</label>
+      <label className={`${labelCls} mt-4`}>Equipamentos da sala</label>
       <div className="flex flex-wrap gap-2">
-        {EQUIPAMENTOS_OPCOES.map((e) => {
+        {EQUIPAMENTOS_SALA_OPCOES.map((e) => {
           const on = room.equipamentos.includes(e);
           return (
             <button key={e} type="button" onClick={() => toggleEquip(e)} className="rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors" style={on ? { background: "#007aff", color: "#fff" } : { background: "#eef2fb", color: "#0a2a66" }}>
@@ -246,6 +249,14 @@ function SalaBloco({
           );
         })}
       </div>
+      <input
+        value={room.equipamentos_extra}
+        onChange={(e) => set("equipamentos_extra", e.target.value.slice(0, 150))}
+        maxLength={150}
+        placeholder="Outros equipamentos da sala (separe por vírgula)"
+        className={`${inputBase} mt-2.5`}
+      />
+      <p className="mt-1 text-right text-[11px] text-ink-muted">{room.equipamentos_extra.length}/150</p>
 
       <div className="mt-4 flex flex-wrap items-end gap-3">
         <div className="flex-1 min-w-[140px]">

@@ -45,6 +45,7 @@ export interface SalaPublica {
   titulo: string;
   descricao: string | null;
   equipamentos: string[];
+  equipamentos_extra: string | null; // texto livre (≤150) — itens extra da sala
   preco_valor: number;
   preco_unidade: PrecoUnidade;
   preco_diaria: number | null;
@@ -101,6 +102,8 @@ export interface ClinicaDetalhe {
   whatsapp: string | null;
   foto_fachada: string | null;
   fotos_recepcao: string[];
+  estrutura: string[]; // comodidades da clínica (estacionamento, wifi, …)
+  estrutura_extra: string | null; // texto livre (≤150) — itens extra da clínica
 }
 
 /** Detalhe members-only (RPC get_sala_detalhe): inclui contato + endereço completo,
@@ -121,6 +124,7 @@ export interface SalaForm {
   titulo: string;
   descricao: string;
   equipamentos: string[];
+  equipamentos_extra: string; // texto livre (≤150) — itens extra da sala
   preco_valor: string; // valor por HORA (string no form; convertido no salvar)
   preco_unidade: PrecoUnidade; // sempre "hora" no modelo atual (hora + diária)
   preco_diaria: string; // valor da DIÁRIA (opcional)
@@ -172,19 +176,29 @@ export interface ContatoReserva {
 }
 
 // ─── Constantes (vocabulário de infraestrutura da sala) ──────────────────────────
-export const EQUIPAMENTOS_OPCOES = [
+/** Estrutura da CLÍNICA (vale p/ TODAS as salas) — vive no endereço (curadentespro_enderecos). */
+export const ESTRUTURA_CLINICA_OPCOES = [
+  "Estacionamento",
+  "Wi-Fi",
+  "Recepção compartilhada",
+  "Sala de espera",
+  "Ar-condicionado (recepção)",
+  "Acesso para cadeirante",
+  "Banheiro acessível",
+  "Água, café e cortesias",
+] as const;
+
+/** Equipamentos da SALA (de cada anúncio) — vivem na própria sala. */
+export const EQUIPAMENTOS_SALA_OPCOES = [
   "Cadeira odontológica",
+  "Mocho (banqueta)",
   "Raio-X",
   "Autoclave",
   "Compressor",
   "Sugador",
   "Fotopolimerizador",
-  "Recepção compartilhada",
-  "Sala de espera",
-  "Estacionamento",
-  "Acesso para cadeirante",
-  "Wi-Fi",
-  "Ar-condicionado",
+  "Pia/bancada",
+  "Ar-condicionado (na sala)",
 ] as const;
 
 export const PRECO_UNIDADE_LABEL: Record<PrecoUnidade, string> = {

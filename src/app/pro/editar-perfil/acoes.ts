@@ -88,6 +88,8 @@ export async function salvarPerfil(input: {
       longitude: end.longitude,
       foto_fachada: end.foto_fachada || null,
       fotos_recepcao: end.fotos_recepcao ?? [],
+      estrutura: end.estrutura ?? [],
+      estrutura_extra: end.estrutura_extra?.trim() || null,
     };
     if (end._isNew) {
       const { data: novo, error } = await supabase

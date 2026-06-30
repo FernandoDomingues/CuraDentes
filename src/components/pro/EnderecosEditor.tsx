@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { Check, Plus, Save, Trash2 } from "lucide-react";
 import { ESPECIALIDADES } from "@/lib/especialidades";
+import { ESTRUTURA_CLINICA_OPCOES } from "@/lib/salas";
 import UploadFotos from "@/components/UploadFotos";
 import { buscarCep } from "@/lib/cep";
 
@@ -48,6 +49,8 @@ export interface EnderecoForm {
   agenda: AgendaDiaForm[];
   foto_fachada: string; // URL única (locação) — bucket fotos-salas
   fotos_recepcao: string[]; // 0..3 URLs (locação)
+  estrutura: string[]; // comodidades da clínica (locação) — estacionamento, wifi, …
+  estrutura_extra: string; // texto livre (≤150) — comodidades extra da clínica
   _isNew?: boolean;
 }
 
@@ -91,6 +94,7 @@ export function novoEndereco(): EnderecoForm {
       ativo: ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira"].includes(dia),
     })),
     foto_fachada: "", fotos_recepcao: [],
+    estrutura: [], estrutura_extra: "",
     _isNew: true,
   };
 }
@@ -155,7 +159,7 @@ export default function EnderecosEditor({
     n[idx] = { ...n[idx], [campo]: valor };
     onChange(n);
   }
-  function toggleOpcao(idx: number, campo: "atividades" | "convenios" | "formas_pagamento", valor: string) {
+  function toggleOpcao(idx: number, campo: "atividades" | "convenios" | "formas_pagamento" | "estrutura", valor: string) {
     const n = [...enderecos];
     const lista = n[idx][campo];
     n[idx] = { ...n[idx], [campo]: lista.includes(valor) ? lista.filter((v) => v !== valor) : [...lista, valor] };
@@ -355,6 +359,40 @@ export default function EnderecosEditor({
                     escopo="clinicas"
                   />
                 </div>
+              </div>
+            )}
+
+            {mostrarFotos && (
+              <div className="rounded-[12px] border border-brand-blue/20 p-3" style={{ background: "rgba(0,122,255,0.03)" }}>
+                <p className="text-xs font-bold text-brand-navy">Estrutura da clínica (locação de salas)</p>
+                <p className="mb-3 mt-0.5 text-[11px] text-ink-muted">
+                  Comodidades que valem para TODAS as salas deste endereço. Os equipamentos de cada sala ficam no anúncio dela.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {ESTRUTURA_CLINICA_OPCOES.map((opt) => {
+                    const on = end.estrutura.includes(opt);
+                    return (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => toggleOpcao(idx, "estrutura", opt)}
+                        className="rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors"
+                        style={on ? { background: "#007aff", color: "#fff" } : { background: "#eef2fb", color: "#0a2a66" }}
+                      >
+                        {on && <Check size={13} className="mr-1 inline" />}
+                        {opt}
+                      </button>
+                    );
+                  })}
+                </div>
+                <input
+                  value={end.estrutura_extra}
+                  onChange={(e) => atualizar(idx, "estrutura_extra", e.target.value.slice(0, 150))}
+                  maxLength={150}
+                  placeholder="Outras comodidades da clínica (separe por vírgula)"
+                  className={`${inputCls} mt-2.5`}
+                />
+                <p className="mt-1 text-right text-[11px] text-ink-muted">{end.estrutura_extra.length}/150</p>
               </div>
             )}
 
