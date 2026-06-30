@@ -90,7 +90,7 @@ export default async function SalasPage({
         ) : (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {clinicas.map((c) => (
-              <ClinicaCard key={c.slug} clinica={c} />
+              <ClinicaCard key={c.clinica_key} clinica={c} />
             ))}
           </div>
         )}

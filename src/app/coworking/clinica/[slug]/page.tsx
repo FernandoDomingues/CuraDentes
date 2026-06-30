@@ -28,16 +28,17 @@ export default async function ClinicaPage({ params }: { params: Promise<{ slug: 
   const usuario = await getUsuario();
   if (!usuario?.croVerificado) return <MuroSalas modo={usuario ? "sem-cro" : "anonimo"} />;
 
-  const { slug } = await params;
+  // O parâmetro da rota é a clinica_key (chave física CEP+número+complemento).
+  const { slug: chave } = await params;
   const sb = await criarClienteServidor();
-  const { data: cData } = await sb.rpc("get_clinica_por_slug", { p_slug: slug });
+  const { data: cData } = await sb.rpc("get_clinica_por_chave", { p_chave: chave });
   const clinica = (Array.isArray(cData) ? cData[0] : null) as ClinicaDetalhe | null;
   if (!clinica) notFound();
 
   const { data: sData } = await supabasePublic
     .from("salas_publicas")
     .select("*")
-    .eq("clinica_slug", slug)
+    .eq("clinica_key", chave)
     .order("numero_na_clinica", { ascending: true });
   // `numeric` chega como string → coage preço para number antes de exibir.
   const salas = ((sData as SalaPublica[]) ?? []).map((s) => ({

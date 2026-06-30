@@ -91,10 +91,10 @@ export default async function SalaDetalhePage({ params }: { params: Promise<{ id
   return (
     <Container className="py-8 md:py-10">
       <Link
-        href={sala.clinica_slug ? `/coworking/clinica/${sala.clinica_slug}` : "/coworking"}
+        href={sala.clinica_key ? `/coworking/clinica/${sala.clinica_key}` : "/coworking"}
         className="mb-4 inline-flex items-center gap-1.5 text-[14px] font-semibold text-ink-muted hover:text-ink"
       >
-        <ArrowLeft size={16} /> {sala.clinica_slug ? "Voltar à clínica" : "Todas as clínicas"}
+        <ArrowLeft size={16} /> {sala.clinica_key ? "Voltar à clínica" : "Todas as clínicas"}
       </Link>
 
       {/* Galeria */}
@@ -120,9 +120,9 @@ export default async function SalaDetalhePage({ params }: { params: Promise<{ id
               <MapPin size={15} />
               {[sala.bairro, sala.cidade, sala.estado].filter(Boolean).join(", ") || sala.nome_clinica}
             </p>
-            {sala.clinica_slug && (
+            {sala.clinica_key && (
               <Link
-                href={`/coworking/clinica/${sala.clinica_slug}`}
+                href={`/coworking/clinica/${sala.clinica_key}`}
                 className="mt-1.5 inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand-blue hover:underline"
               >
                 <Building2 size={14} /> {sala.nome_clinica || "Ver a clínica"} · outras salas

@@ -59,6 +59,7 @@ export interface SalaPublica {
   latitude: number | null;
   longitude: number | null;
   clinica_slug?: string | null;
+  clinica_key?: string | null; // chave física da clínica (rota /coworking/clinica/[chave])
   numero_na_clinica?: number | null;
   created_at: string;
 }
@@ -71,9 +72,10 @@ export interface MinhaSala extends SalaPublica {
   contato_email: string | null;
 }
 
-/** Clínica no catálogo (RPC get_clinicas_publicas) — card com fachada + agregados. */
+/** Clínica no catálogo (RPC get_clinicas_publicas) — agrupada por chave física
+ *  (clinica_key = CEP+número+complemento). `clinica_key` é o id da rota. */
 export interface ClinicaPublica {
-  slug: string;
+  clinica_key: string;
   nome_clinica: string | null;
   cidade: string | null;
   bairro: string | null;
@@ -85,9 +87,9 @@ export interface ClinicaPublica {
   preco_min: number | null;
 }
 
-/** Clínica completa (RPC get_clinica_por_slug) — página da clínica. */
+/** Clínica completa (RPC get_clinica_por_chave) — página da clínica (agregada). */
 export interface ClinicaDetalhe {
-  slug: string;
+  clinica_key: string;
   nome_clinica: string | null;
   logradouro: string | null;
   numero: string | null;
