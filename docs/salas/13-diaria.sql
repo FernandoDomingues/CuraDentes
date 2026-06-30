@@ -43,10 +43,10 @@ begin
     raise exception 'Apenas dentistas com CRO verificado podem ver os detalhes da sala.';
   end if;
   return query
-    select s.id, s.titulo, s.descricao, s.equipamentos,
+    select s.id, s.titulo::text, s.descricao::text, s.equipamentos,
            s.preco_valor, s.preco_unidade::text, s.preco_diaria, s.disponibilidade,
-           s.politica_cancelamento, s.fotos,
-           e.nome_clinica, e.cidade, e.bairro, e.estado,
+           s.politica_cancelamento::text, s.fotos,
+           e.nome_clinica::text, e.cidade::text, e.bairro::text, e.estado::text,
            e.latitude, e.longitude, s.created_at,
            coalesce(e.whatsapp, e.telefone)::text, null::text,
            e.logradouro::text, e.numero::text, e.complemento::text, e.cep::text,

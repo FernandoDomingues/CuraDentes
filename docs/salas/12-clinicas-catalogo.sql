@@ -20,8 +20,8 @@ begin
     raise exception 'Apenas dentistas com CRO verificado.';
   end if;
   return query
-    select e.slug, e.nome_clinica, e.cidade, e.bairro, e.estado,
-           e.latitude, e.longitude, e.foto_fachada,
+    select e.slug::text, e.nome_clinica::text, e.cidade::text, e.bairro::text, e.estado::text,
+           e.latitude, e.longitude, e.foto_fachada::text,
            count(s.id) as qtd_salas, min(s.preco_valor) as preco_min
       from public.curadentespro_enderecos e
       join public.curadentespro c on c.id = e.curadentespro_id

@@ -116,8 +116,8 @@ create or replace function public.get_salas_proximas(
   equipamentos text[], fotos text[], distancia_km double precision
 ) language sql stable security definer set search_path = public, pg_temp
 as $$
-  select s.id, s.titulo, s.preco_valor, s.preco_unidade,
-         e.nome_clinica, e.cidade, e.bairro, e.slug, s.numero_na_clinica,
+  select s.id, s.titulo::text, s.preco_valor, s.preco_unidade::text,
+         e.nome_clinica::text, e.cidade::text, e.bairro::text, e.slug::text, s.numero_na_clinica,
          e.latitude, e.longitude, s.equipamentos, s.fotos,
          (6371 * acos(greatest(-1, least(1,
             cos(radians(lat)) * cos(radians(e.latitude)) * cos(radians(e.longitude) - radians(lng))
@@ -161,10 +161,10 @@ begin
     raise exception 'Apenas dentistas com CRO verificado podem ver os detalhes da sala.';
   end if;
   return query
-    select s.id, s.titulo, s.descricao, s.equipamentos,
+    select s.id, s.titulo::text, s.descricao::text, s.equipamentos,
            s.preco_valor, s.preco_unidade::text, s.disponibilidade,
-           s.politica_cancelamento, s.fotos,
-           e.nome_clinica, e.cidade, e.bairro, e.estado,
+           s.politica_cancelamento::text, s.fotos,
+           e.nome_clinica::text, e.cidade::text, e.bairro::text, e.estado::text,
            e.latitude, e.longitude, s.created_at,
            coalesce(e.whatsapp, e.telefone)::text, null::text,
            e.logradouro::text, e.numero::text, e.complemento::text, e.cep::text,
@@ -199,9 +199,9 @@ begin
     raise exception 'Apenas dentistas com CRO verificado podem ver a clínica.';
   end if;
   return query
-    select e.slug, e.nome_clinica,
-           e.logradouro::text, e.numero::text, e.complemento::text, e.bairro, e.cidade, e.estado, e.cep::text,
-           e.latitude, e.longitude, e.telefone::text, e.whatsapp::text, e.foto_fachada, e.fotos_recepcao
+    select e.slug::text, e.nome_clinica::text,
+           e.logradouro::text, e.numero::text, e.complemento::text, e.bairro::text, e.cidade::text, e.estado::text, e.cep::text,
+           e.latitude, e.longitude, e.telefone::text, e.whatsapp::text, e.foto_fachada::text, e.fotos_recepcao
       from public.curadentespro_enderecos e
       join public.curadentespro c on c.id = e.curadentespro_id
      where e.slug = p_slug
