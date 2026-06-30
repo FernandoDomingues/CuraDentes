@@ -1,5 +1,12 @@
 # Edge Function `notificar-adesao-clinica` (Passo 5 da adesão de clínica)
 
+> ⚠️ **ISTO NÃO É UM SQL.** Não cole este arquivo no SQL Editor (vai dar
+> `42601: syntax error at or near "#"`). Este é o código de uma **Edge Function**
+> (TypeScript/Deno): publique-o na seção **Edge Functions** do Supabase — copiando só o
+> bloco ` ```ts ... ``` ` do `index.ts` mais abaixo — do mesmo jeito que você publicou
+> `send-rating-notification` e as outras. Os únicos arquivos que vão no SQL Editor são os
+> `.sql` (ex.: `19`, `20`).
+
 Avisa por e-mail o **DONO da clínica** quando outro dentista se cadastra no mesmo
 endereço físico (mesma `clinica_key`) e cria um **pedido de adesão pendente**.
 
