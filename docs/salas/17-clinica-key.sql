@@ -61,12 +61,12 @@ begin
     select
       public.clinica_key_de(e.cep, e.numero, e.complemento) as clinica_key,
       (mode() within group (order by e.nome_clinica))::text as nome_clinica,
-      (array_agg(e.cidade order by e.created_at))[1]::text as cidade,
-      (array_agg(e.bairro order by e.created_at))[1]::text as bairro,
-      (array_agg(e.estado order by e.created_at))[1]::text as estado,
-      (array_agg(e.latitude order by (e.latitude is null), e.created_at))[1] as latitude,
-      (array_agg(e.longitude order by (e.longitude is null), e.created_at))[1] as longitude,
-      (array_agg(e.foto_fachada order by (e.foto_fachada is null or e.foto_fachada = ''), e.created_at))[1]::text as foto_fachada,
+      (array_agg(e.cidade order by e.id))[1]::text as cidade,
+      (array_agg(e.bairro order by e.id))[1]::text as bairro,
+      (array_agg(e.estado order by e.id))[1]::text as estado,
+      (array_agg(e.latitude order by (e.latitude is null), e.id))[1] as latitude,
+      (array_agg(e.longitude order by (e.longitude is null), e.id))[1] as longitude,
+      (array_agg(e.foto_fachada order by (e.foto_fachada is null or e.foto_fachada = ''), e.id))[1]::text as foto_fachada,
       count(s.id) as qtd_salas,
       min(s.preco_valor) as preco_min
     from public.curadentespro_enderecos e
@@ -104,21 +104,21 @@ begin
   select
     p_chave,
     (mode() within group (order by e.nome_clinica))::text,
-    (array_agg(e.logradouro   order by (e.foto_fachada is null or e.foto_fachada = ''), e.created_at))[1]::text,
-    (array_agg(e.numero       order by (e.foto_fachada is null or e.foto_fachada = ''), e.created_at))[1]::text,
-    (array_agg(e.complemento  order by (e.foto_fachada is null or e.foto_fachada = ''), e.created_at))[1]::text,
-    (array_agg(e.bairro       order by (e.foto_fachada is null or e.foto_fachada = ''), e.created_at))[1]::text,
-    (array_agg(e.cidade       order by (e.foto_fachada is null or e.foto_fachada = ''), e.created_at))[1]::text,
-    (array_agg(e.estado       order by (e.foto_fachada is null or e.foto_fachada = ''), e.created_at))[1]::text,
-    (array_agg(e.cep          order by (e.foto_fachada is null or e.foto_fachada = ''), e.created_at))[1]::text,
-    (array_agg(e.latitude     order by (e.latitude is null), e.created_at))[1],
-    (array_agg(e.longitude    order by (e.longitude is null), e.created_at))[1],
-    (array_agg(e.telefone     order by (e.foto_fachada is null or e.foto_fachada = ''), e.created_at))[1]::text,
-    (array_agg(e.whatsapp     order by (e.foto_fachada is null or e.foto_fachada = ''), e.created_at))[1]::text,
-    (array_agg(e.foto_fachada order by (e.foto_fachada is null or e.foto_fachada = ''), e.created_at))[1]::text,
-    (array_agg(e.fotos_recepcao order by (e.foto_fachada is null or e.foto_fachada = ''), e.created_at))[1],
-    (array_agg(e.estrutura    order by (e.foto_fachada is null or e.foto_fachada = ''), e.created_at))[1],
-    (array_agg(e.estrutura_extra order by (e.foto_fachada is null or e.foto_fachada = ''), e.created_at))[1]::text
+    (array_agg(e.logradouro   order by (e.foto_fachada is null or e.foto_fachada = ''), e.id))[1]::text,
+    (array_agg(e.numero       order by (e.foto_fachada is null or e.foto_fachada = ''), e.id))[1]::text,
+    (array_agg(e.complemento  order by (e.foto_fachada is null or e.foto_fachada = ''), e.id))[1]::text,
+    (array_agg(e.bairro       order by (e.foto_fachada is null or e.foto_fachada = ''), e.id))[1]::text,
+    (array_agg(e.cidade       order by (e.foto_fachada is null or e.foto_fachada = ''), e.id))[1]::text,
+    (array_agg(e.estado       order by (e.foto_fachada is null or e.foto_fachada = ''), e.id))[1]::text,
+    (array_agg(e.cep          order by (e.foto_fachada is null or e.foto_fachada = ''), e.id))[1]::text,
+    (array_agg(e.latitude     order by (e.latitude is null), e.id))[1],
+    (array_agg(e.longitude    order by (e.longitude is null), e.id))[1],
+    (array_agg(e.telefone     order by (e.foto_fachada is null or e.foto_fachada = ''), e.id))[1]::text,
+    (array_agg(e.whatsapp     order by (e.foto_fachada is null or e.foto_fachada = ''), e.id))[1]::text,
+    (array_agg(e.foto_fachada order by (e.foto_fachada is null or e.foto_fachada = ''), e.id))[1]::text,
+    (array_agg(e.fotos_recepcao order by (e.foto_fachada is null or e.foto_fachada = ''), e.id))[1],
+    (array_agg(e.estrutura    order by (e.foto_fachada is null or e.foto_fachada = ''), e.id))[1],
+    (array_agg(e.estrutura_extra order by (e.foto_fachada is null or e.foto_fachada = ''), e.id))[1]::text
   from public.curadentespro_enderecos e
   join public.curadentespro c on c.id = e.curadentespro_id
   where c.cro_verificado is true and c.deleted_at is null
