@@ -287,8 +287,21 @@ export function disponibilidadePadrao(): BlocoDisponibilidade[] {
   return [1, 2, 3, 4, 5].map((d) => ({ tipo: "semanal" as const, diaSemana: d, inicio: "08:00", fim: "18:00" }));
 }
 
-/** Formata "R$ 120,00 por hora". */
+/** Coage um valor que pode chegar como string (colunas `numeric` do Postgres são
+ *  serializadas como string pelo PostgREST) para number — ou null se vazio/inválido.
+ *  Use SEMPRE ao ler preço do banco, antes de formatar/calcular. */
+export function numeroOuNull(v: unknown): number | null {
+  if (v === null || v === undefined || v === "") return null;
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Formata um valor em BRL ("R$ 1.200,50"), tolerando number OU string do banco. */
+export function formatarBRL(valor: number | string | null | undefined): string {
+  return (numeroOuNull(valor) ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+/** Formata "R$ 120,00 por hora". Tolera valor vindo como string (numeric do Postgres). */
 export function formatarPreco(valor: number, unidade: PrecoUnidade): string {
-  const v = valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-  return `${v} ${PRECO_UNIDADE_LABEL[unidade]}`;
+  return `${formatarBRL(valor)} ${PRECO_UNIDADE_LABEL[unidade]}`;
 }

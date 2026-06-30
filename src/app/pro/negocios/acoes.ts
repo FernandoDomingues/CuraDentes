@@ -7,6 +7,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import { criarClienteServidor } from "@/lib/supabase/server";
+import { numeroOuNull } from "@/lib/salas";
 import type {
   SalaForm,
   SalaStatus,
@@ -58,10 +59,17 @@ export async function carregarMinhasSalas(): Promise<{
       .order("created_at", { ascending: false }),
   ]);
 
+  // `preco_valor`/`preco_diaria` são `numeric` → chegam como string; coage p/ number.
+  const salas = ((salaRes.data as MinhaSala[]) ?? []).map((s) => ({
+    ...s,
+    preco_valor: numeroOuNull(s.preco_valor) ?? 0,
+    preco_diaria: numeroOuNull(s.preco_diaria),
+  }));
+
   return {
     ok: true,
     enderecos: (endRes.data as EnderecoResumo[]) ?? [],
-    salas: (salaRes.data as MinhaSala[]) ?? [],
+    salas,
   };
 }
 
@@ -164,7 +172,7 @@ export async function carregarRecebidas(): Promise<{
       sala_titulo: sala.titulo ?? null,
       sala_local: [sala.bairro, sala.cidade].filter(Boolean).join(", ") || null,
       sala_clinica: sala.nome_clinica ?? null,
-      sala_preco: sala.preco_valor ?? null,
+      sala_preco: numeroOuNull(sala.preco_valor),
       sala_unidade: sala.preco_unidade ?? null,
       dentista_nome: nomes.get(r.locatario_id as string) || null,
     };
@@ -200,7 +208,7 @@ export async function carregarEnviadas(): Promise<{
         titulo: p.titulo,
         local: [p.bairro, p.cidade].filter(Boolean).join(", ") || null,
         clinica: p.nome_clinica ?? null,
-        preco: p.preco_valor ?? null,
+        preco: numeroOuNull(p.preco_valor),
         unidade: p.preco_unidade ?? null,
       });
     }

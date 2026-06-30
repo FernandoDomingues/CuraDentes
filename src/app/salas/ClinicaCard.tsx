@@ -57,6 +57,7 @@ export default function ClinicaCard({ clinica }: { clinica: ClinicaPublica }) {
               <strong className="text-brand-blue">
                 {clinica.preco_min.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
               </strong>
+              /hora
             </span>
           )}
         </div>

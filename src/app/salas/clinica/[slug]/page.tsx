@@ -11,7 +11,7 @@ import { ArrowLeft, MapPin, MessageCircle, Phone, ExternalLink } from "lucide-re
 import { criarClienteServidor } from "@/lib/supabase/server";
 import { supabase as supabasePublic } from "@/lib/supabase/public";
 import { getUsuario } from "@/lib/auth";
-import type { ClinicaDetalhe, SalaPublica, SlotOcupado } from "@/lib/salas";
+import { numeroOuNull, type ClinicaDetalhe, type SalaPublica, type SlotOcupado } from "@/lib/salas";
 import MuroSalas from "../../MuroSalas";
 import MapaSala from "../../MapaSala";
 import SalaBlocoClinica from "../../SalaBlocoClinica";
@@ -38,7 +38,12 @@ export default async function ClinicaPage({ params }: { params: Promise<{ slug: 
     .select("*")
     .eq("clinica_slug", slug)
     .order("numero_na_clinica", { ascending: true });
-  const salas = (sData as SalaPublica[]) ?? [];
+  // `numeric` chega como string → coage preço para number antes de exibir.
+  const salas = ((sData as SalaPublica[]) ?? []).map((s) => ({
+    ...s,
+    preco_valor: numeroOuNull(s.preco_valor) ?? 0,
+    preco_diaria: numeroOuNull(s.preco_diaria),
+  }));
 
   // Horários ocupados por sala (para a agenda pintar/bloquear).
   const ocupadosPorSala = new Map<string, SlotOcupado[]>();

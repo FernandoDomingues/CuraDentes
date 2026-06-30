@@ -1,8 +1,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // /salas/[id] — DETALHE da sala (estilo portal imobiliário, identidade CuraDentes).
 // Members-only: gate de CRO antes de buscar. Detalhe completo (contato + endereço)
-// vem da RPC get_sala_detalhe (porteiro de CRO); fallback p/ a view pública enquanto
-// o SQL 05-detalhe-membros.sql não estiver aplicado. Mapa exato via lat/lng.
+// vem da RPC get_sala_detalhe (porteiro de CRO); há fallback defensivo p/ a view
+// pública caso a RPC falhe. Mapa exato via lat/lng.
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import type { Metadata } from "next";
@@ -17,7 +17,7 @@ import { supabase as supabasePublic } from "@/lib/supabase/public";
 import { criarClienteServidor } from "@/lib/supabase/server";
 import { getUsuario } from "@/lib/auth";
 import {
-  normalizarBlocos, descreverBloco,
+  normalizarBlocos, descreverBloco, numeroOuNull,
   type SalaPublica, type SalaDetalhe,
 } from "@/lib/salas";
 import SolicitarReserva from "../SolicitarReserva";
@@ -57,12 +57,18 @@ export default async function SalaDetalhePage({ params }: { params: Promise<{ id
     }
   }
   if (!sala) notFound();
+  // `numeric` chega como string → coage preço para number antes de exibir.
+  sala = { ...sala, preco_valor: numeroOuNull(sala.preco_valor) ?? 0, preco_diaria: numeroOuNull(sala.preco_diaria) };
 
   // Veja também: outras salas ativas (qualquer uma menos esta).
   const { data: outrasData } = await supabasePublic
     .from("salas_publicas").select("*").neq("id", id)
     .order("created_at", { ascending: false }).limit(3);
-  const outras = (outrasData as SalaPublica[]) ?? [];
+  const outras = ((outrasData as SalaPublica[]) ?? []).map((s) => ({
+    ...s,
+    preco_valor: numeroOuNull(s.preco_valor) ?? 0,
+    preco_diaria: numeroOuNull(s.preco_diaria),
+  }));
 
   // Horários já alocados (reservas aprovadas) — para a agenda pintar/bloquear.
   const { data: ocupadosData } = await sb.rpc("slots_ocupados_sala", { p_sala_id: id });

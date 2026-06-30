@@ -7,6 +7,9 @@ import {
   diaTemDisponibilidade,
   parseDataLocal,
   dataLocalISO,
+  numeroOuNull,
+  formatarBRL,
+  formatarPreco,
   type BlocoDisponibilidade,
 } from "./salas";
 
@@ -86,5 +89,37 @@ describe("agruparHorasEmFaixas (regra 2-cliques-faixa / pontual)", () => {
 describe("parseDataLocal/dataLocalISO", () => {
   it("faz round-trip sem deslocamento de fuso", () => {
     expect(dataLocalISO(parseDataLocal("2026-07-09"))).toBe("2026-07-09");
+  });
+});
+
+// Regressão: colunas `numeric` do Postgres chegam como STRING pelo PostgREST.
+// Sem coerção, .toLocaleString({currency}) e .toFixed() falhavam (preço cru / export quebrado).
+describe("numeroOuNull (coerção de numeric-string do Postgres)", () => {
+  it("coage string numérica para number", () => {
+    expect(numeroOuNull("120.00")).toBe(120);
+    expect(numeroOuNull("1200.5")).toBe(1200.5);
+  });
+  it("preserva number e trata nulos/vazios/inválidos", () => {
+    expect(numeroOuNull(80)).toBe(80);
+    expect(numeroOuNull(null)).toBeNull();
+    expect(numeroOuNull(undefined)).toBeNull();
+    expect(numeroOuNull("")).toBeNull();
+    expect(numeroOuNull("abc")).toBeNull();
+  });
+});
+
+describe("formatarBRL / formatarPreco (tolerantes a string)", () => {
+  it("formata em R$ mesmo recebendo string (o bug real)", () => {
+    // String crua entrava como "120.00"; agora vira "R$ 120,00".
+    expect(formatarBRL("120.00")).toContain("120,00");
+    expect(formatarBRL("120.00")).toContain("R$");
+    expect(formatarBRL(1200.5)).toContain("1.200,50");
+  });
+  it("null/indefinido viram R$ 0,00", () => {
+    expect(formatarBRL(null)).toContain("0,00");
+  });
+  it("formatarPreco acopla a unidade", () => {
+    // @ts-expect-error — em runtime o banco entrega string; o helper precisa tolerar.
+    expect(formatarPreco("120.00", "hora")).toBe(`${formatarBRL("120.00")} por hora`);
   });
 });
