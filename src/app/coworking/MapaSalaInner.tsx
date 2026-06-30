@@ -52,5 +52,8 @@ export default function MapaSalaInner({
     };
   }, [lat, lng, titulo]);
 
-  return <div ref={elRef} className="h-full w-full" />;
+  // isolation:isolate → cria um stacking context próprio, prendendo os z-index
+  // internos do Leaflet (panes/controles vão até ~1000) dentro do mapa. Sem isto,
+  // eles "escapam" e aparecem ACIMA de modais (ex.: a agenda) abertos na página.
+  return <div ref={elRef} className="h-full w-full" style={{ isolation: "isolate" }} />;
 }
