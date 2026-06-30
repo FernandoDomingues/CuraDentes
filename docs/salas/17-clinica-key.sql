@@ -101,30 +101,30 @@ begin
     raise exception 'Apenas dentistas com CRO verificado podem ver a clinica.';
   end if;
   return query
+  with grp as (
+    -- todos os enderecos da mesma chave (donos com CRO + com sala ativa)
+    select e.*
+    from public.curadentespro_enderecos e
+    join public.curadentespro c on c.id = e.curadentespro_id
+    where c.cro_verificado is true and c.deleted_at is null
+      and public.clinica_key_de(e.cep, e.numero, e.complemento) = p_chave
+      and exists (select 1 from public.salas s where s.endereco_id = e.id and s.status = 'ativa')
+  ),
+  rep as (
+    -- endereco REPRESENTATIVO: o que tem foto de fachada; senao o 1o (id estavel).
+    -- Retornar os campos dele DIRETO evita array_agg em colunas que sao arrays
+    -- (fotos_recepcao/estrutura) — que viram array-de-array e quebram.
+    select * from grp order by (foto_fachada is null or foto_fachada = ''), id limit 1
+  )
   select
     p_chave,
-    (mode() within group (order by e.nome_clinica))::text,
-    (array_agg(e.logradouro   order by (e.foto_fachada is null or e.foto_fachada = ''), e.id))[1]::text,
-    (array_agg(e.numero       order by (e.foto_fachada is null or e.foto_fachada = ''), e.id))[1]::text,
-    (array_agg(e.complemento  order by (e.foto_fachada is null or e.foto_fachada = ''), e.id))[1]::text,
-    (array_agg(e.bairro       order by (e.foto_fachada is null or e.foto_fachada = ''), e.id))[1]::text,
-    (array_agg(e.cidade       order by (e.foto_fachada is null or e.foto_fachada = ''), e.id))[1]::text,
-    (array_agg(e.estado       order by (e.foto_fachada is null or e.foto_fachada = ''), e.id))[1]::text,
-    (array_agg(e.cep          order by (e.foto_fachada is null or e.foto_fachada = ''), e.id))[1]::text,
-    (array_agg(e.latitude     order by (e.latitude is null), e.id))[1],
-    (array_agg(e.longitude    order by (e.longitude is null), e.id))[1],
-    (array_agg(e.telefone     order by (e.foto_fachada is null or e.foto_fachada = ''), e.id))[1]::text,
-    (array_agg(e.whatsapp     order by (e.foto_fachada is null or e.foto_fachada = ''), e.id))[1]::text,
-    (array_agg(e.foto_fachada order by (e.foto_fachada is null or e.foto_fachada = ''), e.id))[1]::text,
-    (array_agg(e.fotos_recepcao order by (e.foto_fachada is null or e.foto_fachada = ''), e.id))[1],
-    (array_agg(e.estrutura    order by (e.foto_fachada is null or e.foto_fachada = ''), e.id))[1],
-    (array_agg(e.estrutura_extra order by (e.foto_fachada is null or e.foto_fachada = ''), e.id))[1]::text
-  from public.curadentespro_enderecos e
-  join public.curadentespro c on c.id = e.curadentespro_id
-  where c.cro_verificado is true and c.deleted_at is null
-    and public.clinica_key_de(e.cep, e.numero, e.complemento) = p_chave
-    and exists (select 1 from public.salas s where s.endereco_id = e.id and s.status = 'ativa')
-  having count(*) > 0;
+    (select (mode() within group (order by g.nome_clinica))::text from grp g),
+    rep.logradouro::text, rep.numero::text, rep.complemento::text, rep.bairro::text,
+    rep.cidade::text, rep.estado::text, rep.cep::text,
+    rep.latitude, rep.longitude,
+    rep.telefone::text, rep.whatsapp::text, rep.foto_fachada::text, rep.fotos_recepcao,
+    rep.estrutura, rep.estrutura_extra::text
+  from rep;
 end; $$;
 revoke all on function public.get_clinica_por_chave(text) from public;
 grant execute on function public.get_clinica_por_chave(text) to authenticated;
