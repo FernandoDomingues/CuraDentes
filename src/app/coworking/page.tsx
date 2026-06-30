@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// /salas — CATÁLOGO por CLÍNICA. A busca mostra clínicas (com fachada + nº de salas
+// /coworking — CATÁLOGO por CLÍNICA. A busca mostra clínicas (com fachada + nº de salas
 // + preço mínimo); ao entrar numa clínica, o dentista escolhe a sala. Members-only.
 // Lê a RPC get_clinicas_publicas (gated por CRO) via cliente autenticado.
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -53,7 +53,7 @@ export default async function SalasPage({
             <p className="mx-auto mt-3 max-w-xl text-[15px] leading-relaxed text-white/75 md:text-[16px]">
               Encontre clínicas perto de você e escolha a sala para o seu atendimento. Exclusivo para dentistas verificados.
             </p>
-            <form action="/salas" method="get" className="mx-auto mt-7 flex max-w-xl gap-2 rounded-full bg-white p-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.18)]">
+            <form action="/coworking" method="get" className="mx-auto mt-7 flex max-w-xl gap-2 rounded-full bg-white p-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.18)]">
               <div className="relative flex-1">
                 <MapPin size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted" />
                 <input name="cidade" defaultValue={termo} placeholder="Em qual cidade você procura?" className="w-full rounded-full border-0 bg-transparent py-3 pl-11 pr-4 text-[15px] text-ink outline-none placeholder:text-ink-muted" />

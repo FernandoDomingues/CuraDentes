@@ -17,7 +17,7 @@ export default function ClinicaCard({ clinica }: { clinica: ClinicaPublica }) {
 
   return (
     <Link
-      href={`/salas/clinica/${clinica.slug}`}
+      href={`/coworking/clinica/${clinica.slug}`}
       className="group flex flex-col overflow-hidden rounded-[20px] border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(10,42,102,0.14)]"
     >
       <div className="relative aspect-[16/10] w-full overflow-hidden bg-brand-soft">

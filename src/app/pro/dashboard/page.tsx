@@ -295,7 +295,7 @@ export default async function DashboardPage() {
                 </span>
               </Link>
               <Link
-                href="/salas"
+                href="/coworking"
                 className="mt-2 block text-center text-[13px] font-medium text-ink-muted hover:text-brand-blue"
               >
                 Procurar salas para alugar

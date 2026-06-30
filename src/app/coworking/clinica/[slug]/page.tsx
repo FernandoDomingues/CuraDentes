@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// /salas/clinica/[slug] — página da CLÍNICA. Ordem (desktop, margens reduzidas p/
+// /coworking/clinica/[slug] — página da CLÍNICA. Ordem (desktop, margens reduzidas p/
 // mais campo de visão): H1 nome → endereço escrito → fachada → mapa → as SALAS
 // (cards ricos com fotos, hora+diária, equipamentos e solicitar). Members-only.
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -67,7 +67,7 @@ export default async function ClinicaPage({ params }: { params: Promise<{ slug: 
   return (
     // Margens laterais reduzidas (~30%) no desktop → mais campo de visão.
     <div className="mx-auto w-full max-w-[1380px] px-5 py-8 md:px-8 md:py-10">
-      <Link href="/salas" className="mb-4 inline-flex items-center gap-1.5 text-[14px] font-semibold text-ink-muted hover:text-ink">
+      <Link href="/coworking" className="mb-4 inline-flex items-center gap-1.5 text-[14px] font-semibold text-ink-muted hover:text-ink">
         <ArrowLeft size={16} /> Todas as clínicas
       </Link>
 

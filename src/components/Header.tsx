@@ -38,8 +38,8 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const primeiroNome = user?.nome ? user.nome.split(" ")[0] : "";
   const pathname = usePathname();
-  // /salas é ambiente CuraDentes Pro (comunidade de dentistas verificados) → marca Pro.
-  const ehSalas = !!pathname && pathname.startsWith("/salas");
+  // /coworking é ambiente CuraDentes Pro (comunidade de dentistas verificados) → marca Pro.
+  const ehSalas = !!pathname && pathname.startsWith("/coworking");
   // Páginas-tarefa (locação e busca) escondem os links institucionais do header.
   const ehBusca = !!pathname && pathname.startsWith("/busca");
   const ocultarNav = ehSalas || ehBusca;
@@ -114,9 +114,9 @@ export default function Header() {
     >
       <div className="container mx-auto px-5 md:px-8 lg:px-16">
         <div className="flex h-[64px] items-center justify-between gap-4">
-          {/* Logo — Pro nas páginas /salas (ambiente CuraDentes Pro); consumer no resto */}
+          {/* Logo — Pro nas páginas /coworking (ambiente CuraDentes Pro); consumer no resto */}
           {ehSalas ? (
-            <Link href="/salas" className="flex flex-shrink-0 items-center" aria-label="CuraDentes Pro — salas">
+            <Link href="/coworking" className="flex flex-shrink-0 items-center" aria-label="CuraDentes Pro — salas">
               <Image src="/logos/logo-pro-nome.png" alt="CuraDentes Pro" width={2480} height={926} priority className="h-8 w-auto" />
             </Link>
           ) : (

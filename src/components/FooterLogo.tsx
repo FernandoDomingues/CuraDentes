@@ -1,7 +1,7 @@
 "use client";
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// FooterLogo — logo do rodapé ciente da rota. Em /salas (ambiente CuraDentes Pro)
+// FooterLogo — logo do rodapé ciente da rota. Em /coworking (ambiente CuraDentes Pro)
 // usa a logo Pro branca; no resto, a consumer (branca via filtro invert). Island
 // client porque o Footer é Server Component e precisa de usePathname.
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -11,10 +11,10 @@ import { usePathname } from "next/navigation";
 
 export default function FooterLogo() {
   const pathname = usePathname();
-  const ehSalas = !!pathname && pathname.startsWith("/salas");
+  const ehSalas = !!pathname && pathname.startsWith("/coworking");
 
   return (
-    <Link href={ehSalas ? "/salas" : "/"} className="mb-4 inline-block">
+    <Link href={ehSalas ? "/coworking" : "/"} className="mb-4 inline-block">
       {ehSalas ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src="/logos/logo-pro-nome-branco.png" alt="CuraDentes Pro" className="h-9 w-auto" />

@@ -108,7 +108,7 @@ export default function PainelSalas({
             icone={<Send size={32} />}
             titulo="Você não tem solicitações ativas"
             texto="Pedidos recusados ou cancelados ficam no Histórico."
-            acao={<Link href="/salas" className="mt-2 inline-flex items-center gap-2 rounded-[14px] px-6 py-3 text-[14px] font-semibold text-white" style={{ background: "#007aff" }}>Procurar salas</Link>}
+            acao={<Link href="/coworking" className="mt-2 inline-flex items-center gap-2 rounded-[14px] px-6 py-3 text-[14px] font-semibold text-white" style={{ background: "#007aff" }}>Procurar salas</Link>}
           />
         ) : (
           <div className="flex flex-col gap-3">
@@ -202,7 +202,7 @@ function ClinicaPainelCard({ endereco, salas }: { endereco: EnderecoResumo; sala
                     <span className="text-[12px] font-medium text-ink-muted"> · {rs(s.preco_diaria)}/dia</span>
                   )}
                 </p>
-                <Link href={`/salas/${s.id}`} className="text-[12px] font-medium text-ink-muted hover:text-brand-blue">Ver anúncio →</Link>
+                <Link href={`/coworking/${s.id}`} className="text-[12px] font-medium text-ink-muted hover:text-brand-blue">Ver anúncio →</Link>
               </div>
             );
           })}

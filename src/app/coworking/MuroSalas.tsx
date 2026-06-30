@@ -1,7 +1,7 @@
 "use client";
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// MuroSalas — gate da vitrine pública /salas. A Locação de Salas é members-only:
+// MuroSalas — gate da vitrine pública /coworking. A Locação de Salas é members-only:
 // só dentista com CRO aprovado vê a lista/detalhe (regra de produto). Mostra a
 // mensagem certa conforme o estado da sessão e abre o login de dentista.
 // ═══════════════════════════════════════════════════════════════════════════════

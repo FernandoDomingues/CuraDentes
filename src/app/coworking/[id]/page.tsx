@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// /salas/[id] — DETALHE da sala (estilo portal imobiliário, identidade CuraDentes).
+// /coworking/[id] — DETALHE da sala (estilo portal imobiliário, identidade CuraDentes).
 // Members-only: gate de CRO antes de buscar. Detalhe completo (contato + endereço)
 // vem da RPC get_sala_detalhe (porteiro de CRO); há fallback defensivo p/ a view
 // pública caso a RPC falhe. Mapa exato via lat/lng.
@@ -91,7 +91,7 @@ export default async function SalaDetalhePage({ params }: { params: Promise<{ id
   return (
     <Container className="py-8 md:py-10">
       <Link
-        href={sala.clinica_slug ? `/salas/clinica/${sala.clinica_slug}` : "/salas"}
+        href={sala.clinica_slug ? `/coworking/clinica/${sala.clinica_slug}` : "/coworking"}
         className="mb-4 inline-flex items-center gap-1.5 text-[14px] font-semibold text-ink-muted hover:text-ink"
       >
         <ArrowLeft size={16} /> {sala.clinica_slug ? "Voltar à clínica" : "Todas as clínicas"}
@@ -122,7 +122,7 @@ export default async function SalaDetalhePage({ params }: { params: Promise<{ id
             </p>
             {sala.clinica_slug && (
               <Link
-                href={`/salas/clinica/${sala.clinica_slug}`}
+                href={`/coworking/clinica/${sala.clinica_slug}`}
                 className="mt-1.5 inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand-blue hover:underline"
               >
                 <Building2 size={14} /> {sala.nome_clinica || "Ver a clínica"} · outras salas

@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // SalaCard — card do catálogo (estilo portal imobiliário, identidade CuraDentes).
 // Liderado por foto (capa 16:10) com placeholder de marca quando ainda não há foto.
-// Usado em /salas (grid) e no "Veja também" do detalhe.
+// Usado em /coworking (grid) e no "Veja também" do detalhe.
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import { useState } from "react";
@@ -18,7 +18,7 @@ export default function SalaCard({ sala }: { sala: SalaPublica }) {
 
   return (
     <Link
-      href={`/salas/${sala.id}`}
+      href={`/coworking/${sala.id}`}
       className="group flex flex-col overflow-hidden rounded-[20px] border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(10,42,102,0.14)]"
     >
       {/* Capa */}
