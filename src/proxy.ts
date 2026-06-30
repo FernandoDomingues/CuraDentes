@@ -48,13 +48,18 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Renova a sessão SÓ onde o servidor lê o login: a área restrita e as telas de
-  // autenticação. As páginas PÚBLICAS (home, /dentista, /especialidade, /busca,
-  // /urgencia, /sobre, /termos, /privacidade) não usam sessão no servidor — então
-  // não acionam o middleware, economizando invocations/banda (custo) e latência.
+  // Renova a sessão SÓ onde o servidor lê o login: a área restrita, a vitrine de
+  // locação (/coworking — members-only, lê a sessão no servidor p/ as RPCs gated)
+  // e as telas de autenticação. As páginas PÚBLICAS (home, /dentista, /especialidade,
+  // /busca, /urgencia, /sobre, /termos, /privacidade) não usam sessão no servidor —
+  // então não acionam o middleware, economizando invocations/banda (custo) e latência.
   // O login no cabeçalho dessas páginas é uma ilha cliente que se renova sozinha.
+  // IMPORTANTE: /coworking PRECISA estar aqui — sem o refresh do proxy, o getUsuario
+  // renova o token em memória (passa o muro) mas rotaciona o refresh-token sem
+  // regravar o cookie; o 2º cliente (sb.rpc) então cai da sessão e auth.uid() vira
+  // null dentro da RPC → catálogo vazio. Estar no matcher regrava os cookies antes.
   // OBS: /auth/callback NÃO entra aqui de propósito — quem estabelece a sessão é
   // o próprio route handler do callback (que grava os cookies na resposta de
   // redirect). Rodar o proxy lá só criaria corrida de cookies.
-  matcher: ["/pro/:path*", "/entrar", "/cadastro", "/redefinir-senha"],
+  matcher: ["/pro/:path*", "/coworking", "/coworking/:path*", "/entrar", "/cadastro", "/redefinir-senha"],
 };
