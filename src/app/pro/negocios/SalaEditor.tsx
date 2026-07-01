@@ -103,6 +103,7 @@ export default function SalaEditor({
     }
     setOcupado(true);
     let falhou = "";
+    let clinicaKey: string | null = null;
     for (const r of salas) {
       const input: SalaForm = {
         id: r.id,
@@ -123,11 +124,18 @@ export default function SalaEditor({
         falhou = res.erro || "Não foi possível salvar.";
         break;
       }
+      clinicaKey = res.clinicaKey ?? clinicaKey;
     }
     setOcupado(false);
     if (falhou) return setErro(falhou);
     toast.success(editando ? "Sala atualizada!" : salas.length > 1 ? "Salas anunciadas!" : "Sala anunciada!");
-    router.push("/pro/negocios");
+    // Ao ANUNCIAR, leva ao anúncio da clínica para o dentista ver o resultado; ao editar,
+    // volta ao painel de gerenciamento.
+    if (!editando && clinicaKey) {
+      router.push(`/coworking/clinica/${clinicaKey}`);
+    } else {
+      router.push("/pro/negocios");
+    }
     router.refresh();
   }
 

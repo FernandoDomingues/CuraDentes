@@ -7,7 +7,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import { criarClienteServidor } from "@/lib/supabase/server";
-import { numeroOuNull } from "@/lib/salas";
+import { numeroOuNull, clinicaKeyDe } from "@/lib/salas";
 import type {
   SalaForm,
   SalaStatus,
@@ -76,7 +76,7 @@ export async function carregarMinhasSalas(): Promise<{
 /** Cria ou atualiza uma sala. anfitriao_id = sessão; trigger deriva o resto. */
 export async function salvarSala(
   input: SalaForm,
-): Promise<{ ok: boolean; erro?: string; id?: string }> {
+): Promise<{ ok: boolean; erro?: string; id?: string; clinicaKey?: string | null }> {
   const { supabase, uid } = await sessao();
   if (!uid) return { ok: false, erro: "Sessão expirada. Entre novamente." };
 
@@ -92,11 +92,13 @@ export async function salvarSala(
   // existindo até a limpeza final. O detalhe lê o contato pela get_sala_detalhe (clínica).
   const { data: end } = await supabase
     .from("curadentespro_enderecos")
-    .select("whatsapp, telefone")
+    .select("whatsapp, telefone, cep, numero, complemento")
     .eq("id", input.endereco_id)
     .eq("curadentespro_id", uid)
-    .maybeSingle<{ whatsapp: string | null; telefone: string | null }>();
+    .maybeSingle<{ whatsapp: string | null; telefone: string | null; cep: string | null; numero: string | null; complemento: string | null }>();
   const contatoClinica = end?.whatsapp || end?.telefone || "definir-no-perfil";
+  // Chave da clínica (para redirecionar ao anúncio dela após anunciar).
+  const clinicaKey = end ? clinicaKeyDe(end.cep ?? "", end.numero ?? "", end.complemento ?? "") : null;
 
   const diariaNum = input.preco_diaria?.trim() ? Number(String(input.preco_diaria).replace(",", ".")) : null;
   const preco_diaria = diariaNum != null && Number.isFinite(diariaNum) && diariaNum >= 0 ? diariaNum : null;
@@ -121,11 +123,11 @@ export async function salvarSala(
   if (input.id) {
     const { error } = await supabase.from("salas").update(payload).eq("id", input.id);
     if (error) return { ok: false, erro: error.message || "Não foi possível salvar a sala." };
-    return { ok: true, id: input.id };
+    return { ok: true, id: input.id, clinicaKey };
   }
   const { data, error } = await supabase.from("salas").insert(payload).select("id").single();
   if (error) return { ok: false, erro: error.message || "Não foi possível criar a sala." };
-  return { ok: true, id: (data?.id as string) ?? undefined };
+  return { ok: true, id: (data?.id as string) ?? undefined, clinicaKey };
 }
 
 /** Número que uma NOVA sala teria nesta clínica (máx da clínica + 1) — para o formulário
