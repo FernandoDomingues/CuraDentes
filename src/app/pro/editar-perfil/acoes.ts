@@ -63,6 +63,10 @@ export async function salvarPerfil(input: {
   // 4) Insere/atualiza cada endereço (curadentespro_id da sessão).
   const novosIds: { tempId: string; id: string }[] = [];
   const pendentes: string[] = []; // endereços que viraram adesão pendente (e-mail ao dono — passo 5)
+  // Endereços em que sou MEMBRO (não-dono) de uma clínica: NÃO posso alterar os dados que
+  // a definem (nome/endereço/fotos/estrutura) — são do dono. Defesa server-side da trava.
+  const { data: membroData } = await supabase.rpc("enderecos_membro");
+  const membros = new Set(((membroData as { endereco_id: string }[] | null) ?? []).map((r) => r.endereco_id));
   for (const end of input.enderecos) {
     const payload = {
       curadentespro_id: uid,
@@ -102,7 +106,24 @@ export async function salvarPerfil(input: {
       if (error) return { ok: false, erro: error.message || "Erro ao salvar endereço." };
       if (novo) { novosIds.push({ tempId: end.id, id: novo.id as string }); endId = novo.id as string; }
     } else {
-      const { error } = await supabase.from("curadentespro_enderecos").update(payload).eq("id", end.id);
+      // Membro: grava só os campos que são DELE; os que definem a clínica ficam intactos
+      // (permanecem com o valor do banco, do dono), mesmo que o cliente tenha sido burlado.
+      const dadosUpdate = membros.has(end.id)
+        ? {
+            telefone: end.telefone,
+            whatsapp: end.whatsapp,
+            atende_urgencias: end.atende_urgencias,
+            aceita_urgencia_termo: end.aceita_urgencia_termo,
+            estacionamento: end.estacionamento,
+            atividades: end.atividades,
+            convenios: end.convenios,
+            formas_pagamento: end.formas_pagamento,
+            politica_cancelamento: end.politica_cancelamento,
+            observacoes: end.observacoes,
+            agenda: end.agenda,
+          }
+        : payload;
+      const { error } = await supabase.from("curadentespro_enderecos").update(dadosUpdate).eq("id", end.id);
       if (error) return { ok: false, erro: error.message || "Erro ao salvar endereço." };
       endId = end.id;
     }

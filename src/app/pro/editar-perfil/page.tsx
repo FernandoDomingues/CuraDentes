@@ -51,7 +51,7 @@ export default async function MeuPerfilPage() {
   const supabase = await criarClienteServidor();
   const id = usuario!.id;
 
-  const [perfilRes, cpfRes, telRes, endsRes, prefsRes, salasRes] = await Promise.all([
+  const [perfilRes, cpfRes, telRes, endsRes, prefsRes, salasRes, membroRes] = await Promise.all([
     supabase
       .from("curadentespro")
       .select("id, nome, tratamento, nome_completo, cro, ano_formacao, foto_url, bio, instagram, especialidade, google_review_url, lgpd_aceito")
@@ -67,6 +67,8 @@ export default async function MeuPerfilPage() {
     supabase.from("curadentespro_enderecos").select("*").eq("curadentespro_id", id),
     supabase.from("curadentespro_email").select("prefs").eq("curadentespro_id", id).maybeSingle<{ prefs: { desempenho?: boolean; novidades?: boolean; parceiros?: boolean } | null }>(),
     supabase.from("salas").select("id, endereco_id, titulo, numero_na_clinica, fotos").eq("anfitriao_id", id).neq("status", "removida"),
+    // Endereços em que sou MEMBRO (não-dono) de uma clínica → travar os dados da clínica.
+    supabase.rpc("enderecos_membro"),
   ]);
 
   const pro = perfilRes.data;
@@ -127,5 +129,7 @@ export default async function MeuPerfilPage() {
     numero_na_clinica: s.numero_na_clinica, fotos: s.fotos ?? [],
   }));
 
-  return <PerfilEditor perfil={perfil} enderecosIniciais={enderecos} salasResumo={salasResumo} />;
+  const enderecosMembro = ((membroRes.data as { endereco_id: string }[] | null) ?? []).map((r) => r.endereco_id);
+
+  return <PerfilEditor perfil={perfil} enderecosIniciais={enderecos} enderecosMembro={enderecosMembro} salasResumo={salasResumo} />;
 }

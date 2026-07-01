@@ -51,10 +51,12 @@ const inputCls = "w-full rounded-[10px] border border-black/15 px-3.5 py-2.5 tex
 export default function PerfilEditor({
   perfil,
   enderecosIniciais,
+  enderecosMembro = [],
   salasResumo = [],
 }: {
   perfil: PerfilForm;
   enderecosIniciais: EnderecoForm[];
+  enderecosMembro?: string[];
   salasResumo?: SalaResumoClinica[];
 }) {
   const router = useRouter();
@@ -357,6 +359,7 @@ export default function PerfilEditor({
             onRemover={(id) => setRemovidos((prev) => [...prev, id])}
             mostrarFotos
             salas={salasResumo}
+            enderecosMembro={enderecosMembro}
           />
         </section>
 
