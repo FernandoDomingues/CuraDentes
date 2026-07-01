@@ -144,6 +144,9 @@ export default function EnderecosEditor({
   // auto-adesão de re-travar a MESMA clínica (por chave), mesmo se ele reeditar o CEP —
   // mas não bloqueia adotar OUTRA clínica em outro prédio (chave diferente).
   const [rejeitadas, setRejeitadas] = useState<Record<string, string[]>>({});
+  // Clínica correspondente a este endereço (por auto-adoção OU escolha no cartão).
+  // Mantém o banner + checkbox visíveis para alternar "é minha" (travado) ↔ "não é minha".
+  const [candidato, setCandidato] = useState<Record<string, ClinicaSugestao>>({});
   // Refs espelham o estado para leituras confiáveis dentro de fluxos assíncronos
   // (busca de CEP / sugestão), sem fechar sobre valores velhos.
   const adotadaRef = useRef(adotada);
@@ -195,12 +198,14 @@ export default function EnderecosEditor({
     );
     setAdotada((p) => ({ ...p, [id]: sug.clinica_key }));
     setSugFechadas((p) => new Set(p).add(id));
+    setCandidato((p) => ({ ...p, [id]: sug }));
   }
-  // Mudar CEP ou número = mudar de PRÉDIO: destrava (se adotado) e limpa a rejeição,
-  // para reavaliar/auto-adotar o novo endereço.
+  // Mudar CEP ou número = mudar de PRÉDIO: destrava (se adotado), limpa a rejeição e o
+  // candidato, para reavaliar/auto-adotar o novo endereço.
   function aoMudarPredio(id: string) {
     setAdotada((p) => { if (!p[id]) return p; const c = { ...p }; delete c[id]; return c; });
     setSugFechadas((p) => { if (!p.has(id)) return p; const s = new Set(p); s.delete(id); return s; });
+    setCandidato((p) => { if (!p[id]) return p; const c = { ...p }; delete c[id]; return c; });
   }
   function mudarNumero(idx: number, valor: string) {
     aoMudarPredio(enderecos[idx].id);
@@ -225,6 +230,18 @@ export default function EnderecosEditor({
     const chave = adotada[id];
     if (chave) setRejeitadas((p) => ({ ...p, [id]: [...(p[id] ?? []), chave] }));
     setAdotada((p) => { const c = { ...p }; delete c[id]; return c; });
+    // NÃO limpa o candidato: o banner + checkbox continuam visíveis (marcados) para
+    // o dentista poder desmarcar e voltar a aderir se tiver se enganado.
+  }
+  // Desmarcar "não é minha" → volta a aderir: tira a rejeição desta chave e re-adota.
+  function readotarClinica(id: string, sug: ClinicaSugestao) {
+    setRejeitadas((p) => {
+      const arr = (p[id] ?? []).filter((k) => k !== sug.clinica_key);
+      const c = { ...p };
+      if (arr.length) c[id] = arr; else delete c[id];
+      return c;
+    });
+    adotarClinica(id, sug);
   }
 
   async function salvarProgresso(idx: number) {
@@ -367,15 +384,28 @@ export default function EnderecosEditor({
                   style={adotada[end.id] ? { borderColor: "#007aff", boxShadow: "0 0 0 3px rgba(0,122,255,0.18)" } : undefined} />
               </div>
 
-              {/* Banner: aderindo a uma clínica existente (campos travados). */}
-              {adotada[end.id] && (
+              {/* Banner de adesão: aparece enquanto há uma clínica correspondente a este
+                  endereço. A checkbox alterna "é minha" (travado) ↔ "não é minha" (liberado)
+                  e permanece visível — desmarcar volta a aderir. */}
+              {candidato[end.id] && (
                 <div className="md:col-span-2 rounded-[12px] border p-3" style={{ borderColor: "rgba(0,122,255,0.35)", background: "rgba(0,122,255,0.06)" }}>
-                  <p className="text-[13px] text-ink-soft">
-                    🔒 Você está <strong className="text-brand-navy">aderindo a uma clínica existente</strong>. Nome, endereço, fotos e estrutura foram preenchidos e <strong>travados</strong>. Se você atende em <strong>outra sala/conjunto</strong>, edite o <strong className="text-brand-blue">complemento</strong> (ou o número/CEP). Ao salvar, o <strong>dono da clínica</strong> recebe seu pedido para aprovar.
-                  </p>
+                  {adotada[end.id] ? (
+                    <p className="text-[13px] text-ink-soft">
+                      🔒 Você está <strong className="text-brand-navy">aderindo a uma clínica existente</strong>. Nome, endereço, fotos e estrutura foram preenchidos e <strong>travados</strong>. Se você atende em <strong>outra sala/conjunto</strong>, edite o <strong className="text-brand-blue">complemento</strong> (ou o número/CEP). Ao salvar, o <strong>dono da clínica</strong> recebe seu pedido para aprovar.
+                    </p>
+                  ) : (
+                    <p className="text-[13px] text-ink-soft">
+                      ✅ Você marcou que <strong className="text-brand-navy">esta clínica não é sua</strong>. Os campos foram <strong>liberados</strong> — preencha os dados da sua clínica. Se na verdade for a mesma, é só <strong>desmarcar</strong> abaixo.
+                    </p>
+                  )}
                   <label className="mt-2.5 flex cursor-pointer items-start gap-2 border-t border-black/10 pt-2.5">
-                    <input type="checkbox" checked={false} onChange={() => rejeitarClinica(end.id)} className="mt-0.5 h-4 w-4 flex-shrink-0 accent-brand-blue" />
-                    <span className="text-[13px] font-semibold text-brand-navy">Esta clínica <strong>não é minha</strong> — desbloquear os campos para eu preencher a minha</span>
+                    <input
+                      type="checkbox"
+                      checked={!adotada[end.id]}
+                      onChange={() => (adotada[end.id] ? rejeitarClinica(end.id) : readotarClinica(end.id, candidato[end.id]))}
+                      className="mt-0.5 h-4 w-4 flex-shrink-0 accent-brand-blue"
+                    />
+                    <span className="text-[13px] font-semibold text-brand-navy">Esta clínica <strong>não é minha</strong></span>
                   </label>
                 </div>
               )}
