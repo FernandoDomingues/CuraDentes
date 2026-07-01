@@ -19,7 +19,8 @@ export const dynamic = "force-dynamic";
 
 export default async function AdesoesPage() {
   const usuario = await getUsuario();
-  if (!usuario) redirect("/entrar");
+  // (O layout /pro já barra anônimo → /login-necessario; mantido por segurança/consistência.)
+  if (!usuario) redirect("/login-necessario");
   if (usuario.papel === "paciente") redirect("/");
 
   const adesoes = await carregarAdesoesPendentes();

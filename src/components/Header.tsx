@@ -44,6 +44,39 @@ export default function Header() {
   const ehBusca = !!pathname && pathname.startsWith("/busca");
   const ocultarNav = ehSalas || ehBusca;
 
+  // ── Parede de login (/login-necessario): cabeçalho MÍNIMO — logo + só "Home".
+  // Não expõe controles de sessão (Sair/Meu Perfil) a quem não está logado.
+  if (pathname === "/login-necessario") {
+    return (
+      <header
+        style={{
+          position: "sticky", top: 0, zIndex: 100,
+          background: "rgba(255,255,255,0.92)",
+          backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
+          borderBottom: "0.5px solid rgba(60,60,67,0.10)",
+          paddingTop: "env(safe-area-inset-top)",
+          paddingLeft: "env(safe-area-inset-left)",
+          paddingRight: "env(safe-area-inset-right)",
+        }}
+      >
+        <div className="container mx-auto px-4 md:px-8">
+          <div className="flex h-[60px] items-center justify-between">
+            <Link href="/" aria-label="CuraDentes — início">
+              <Image src="/logos/logo-com-nome.png" alt="CuraDentes" width={2480} height={926} priority className="hidden h-8 w-auto lg:block" />
+              <Image src="/logos/logo-icon.png" alt="CuraDentes" width={500} height={500} priority className="h-8 w-8 lg:hidden" />
+            </Link>
+            <Link
+              href="/"
+              className="inline-flex min-h-[40px] items-center gap-2 rounded-[12px] bg-black/5 px-3 py-2 text-[13px] font-medium text-ink-muted transition-colors hover:bg-brand-blue/10 hover:text-brand-blue"
+            >
+              <Home size={16} /><span>Home</span>
+            </Link>
+          </div>
+        </div>
+      </header>
+    );
+  }
+
   // ── Cabeçalho da ÁREA PRO (logado) — porte do header do dashboard do k11:
   // logo Pro à esquerda; à direita Home / Meu Perfil / Sair (texto some no mobile).
   if (pathname && pathname.startsWith("/pro")) {

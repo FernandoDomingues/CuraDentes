@@ -2,8 +2,8 @@
 // LAYOUT DA ÁREA /pro — guarda de acesso (Server Component).
 //
 // Roda no servidor antes de qualquer página /pro:
-//   • sem sessão            → muro "Entrar como dentista" (a área /pro é só de
-//                             dentista; cair no login de paciente/Google seria errado)
+//   • sem sessão            → /login-necessario (parede fora de /pro, com header
+//                             mínimo; não expõe "Sair"/"Voltar ao meu Perfil" a anônimo)
 //   • paciente (sem perfil) → manda para a home (não tem painel)
 //   • dentista / superuser  → libera
 //
@@ -15,7 +15,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getUsuario } from "@/lib/auth";
-import MuroDentista from "@/components/MuroDentista";
 
 // Área logada nunca deve ser indexada. O robots.ts já bloqueia o *crawl* de /pro,
 // mas isto impede a INDEXAÇÃO de URLs descobertas por links externos (o robots
@@ -26,7 +25,7 @@ export const metadata: Metadata = {
 
 export default async function ProLayout({ children }: { children: React.ReactNode }) {
   const usuario = await getUsuario();
-  if (!usuario) return <MuroDentista />;
+  if (!usuario) redirect("/login-necessario");
   if (usuario.papel === "paciente") redirect("/");
   return <>{children}</>;
 }
