@@ -52,6 +52,9 @@ export interface EnderecoForm {
   fotos_recepcao: string[]; // 0..3 URLs (locação)
   estrutura: string[]; // comodidades da clínica (locação) — estacionamento, wifi, …
   estrutura_extra: string; // texto livre (≤150) — comodidades extra da clínica
+  // Confirmação de adesão a uma clínica existente (checkbox obrigatória). undefined = não
+  // é adesão; false = adesão pendente de confirmação; true = confirmada. NÃO persiste no BD.
+  _adesaoConfirmada?: boolean;
   _isNew?: boolean;
 }
 
@@ -144,9 +147,6 @@ export default function EnderecosEditor({
   // auto-adesão de re-travar a MESMA clínica (por chave), mesmo se ele reeditar o CEP —
   // mas não bloqueia adotar OUTRA clínica em outro prédio (chave diferente).
   const [rejeitadas, setRejeitadas] = useState<Record<string, string[]>>({});
-  // Clínica correspondente a este endereço (por auto-adoção OU escolha no cartão).
-  // Mantém o banner + checkbox visíveis para alternar "é minha" (travado) ↔ "não é minha".
-  const [candidato, setCandidato] = useState<Record<string, ClinicaSugestao>>({});
   // Refs espelham o estado para leituras confiáveis dentro de fluxos assíncronos
   // (busca de CEP / sugestão), sem fechar sobre valores velhos.
   const adotadaRef = useRef(adotada);
@@ -184,6 +184,7 @@ export default function EnderecosEditor({
               ...e,
               nome_clinica: sug.nome_clinica ?? e.nome_clinica,
               complemento: sug.complemento ?? e.complemento,
+              _adesaoConfirmada: false, // adesão pendente da confirmação obrigatória (checkbox)
               ...(dados
                 ? {
                     foto_fachada: dados.foto_fachada ?? "",
@@ -198,50 +199,31 @@ export default function EnderecosEditor({
     );
     setAdotada((p) => ({ ...p, [id]: sug.clinica_key }));
     setSugFechadas((p) => new Set(p).add(id));
-    setCandidato((p) => ({ ...p, [id]: sug }));
   }
-  // Mudar CEP ou número = mudar de PRÉDIO: destrava (se adotado), limpa a rejeição e o
-  // candidato, para reavaliar/auto-adotar o novo endereço.
+  // Mudar CEP ou número = mudar de PRÉDIO: destrava (se adotado) e reabre a auto-adoção
+  // do novo endereço. (rejeitadas NÃO é limpo — é por chave da clínica.)
   function aoMudarPredio(id: string) {
     setAdotada((p) => { if (!p[id]) return p; const c = { ...p }; delete c[id]; return c; });
     setSugFechadas((p) => { if (!p.has(id)) return p; const s = new Set(p); s.delete(id); return s; });
-    setCandidato((p) => { if (!p[id]) return p; const c = { ...p }; delete c[id]; return c; });
   }
+  // Trocou de prédio (número): destrava e zera a confirmação de adesão do endereço.
   function mudarNumero(idx: number, valor: string) {
     aoMudarPredio(enderecos[idx].id);
-    atualizar(idx, "numero", valor);
+    onChange(enderecos.map((e, i) => (i === idx ? { ...e, numero: valor, _adesaoConfirmada: undefined } : e)));
   }
   // Complemento diferencia unidades no MESMO prédio: se a chave deixar de bater com a
-  // clínica adotada, é OUTRA unidade → só DESTRAVA (o dentista passa a definir a própria).
+  // clínica adotada, é OUTRA clínica → DESTRAVA e o dentista passa a definir A PRÓPRIA
+  // (ele não edita a clínica alheia; para ser outra, muda a identidade = complemento).
   function mudarComplemento(idx: number, valor: string) {
     const end = enderecos[idx];
-    atualizar(idx, "complemento", valor);
     const chave = adotada[end.id];
-    if (chave && clinicaKeyDe(end.cep, end.numero, valor) !== chave) {
-      // Diferenciou a unidade → é OUTRA clínica: destrava e marca a chave como rejeitada,
-      // para o blur do número não re-adotar a clínica do prédio.
-      setRejeitadas((p) => ({ ...p, [end.id]: [...(p[end.id] ?? []), chave] }));
+    const virouOutra = !!chave && clinicaKeyDe(end.cep, end.numero, valor) !== chave;
+    onChange(enderecos.map((e, i) => (i === idx ? { ...e, complemento: valor, ...(virouOutra ? { _adesaoConfirmada: undefined } : {}) } : e)));
+    if (virouOutra) {
+      // marca a chave como rejeitada para o blur do número não re-adotar a clínica do prédio.
+      setRejeitadas((p) => ({ ...p, [end.id]: [...(p[end.id] ?? []), chave!] }));
       setAdotada((p) => { const c = { ...p }; delete c[end.id]; return c; });
     }
-  }
-  // "Não é a minha clínica": destrava e marca a chave como REJEITADA (não re-adota a
-  // mesma clínica, nem se reeditar o CEP; outra clínica em outro prédio ainda pode).
-  function rejeitarClinica(id: string) {
-    const chave = adotada[id];
-    if (chave) setRejeitadas((p) => ({ ...p, [id]: [...(p[id] ?? []), chave] }));
-    setAdotada((p) => { const c = { ...p }; delete c[id]; return c; });
-    // NÃO limpa o candidato: o banner + checkbox continuam visíveis (marcados) para
-    // o dentista poder desmarcar e voltar a aderir se tiver se enganado.
-  }
-  // Desmarcar "não é minha" → volta a aderir: tira a rejeição desta chave e re-adota.
-  function readotarClinica(id: string, sug: ClinicaSugestao) {
-    setRejeitadas((p) => {
-      const arr = (p[id] ?? []).filter((k) => k !== sug.clinica_key);
-      const c = { ...p };
-      if (arr.length) c[id] = arr; else delete c[id];
-      return c;
-    });
-    adotarClinica(id, sug);
   }
 
   async function salvarProgresso(idx: number) {
@@ -292,8 +274,8 @@ export default function EnderecosEditor({
     const cep = (cepDigitado ?? "").replace(/\D/g, "").slice(0, 8);
     const idAlvo = enderecos[idx].id;
     aoMudarPredio(idAlvo); // editar o CEP = trocar de prédio → destrava a adesão
-    // Aplica o CEP digitado sobre o estado mais recente (por id).
-    onChange(enderecosRef.current.map((e) => (e.id === idAlvo ? { ...e, cep } : e)));
+    // Aplica o CEP digitado sobre o estado mais recente (por id); zera a confirmação.
+    onChange(enderecosRef.current.map((e) => (e.id === idAlvo ? { ...e, cep, _adesaoConfirmada: undefined } : e)));
     if (cep.replace(/\D/g, "").length === 8) {
       const d = await buscarCep(cep);
       if (d) {
@@ -384,29 +366,24 @@ export default function EnderecosEditor({
                   style={adotada[end.id] ? { borderColor: "#007aff", boxShadow: "0 0 0 3px rgba(0,122,255,0.18)" } : undefined} />
               </div>
 
-              {/* Banner de adesão: aparece enquanto há uma clínica correspondente a este
-                  endereço. A checkbox alterna "é minha" (travado) ↔ "não é minha" (liberado)
-                  e permanece visível — desmarcar volta a aderir. */}
-              {candidato[end.id] && (
+              {/* Banner de adesão: aparece quando o endereço bate com uma clínica que já
+                  existe. Os dados dela ficam TRAVADOS (são do dono); a checkbox é uma
+                  CONFIRMAÇÃO obrigatória (não destrava). Para ser outra clínica no prédio,
+                  o dentista muda a identidade (complemento/número/CEP). */}
+              {adotada[end.id] && (
                 <div className="md:col-span-2 rounded-[12px] border p-3" style={{ borderColor: "rgba(0,122,255,0.35)", background: "rgba(0,122,255,0.06)" }}>
-                  {adotada[end.id] ? (
-                    <p className="text-[13px] text-ink-soft">
-                      🔒 Você está <strong className="text-brand-navy">aderindo a uma clínica existente</strong>. Nome, endereço, fotos e estrutura foram preenchidos e <strong>travados</strong>. Se você atende em <strong>outra sala/conjunto</strong>, edite o <strong className="text-brand-blue">complemento</strong> (ou o número/CEP). Ao salvar, o <strong>dono da clínica</strong> recebe seu pedido para aprovar.
-                    </p>
-                  ) : (
-                    <p className="text-[13px] text-ink-soft">
-                      ✅ Você marcou que <strong className="text-brand-navy">esta clínica não é sua</strong>. Os campos foram <strong>liberados</strong> — preencha os dados da sua clínica. Se na verdade for a mesma, é só <strong>desmarcar</strong> abaixo.
-                    </p>
-                  )}
+                  <p className="text-[13px] text-ink-soft">
+                    🔒 Este endereço já tem uma <strong className="text-brand-navy">clínica cadastrada</strong>. Os dados dela ficam <strong>travados</strong> (pertencem ao dono). Ao salvar, você <strong>adere a ela</strong> e o <strong>dono aprova</strong> seu cadastro. Se você é de <strong>outra</strong> clínica no mesmo prédio, informe sua <strong className="text-brand-blue">sala/conjunto no complemento</strong> (ou mude o número/CEP).
+                  </p>
                   <label className="mt-2.5 flex cursor-pointer items-start gap-2 border-t border-black/10 pt-2.5">
-                    <input
-                      type="checkbox"
-                      checked={!adotada[end.id]}
-                      onChange={() => (adotada[end.id] ? rejeitarClinica(end.id) : readotarClinica(end.id, candidato[end.id]))}
-                      className="mt-0.5 h-4 w-4 flex-shrink-0 accent-brand-blue"
-                    />
-                    <span className="text-[13px] font-semibold text-brand-navy">Esta clínica <strong>não é minha</strong></span>
+                    <input type="checkbox" checked={!!end._adesaoConfirmada} onChange={(e) => atualizar(idx, "_adesaoConfirmada", e.target.checked)} className="mt-0.5 h-4 w-4 flex-shrink-0 accent-brand-blue" />
+                    <span className="text-[13px] font-semibold text-brand-navy">
+                      Confirmo que atendo nesta clínica <span className="font-normal text-ink-soft">— ela não é minha; o dono precisa aprovar meu cadastro.</span>
+                    </span>
                   </label>
+                  {!end._adesaoConfirmada && (
+                    <p className="mt-1 pl-6 text-[11px] font-medium" style={{ color: "#FF9500" }}>Confirmação obrigatória para salvar.</p>
+                  )}
                 </div>
               )}
 

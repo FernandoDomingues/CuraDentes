@@ -122,6 +122,13 @@ export default function PerfilEditor({
       const instaNorm = extrairUserInstagram(instagramUrl || "");
       setInstagram(instaNorm);
 
+      // Adesão a clínica existente ainda não confirmada → bloqueia salvar (checkbox obrigatória).
+      if (enderecos.some((e) => e._adesaoConfirmada === false)) {
+        setMsg({ tipo: "erro", texto: "Confirme a adesão à clínica existente marcando a caixa no endereço." });
+        setSalvando(false);
+        return;
+      }
+
       // Geocodifica cada endereço NO CLIENTE (preserva o comportamento atual) e
       // delega TODAS as gravações autenticadas para a Server Action salvarPerfil.
       const enderecosComCoord: (EnderecoForm & { latitude: number | null; longitude: number | null })[] = [];

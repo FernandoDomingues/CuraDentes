@@ -65,6 +65,8 @@ export interface EnderecoInput {
   cidade?: string;
   estado?: string;
   cep?: string;
+  /** false = adesão a uma clínica existente ainda NÃO confirmada (bloqueia salvar). */
+  _adesaoConfirmada?: boolean;
 }
 
 /** Valida os campos obrigatórios de cada endereço; devolve a lista de erros. */
@@ -78,6 +80,7 @@ export function validarEnderecos(enderecos: EnderecoInput[]): { valido: boolean;
     if (!e.cidade?.trim()) erros.push(`${p}: Cidade`);
     if (!e.estado?.trim()) erros.push(`${p}: Estado`);
     if (!e.cep?.trim()) erros.push(`${p}: CEP`);
+    if (e._adesaoConfirmada === false) erros.push(`${p}: confirme a adesão à clínica existente (marque a caixa)`);
   });
   return { valido: erros.length === 0, erros };
 }
