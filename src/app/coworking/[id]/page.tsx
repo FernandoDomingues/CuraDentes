@@ -9,7 +9,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  ArrowLeft, MapPin, Clock, BadgeCheck, Check, CalendarDays, Layers,
+  ArrowLeft, MapPin, Clock, Check, CalendarDays, Layers,
   MessageCircle, Mail, ExternalLink, Wrench, Building2,
 } from "lucide-react";
 import Container from "@/components/Container";
@@ -105,17 +105,9 @@ export default async function SalaDetalhePage({ params }: { params: Promise<{ id
         <div className="flex flex-col gap-6">
           {/* Cabeçalho */}
           <div>
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <h1 className="text-[26px] font-bold leading-tight text-brand-navy md:text-[30px]">
-                {sala.titulo}
-              </h1>
-              <span
-                className="inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-[12px] font-bold text-white"
-                style={{ background: "rgba(10,42,102,0.88)" }}
-              >
-                <BadgeCheck size={13} /> Verificado
-              </span>
-            </div>
+            <h1 className="text-[26px] font-bold leading-tight text-brand-navy md:text-[30px]">
+              {sala.titulo}
+            </h1>
             <p className="mt-1.5 flex items-center gap-1.5 text-[14px] text-ink-muted">
               <MapPin size={15} />
               {[sala.bairro, sala.cidade, sala.estado].filter(Boolean).join(", ") || sala.nome_clinica}

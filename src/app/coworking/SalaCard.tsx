@@ -8,7 +8,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { MapPin, DoorOpen, BadgeCheck } from "lucide-react";
+import { MapPin, DoorOpen } from "lucide-react";
 import { PRECO_UNIDADE_LABEL, type SalaPublica } from "@/lib/salas";
 
 export default function SalaCard({ sala }: { sala: SalaPublica }) {
@@ -43,13 +43,6 @@ export default function SalaCard({ sala }: { sala: SalaPublica }) {
             </span>
           </div>
         )}
-        {/* Badge de verificado (todas as salas públicas são de anfitrião com CRO ok) */}
-        <span
-          className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur"
-          style={{ background: "rgba(10,42,102,0.82)" }}
-        >
-          <BadgeCheck size={12} /> Verificado
-        </span>
       </div>
 
       {/* Corpo */}

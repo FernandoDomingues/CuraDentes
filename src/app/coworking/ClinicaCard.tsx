@@ -7,7 +7,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { MapPin, Building2, BadgeCheck, DoorOpen } from "lucide-react";
+import { MapPin, Building2, DoorOpen } from "lucide-react";
 import type { ClinicaPublica } from "@/lib/salas";
 
 export default function ClinicaCard({ clinica }: { clinica: ClinicaPublica }) {
@@ -36,9 +36,6 @@ export default function ClinicaCard({ clinica }: { clinica: ClinicaPublica }) {
             <span className="text-[12px] font-medium" style={{ color: "rgba(10,42,102,0.40)" }}>Foto em breve</span>
           </div>
         )}
-        <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur" style={{ background: "rgba(10,42,102,0.82)" }}>
-          <BadgeCheck size={12} /> Verificada
-        </span>
       </div>
 
       <div className="flex flex-1 flex-col gap-2 p-4">
