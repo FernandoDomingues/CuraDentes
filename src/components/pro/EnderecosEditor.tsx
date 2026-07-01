@@ -370,12 +370,13 @@ export default function EnderecosEditor({
               {/* Banner: aderindo a uma clínica existente (campos travados). */}
               {adotada[end.id] && (
                 <div className="md:col-span-2 rounded-[12px] border p-3" style={{ borderColor: "rgba(0,122,255,0.35)", background: "rgba(0,122,255,0.06)" }}>
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-[13px] text-ink-soft">
-                      🔒 Você está <strong className="text-brand-navy">aderindo a uma clínica existente</strong>. Nome, endereço, fotos e estrutura foram preenchidos e <strong>travados</strong>. Se você atende em <strong>outra sala/conjunto</strong>, edite o <strong className="text-brand-blue">complemento</strong> (ou o número/CEP). Ao salvar, o <strong>dono da clínica</strong> recebe seu pedido para aprovar.
-                    </p>
-                    <button type="button" onClick={() => rejeitarClinica(end.id)} className="shrink-0 whitespace-nowrap text-[12px] font-semibold text-ink-muted hover:text-ink" title="Não é a minha clínica">Não é a minha clínica</button>
-                  </div>
+                  <p className="text-[13px] text-ink-soft">
+                    🔒 Você está <strong className="text-brand-navy">aderindo a uma clínica existente</strong>. Nome, endereço, fotos e estrutura foram preenchidos e <strong>travados</strong>. Se você atende em <strong>outra sala/conjunto</strong>, edite o <strong className="text-brand-blue">complemento</strong> (ou o número/CEP). Ao salvar, o <strong>dono da clínica</strong> recebe seu pedido para aprovar.
+                  </p>
+                  <label className="mt-2.5 flex cursor-pointer items-start gap-2 border-t border-black/10 pt-2.5">
+                    <input type="checkbox" checked={false} onChange={() => rejeitarClinica(end.id)} className="mt-0.5 h-4 w-4 flex-shrink-0 accent-brand-blue" />
+                    <span className="text-[13px] font-semibold text-brand-navy">Esta clínica <strong>não é minha</strong> — desbloquear os campos para eu preencher a minha</span>
+                  </label>
                 </div>
               )}
 
