@@ -309,15 +309,19 @@ export default async function DashboardPage() {
               badge de pendências (recebidas pendentes + pagamentos a resolver). */}
           {pro.cro_verificado && (
             <section className="rounded-2xl border border-white/60 bg-white/90 shadow-[0_2px_8px_rgba(16,24,64,0.05)] backdrop-blur p-5">
-              <Link
-                href="/pro/negocios"
-                className="flex min-h-[52px] items-center justify-between gap-3 rounded-[14px] px-4 py-3 transition-colors hover:bg-brand-blue/5"
-              >
-                <span className="flex items-center gap-2.5">
-                  <DoorOpen size={18} style={{ color: "#007AFF" }} />
-                  <span className="text-[15px] font-bold text-brand-navy">Locação de salas</span>
-                </span>
-                <span className="flex items-center gap-2">
+              <div className="mb-3 flex items-center gap-2">
+                <DoorOpen size={18} style={{ color: "#007AFF" }} />
+                <h2 className="text-lg font-bold text-brand-navy">Locação de Salas</h2>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Link
+                  href="/pro/negocios"
+                  className="flex min-h-[48px] items-center justify-between gap-3 rounded-[14px] px-4 py-3 text-[14px] font-semibold text-white transition-all hover:brightness-110"
+                  style={{ background: "#007AFF", boxShadow: "0 4px 16px rgba(0,122,255,0.22)" }}
+                >
+                  <span className="flex items-center gap-2">
+                    <Settings size={16} /> Gerenciamento
+                  </span>
                   {pendencias.total > 0 && (
                     <span
                       className="inline-flex h-6 min-w-[24px] items-center justify-center rounded-full px-2 text-[12px] font-bold text-white"
@@ -327,15 +331,15 @@ export default async function DashboardPage() {
                       {pendencias.total}
                     </span>
                   )}
-                  <span aria-hidden className="text-ink-muted">→</span>
-                </span>
-              </Link>
-              <Link
-                href="/coworking"
-                className="mt-2 block text-center text-[13px] font-medium text-ink-muted hover:text-brand-blue"
-              >
-                Procurar salas para alugar
-              </Link>
+                </Link>
+                <Link
+                  href="/coworking"
+                  className="flex min-h-[48px] items-center justify-center gap-2 rounded-[14px] border px-4 py-3 text-[14px] font-semibold text-brand-blue transition-colors hover:bg-brand-blue/5"
+                  style={{ borderColor: "rgba(0,122,255,0.35)" }}
+                >
+                  Procurar salas para alugar
+                </Link>
+              </div>
             </section>
           )}
 
