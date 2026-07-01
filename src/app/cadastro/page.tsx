@@ -134,6 +134,9 @@ export default function CadastroPage() {
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [mostrarConfirma, setMostrarConfirma] = useState(false);
   const [senhaSincronizada, setSenhaSincronizada] = useState(false);
+  // Caso específico "nova senha igual à anterior" (auth.updateUser recusa): destaca os
+  // campos de senha e explica, em vez do erro genérico.
+  const [senhaIgualAnterior, setSenhaIgualAnterior] = useState(false);
 
   // Etapas 2/3
   const [telefone, setTelefone] = useState("");
@@ -283,6 +286,7 @@ export default function CadastroPage() {
 
   async function avancar1() {
     setErro("");
+    setSenhaIgualAnterior(false);
     if (!nome.trim() || !tratamento) { setErro("Preencha o nome e escolha Dr./Dra."); return; }
     if (!emailVerificado || !userId) { setErro("Verifique seu e-mail com o código."); return; }
     // Senha obrigatória só se ainda não sincronizada. Se já sincronizada, validar
@@ -296,7 +300,16 @@ export default function CadastroPage() {
     try {
       if (trocandoSenha && senha) {
         const rs = await definirSenha(senha);
-        if (!rs.ok) throw new Error(rs.erro || "Não foi possível definir a senha.");
+        if (!rs.ok) {
+          // Supabase recusa senha IGUAL à anterior (recadastro de um e-mail cujo usuário
+          // de auth não foi removido). Destaca os campos e explica, não o erro genérico.
+          if (/different from the old password|should be different|same_password/i.test(rs.erro || "")) {
+            setSenhaIgualAnterior(true);
+            setErro("A nova senha precisa ser diferente da senha anterior.");
+            return;
+          }
+          throw new Error(rs.erro || "Não foi possível definir a senha.");
+        }
         setSenhaSincronizada(true);
       }
       // NÃO gravamos `email`: a coluna `email` de curadentespro é protegida via REST
@@ -721,10 +734,10 @@ export default function CadastroPage() {
                     <input
                       type={mostrarSenha ? "text" : "password"}
                       value={senha}
-                      onChange={(e) => setSenha(e.target.value)}
+                      onChange={(e) => { setSenha(e.target.value); setSenhaIgualAnterior(false); }}
                       placeholder={senhaSincronizada ? "Sua senha já está salva (deixe em branco para manter)" : "Mínimo 8 caracteres"}
                       autoComplete="new-password"
-                      style={{ ...inputStyle, paddingRight: "48px" }}
+                      style={{ ...inputStyle, paddingRight: "48px", borderColor: senhaIgualAnterior ? "#FF3B30" : undefined }}
                     />
                     <button type="button" onClick={() => setMostrarSenha(!mostrarSenha)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "#8E8E93" }}>
                       {mostrarSenha ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -760,10 +773,10 @@ export default function CadastroPage() {
                       <input
                         type={mostrarConfirma ? "text" : "password"}
                         value={confirma}
-                        onChange={(e) => setConfirma(e.target.value)}
+                        onChange={(e) => { setConfirma(e.target.value); setSenhaIgualAnterior(false); }}
                         placeholder="Repita a senha"
                         autoComplete="new-password"
-                        style={{ ...inputStyle, paddingRight: "48px", borderColor: confirma && confirma !== senha ? "#FF3B30" : undefined }}
+                        style={{ ...inputStyle, paddingRight: "48px", borderColor: (senhaIgualAnterior || (confirma && confirma !== senha)) ? "#FF3B30" : undefined }}
                       />
                       <button type="button" onClick={() => setMostrarConfirma(!mostrarConfirma)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "#8E8E93" }}>
                         {mostrarConfirma ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -1345,6 +1358,9 @@ function NavEtapa({
 function traduzErro(e: unknown, padrao: string): string {
   const msg = e instanceof Error ? e.message : String(e);
   const code = (e as { code?: string })?.code;
+  if (/different from the old password|should be different|same_password/i.test(msg)) {
+    return "A nova senha precisa ser diferente da senha anterior.";
+  }
   if (code === "23505" || /duplicate key|already exists/i.test(msg)) {
     if (/cpf/i.test(msg)) return "Este CPF já está cadastrado.";
     if (/cro/i.test(msg)) return "Este CRO já está cadastrado. Fale com o suporte.";
