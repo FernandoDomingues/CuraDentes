@@ -4,7 +4,8 @@
 // Roda no servidor antes de qualquer página /pro:
 //   • sem sessão            → /login-necessario (parede fora de /pro, com header
 //                             mínimo; não expõe "Sair"/"Voltar ao meu Perfil" a anônimo)
-//   • paciente (sem perfil) → manda para a home (não tem painel)
+//   • paciente (sem perfil) → /login-necessario (a área é só de dentista; a parede
+//                             já diz "exclusiva para dentistas")
 //   • dentista / superuser  → libera
 //
 // A proteção REAL dos dados é a RLS no banco; esta guarda evita renderizar o
@@ -26,6 +27,6 @@ export const metadata: Metadata = {
 export default async function ProLayout({ children }: { children: React.ReactNode }) {
   const usuario = await getUsuario();
   if (!usuario) redirect("/login-necessario");
-  if (usuario.papel === "paciente") redirect("/");
+  if (usuario.papel === "paciente") redirect("/login-necessario");
   return <>{children}</>;
 }
