@@ -137,47 +137,94 @@ export default function EnderecosEditor({
   const [sugFechadas, setSugFechadas] = useState<Set<string>>(new Set());
 
   // Endereços "aderidos" a uma clínica existente: id do endereço → clinica_key adotada.
-  // Enquanto adotado, os campos que DEFINEM a clínica ficam travados (só o complemento muda).
+  // Enquanto adotado, os campos que DEFINEM a clínica ficam travados (só CEP/número/
+  // complemento seguem editáveis — são o que identifica a clínica).
   const [adotada, setAdotada] = useState<Record<string, string>>({});
+  // Clínicas que o dentista REJEITOU para um endereço (id → clinica_keys). Impede a
+  // auto-adesão de re-travar a MESMA clínica (por chave), mesmo se ele reeditar o CEP —
+  // mas não bloqueia adotar OUTRA clínica em outro prédio (chave diferente).
+  const [rejeitadas, setRejeitadas] = useState<Record<string, string[]>>({});
+  // Refs espelham o estado para leituras confiáveis dentro de fluxos assíncronos
+  // (busca de CEP / sugestão), sem fechar sobre valores velhos.
+  const adotadaRef = useRef(adotada);
+  const rejeitadasRef = useRef(rejeitadas);
+  useEffect(() => { adotadaRef.current = adotada; }, [adotada]);
+  useEffect(() => { rejeitadasRef.current = rejeitadas; }, [rejeitadas]);
 
   async function buscarSugestoes(idx: number) {
-    const end = enderecos[idx];
+    const end = enderecosRef.current[idx];
     if (!end) return;
     const r = await sugerirClinicas(end.cep, end.numero);
     setSugestoes((p) => ({ ...p, [end.id]: r }));
+    // AUTO-ADESÃO: se há EXATAMENTE uma clínica no prédio e o endereço ainda não foi
+    // adotado nem REJEITADO (por chave), adere automaticamente (preenche + trava). Com
+    // 2+ clínicas no mesmo prédio não dá para adivinhar → mostramos o cartão para escolher.
+    if (
+      r.length === 1 &&
+      !adotadaRef.current[end.id] &&
+      !(rejeitadasRef.current[end.id] ?? []).includes(r[0].clinica_key)
+    ) {
+      adotarClinica(end.id, r[0]);
+    }
   }
-  // "Usar este nome" = aderir: busca os dados da clínica do dono, preenche e TRAVA.
-  async function adotarClinica(idx: number, sug: ClinicaSugestao) {
-    const end = enderecos[idx];
+  // Aderir a uma clínica existente: busca os dados do dono, preenche e TRAVA os campos
+  // que DEFINEM a clínica (nome, fotos, estrutura). Telefone/WhatsApp NÃO são tocados —
+  // o contato é individual do dentista. Resolve por ID (não por posição) para não agir
+  // no endereço errado se a lista mudar durante o await.
+  async function adotarClinica(id: string, sug: ClinicaSugestao) {
+    if (!enderecosRef.current.some((e) => e.id === id)) return;
     const dados = await buscarDadosClinica(sug.clinica_key);
-    const n = [...enderecos];
-    n[idx] = {
-      ...n[idx],
-      nome_clinica: sug.nome_clinica ?? n[idx].nome_clinica,
-      complemento: sug.complemento ?? n[idx].complemento,
-      ...(dados
-        ? {
-            foto_fachada: dados.foto_fachada ?? "",
-            fotos_recepcao: dados.fotos_recepcao ?? [],
-            estrutura: dados.estrutura ?? [],
-            estrutura_extra: dados.estrutura_extra ?? "",
-          }
-        : {}),
-    };
-    onChange(n);
-    setAdotada((p) => ({ ...p, [end.id]: sug.clinica_key }));
-    setSugFechadas((p) => new Set(p).add(end.id));
+    onChange(
+      enderecosRef.current.map((e) =>
+        e.id === id
+          ? {
+              ...e,
+              nome_clinica: sug.nome_clinica ?? e.nome_clinica,
+              complemento: sug.complemento ?? e.complemento,
+              ...(dados
+                ? {
+                    foto_fachada: dados.foto_fachada ?? "",
+                    fotos_recepcao: dados.fotos_recepcao ?? [],
+                    estrutura: dados.estrutura ?? [],
+                    estrutura_extra: dados.estrutura_extra ?? "",
+                  }
+                : {}),
+            }
+          : e,
+      ),
+    );
+    setAdotada((p) => ({ ...p, [id]: sug.clinica_key }));
+    setSugFechadas((p) => new Set(p).add(id));
   }
-  // Ao mudar o complemento de um endereço adotado: se a chave deixar de bater com a
-  // clínica adotada, é OUTRA unidade → DESTRAVA (clínica nova/distinta) e reavalia.
+  // Mudar CEP ou número = mudar de PRÉDIO: destrava (se adotado) e limpa a rejeição,
+  // para reavaliar/auto-adotar o novo endereço.
+  function aoMudarPredio(id: string) {
+    setAdotada((p) => { if (!p[id]) return p; const c = { ...p }; delete c[id]; return c; });
+    setSugFechadas((p) => { if (!p.has(id)) return p; const s = new Set(p); s.delete(id); return s; });
+  }
+  function mudarNumero(idx: number, valor: string) {
+    aoMudarPredio(enderecos[idx].id);
+    atualizar(idx, "numero", valor);
+  }
+  // Complemento diferencia unidades no MESMO prédio: se a chave deixar de bater com a
+  // clínica adotada, é OUTRA unidade → só DESTRAVA (o dentista passa a definir a própria).
   function mudarComplemento(idx: number, valor: string) {
     const end = enderecos[idx];
     atualizar(idx, "complemento", valor);
     const chave = adotada[end.id];
     if (chave && clinicaKeyDe(end.cep, end.numero, valor) !== chave) {
+      // Diferenciou a unidade → é OUTRA clínica: destrava e marca a chave como rejeitada,
+      // para o blur do número não re-adotar a clínica do prédio.
+      setRejeitadas((p) => ({ ...p, [end.id]: [...(p[end.id] ?? []), chave] }));
       setAdotada((p) => { const c = { ...p }; delete c[end.id]; return c; });
-      buscarSugestoes(idx);
     }
+  }
+  // "Não é a minha clínica": destrava e marca a chave como REJEITADA (não re-adota a
+  // mesma clínica, nem se reeditar o CEP; outra clínica em outro prédio ainda pode).
+  function rejeitarClinica(id: string) {
+    const chave = adotada[id];
+    if (chave) setRejeitadas((p) => ({ ...p, [id]: [...(p[id] ?? []), chave] }));
+    setAdotada((p) => { const c = { ...p }; delete c[id]; return c; });
   }
 
   async function salvarProgresso(idx: number) {
@@ -227,6 +274,7 @@ export default function EnderecosEditor({
     // (ex.: colar "18016-400" guarda "18016400"). Máximo 8 dígitos.
     const cep = (cepDigitado ?? "").replace(/\D/g, "").slice(0, 8);
     const idAlvo = enderecos[idx].id;
+    aoMudarPredio(idAlvo); // editar o CEP = trocar de prédio → destrava a adesão
     // Aplica o CEP digitado sobre o estado mais recente (por id).
     onChange(enderecosRef.current.map((e) => (e.id === idAlvo ? { ...e, cep } : e)));
     if (cep.replace(/\D/g, "").length === 8) {
@@ -239,6 +287,7 @@ export default function EnderecosEditor({
             e.id === idAlvo ? { ...e, logradouro: d.logradouro, bairro: d.bairro, cidade: d.cidade, estado: d.estado } : e,
           ),
         );
+        buscarSugestoes(idx); // novo prédio identificado: reavalia / auto-adota
       } else {
         // CEP inexistente, fora do ar ou timeout (buscarCep retorna null em todos):
         // antes ficava em silêncio. Agora avisamos para o usuário preencher à mão.
@@ -295,7 +344,7 @@ export default function EnderecosEditor({
               </div>
               <div>
                 <label className={labelCls}>CEP *</label>
-                <input inputMode="numeric" value={end.cep} onChange={(e) => aplicarCep(idx, e.target.value)} placeholder="00000000" maxLength={8} disabled={!!adotada[end.id]} className={adotada[end.id] ? inputTravCls : inputCls} style={mostrarPendencias && !end.cep.trim() ? pendenteStyle : undefined} />
+                <input inputMode="numeric" value={end.cep} onChange={(e) => aplicarCep(idx, e.target.value)} placeholder="00000000" maxLength={8} className={inputCls} style={mostrarPendencias && !end.cep.trim() ? pendenteStyle : undefined} />
                 {mostrarPendencias && !end.cep.trim() && <p className="mt-1 text-[11px] font-medium" style={{ color: "#FF9500" }}>Campo obrigatório pendente</p>}
               </div>
               <div className="md:col-span-2">
@@ -305,7 +354,7 @@ export default function EnderecosEditor({
               </div>
               <div>
                 <label className={labelCls}>Número *</label>
-                <input inputMode="numeric" value={end.numero} onChange={(e) => atualizar(idx, "numero", e.target.value)} onBlur={() => buscarSugestoes(idx)} disabled={!!adotada[end.id]} className={adotada[end.id] ? inputTravCls : inputCls} />
+                <input inputMode="numeric" value={end.numero} onChange={(e) => mudarNumero(idx, e.target.value)} onBlur={() => buscarSugestoes(idx)} className={inputCls} />
               </div>
               <div>
                 <label className={labelCls}>
@@ -314,7 +363,7 @@ export default function EnderecosEditor({
                     ? <span className="font-bold text-brand-blue">— é OUTRA sala/conjunto? edite aqui para diferenciar</span>
                     : <span className="font-normal text-ink-muted">— sala/conjunto, se houver</span>}
                 </label>
-                <input value={end.complemento} onChange={(e) => mudarComplemento(idx, e.target.value)} onBlur={() => buscarSugestoes(idx)} className={inputCls}
+                <input value={end.complemento} onChange={(e) => mudarComplemento(idx, e.target.value)} className={inputCls}
                   style={adotada[end.id] ? { borderColor: "#007aff", boxShadow: "0 0 0 3px rgba(0,122,255,0.18)" } : undefined} />
               </div>
 
@@ -323,23 +372,23 @@ export default function EnderecosEditor({
                 <div className="md:col-span-2 rounded-[12px] border p-3" style={{ borderColor: "rgba(0,122,255,0.35)", background: "rgba(0,122,255,0.06)" }}>
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-[13px] text-ink-soft">
-                      🔒 Você está <strong className="text-brand-navy">aderindo a uma clínica existente</strong>. Os dados da clínica foram preenchidos e <strong>travados</strong>. Se você atende em <strong>outra sala/conjunto</strong> do prédio, edite o <strong className="text-brand-blue">complemento</strong>. Ao salvar, o <strong>dono da clínica</strong> recebe seu pedido para aprovar.
+                      🔒 Você está <strong className="text-brand-navy">aderindo a uma clínica existente</strong>. Nome, endereço, fotos e estrutura foram preenchidos e <strong>travados</strong>. Se você atende em <strong>outra sala/conjunto</strong>, edite o <strong className="text-brand-blue">complemento</strong> (ou o número/CEP). Ao salvar, o <strong>dono da clínica</strong> recebe seu pedido para aprovar.
                     </p>
-                    <button type="button" onClick={() => { setAdotada((p) => { const c = { ...p }; delete c[end.id]; return c; }); }} className="shrink-0 text-[12px] font-semibold text-ink-muted hover:text-ink" title="Não é a mesma clínica">Não é</button>
+                    <button type="button" onClick={() => rejeitarClinica(end.id)} className="shrink-0 whitespace-nowrap text-[12px] font-semibold text-ink-muted hover:text-ink" title="Não é a minha clínica">Não é a minha clínica</button>
                   </div>
                 </div>
               )}
 
               {/* "Você quis dizer?" — clínicas já existentes neste endereço (padroniza o nome). */}
-              {!adotada[end.id] && !sugFechadas.has(end.id) && (sugestoes[end.id]?.length ?? 0) > 0 && (
+              {!adotada[end.id] && !sugFechadas.has(end.id) && (sugestoes[end.id]?.length ?? 0) >= 2 && (
                 <div className="md:col-span-2 rounded-[12px] border p-3" style={{ borderColor: "rgba(0,122,255,0.30)", background: "rgba(0,122,255,0.05)" }}>
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-[13px] font-semibold text-brand-navy">Já existe clínica neste endereço — é a sua?</p>
+                    <p className="text-[13px] font-semibold text-brand-navy">Há clínicas neste endereço — alguma é a sua?</p>
                     <button type="button" onClick={() => setSugFechadas((p) => new Set(p).add(end.id))} aria-label="Fechar" className="shrink-0 text-ink-muted hover:text-ink">✕</button>
                   </div>
                   <div className="mt-2 flex flex-col gap-1.5">
                     {sugestoes[end.id]!.map((s) => (
-                      <button key={s.clinica_key} type="button" onClick={() => adotarClinica(idx, s)} className="flex items-center justify-between gap-3 rounded-[10px] border border-black/10 bg-white px-3 py-2 text-left text-[13px] transition-colors hover:border-brand-blue">
+                      <button key={s.clinica_key} type="button" onClick={() => adotarClinica(end.id, s)} className="flex items-center justify-between gap-3 rounded-[10px] border border-black/10 bg-white px-3 py-2 text-left text-[13px] transition-colors hover:border-brand-blue">
                         <span className="min-w-0">
                           <strong className="text-brand-navy">{s.nome_clinica || "Clínica"}</strong>
                           {s.complemento ? <span className="text-ink-muted"> · {s.complemento}</span> : null}
