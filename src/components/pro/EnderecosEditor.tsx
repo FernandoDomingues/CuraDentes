@@ -154,6 +154,21 @@ export default function EnderecosEditor({
   useEffect(() => { adotadaRef.current = adotada; }, [adotada]);
   useEffect(() => { rejeitadasRef.current = rejeitadas; }, [rejeitadas]);
 
+  // Atalho vindo do dashboard (link /pro/editar-perfil#adicionar-endereco): rola até o
+  // botão "Adicionar endereço" e o destaca por ~2s, para o dentista já começar por ele.
+  const adicionarRef = useRef<HTMLButtonElement>(null);
+  const [piscarAdicionar, setPiscarAdicionar] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || window.location.hash !== "#adicionar-endereco") return;
+    const el = adicionarRef.current;
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.focus({ preventScroll: true });
+    setPiscarAdicionar(true);
+    const t = setTimeout(() => setPiscarAdicionar(false), 2200);
+    return () => clearTimeout(t);
+  }, []);
+
   async function buscarSugestoes(idx: number) {
     const end = enderecosRef.current[idx];
     if (!end) return;
@@ -591,9 +606,18 @@ export default function EnderecosEditor({
 
       {enderecos.length < max && (
         <button
+          id="adicionar-endereco"
+          ref={adicionarRef}
           onClick={() => onChange([...enderecos, novoEndereco()])}
           className="flex w-full items-center justify-center gap-2 rounded-[16px] text-[14px] font-semibold transition-all duration-200"
-          style={{ border: "1.5px dashed rgba(0,122,255,0.30)", color: "#007AFF", background: "rgba(0,122,255,0.04)", minHeight: "56px", padding: "16px" }}
+          style={{
+            border: piscarAdicionar ? "1.5px solid #007AFF" : "1.5px dashed rgba(0,122,255,0.30)",
+            color: "#007AFF",
+            background: "rgba(0,122,255,0.04)",
+            minHeight: "56px",
+            padding: "16px",
+            boxShadow: piscarAdicionar ? "0 0 0 4px rgba(0,122,255,0.20)" : undefined,
+          }}
           onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(0,122,255,0.08)"; }}
           onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(0,122,255,0.04)"; }}
         >

@@ -11,7 +11,7 @@ import Image from "next/image";
 import Link from "next/link";
 import Container from "@/components/Container";
 import Estrelas from "@/components/Estrelas";
-import { Eye, MessageCircle, Phone, Check, AlertCircle, Trophy, CalendarClock, Building2, MapPin, Settings, DoorOpen, UserPlus } from "lucide-react";
+import { Eye, MessageCircle, Phone, Check, AlertCircle, Trophy, CalendarClock, Building2, MapPin, Settings, DoorOpen, UserPlus, Plus } from "lucide-react";
 import { redirect } from "next/navigation";
 import { getUsuario } from "@/lib/auth";
 import { criarClienteServidor } from "@/lib/supabase/server";
@@ -242,12 +242,20 @@ export default async function DashboardPage() {
 
           {/* Endereços — cards ricos (igual k11) */}
           <section>
-            <div className="mb-4 flex items-center gap-2">
+            <div className="mb-4 flex flex-wrap items-center gap-2">
               <MapPin size={16} style={{ color: "#007AFF" }} />
               <h2 className="text-xl font-bold text-brand-navy">Locais de atendimento</h2>
               <span className="ml-auto rounded-full px-2.5 py-1 text-[12px] font-semibold" style={{ background: "rgba(0,122,255,0.10)", color: "#007AFF" }}>
                 {enderecos.length} {enderecos.length === 1 ? "endereço" : "endereços"}
               </span>
+              <Link
+                href="/pro/editar-perfil#adicionar-endereco"
+                className="inline-flex min-h-[32px] items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-semibold text-white transition-[filter] hover:brightness-110"
+                style={{ background: "#007AFF" }}
+                title="Adicionar endereço"
+              >
+                <Plus size={13} /> Adicionar endereço
+              </Link>
             </div>
             {enderecos.length === 0 ? (
               <div className="flex flex-col items-center gap-3 rounded-[20px] py-12 text-center" style={{ background: "#fff", border: "1.5px dashed rgba(60,60,67,0.15)" }}>
