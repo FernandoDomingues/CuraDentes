@@ -128,6 +128,16 @@ export async function salvarSala(
   return { ok: true, id: (data?.id as string) ?? undefined };
 }
 
+/** Número que uma NOVA sala teria nesta clínica (máx da clínica + 1) — para o formulário
+ *  já mostrar "Sala 2" quando outro dentista da mesma clínica já tem a Sala 1. */
+export async function proximoNumeroSala(enderecoId: string): Promise<number> {
+  const { supabase, uid } = await sessao();
+  if (!uid || !enderecoId) return 1;
+  const { data, error } = await supabase.rpc("proximo_numero_sala", { p_endereco_id: enderecoId });
+  if (error) return 1;
+  return Number(data) || 1;
+}
+
 /** Pausa / reativa / remove (soft) uma sala do anfitrião. */
 export async function atualizarStatusSala(
   id: string,

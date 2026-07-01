@@ -7,12 +7,12 @@
 // é uma sala só. Salva via Server Action salvarSala (uma chamada por sala).
 // ═══════════════════════════════════════════════════════════════════════════════
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Check, X, Plus } from "lucide-react";
 import { toast } from "sonner";
 import UploadFotos from "@/components/UploadFotos";
-import { salvarSala } from "./acoes";
+import { salvarSala, proximoNumeroSala } from "./acoes";
 import {
   EQUIPAMENTOS_SALA_OPCOES,
   disponibilidadePadrao,
@@ -78,6 +78,15 @@ export default function SalaEditor({
   );
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState("");
+  // Número que a próxima sala terá NESTA clínica (máx da clínica + 1). Ao anunciar, o
+  // cabeçalho já mostra "Sala 2" se outro dentista da mesma clínica tem a Sala 1.
+  const [proximoNumero, setProximoNumero] = useState<number | null>(null);
+  useEffect(() => {
+    if (editando || !enderecoId) return;
+    let ativo = true;
+    proximoNumeroSala(enderecoId).then((n) => { if (ativo) setProximoNumero(n); });
+    return () => { ativo = false; };
+  }, [editando, enderecoId]);
 
   function setRoom(i: number, room: RoomForm) {
     setSalas((s) => s.map((r, idx) => (idx === i ? room : r)));
@@ -145,7 +154,7 @@ export default function SalaEditor({
       {salas.map((room, i) => (
         <SalaBloco
           key={i}
-          numero={i + 1}
+          numero={editando ? (salaInicial?.numero_na_clinica ?? 1) : (proximoNumero ?? 1) + i}
           room={room}
           onChange={(r) => setRoom(i, r)}
           onRemove={!editando && salas.length > 1 ? () => setSalas((s) => s.filter((_, idx) => idx !== i)) : undefined}
