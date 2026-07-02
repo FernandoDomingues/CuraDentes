@@ -147,7 +147,7 @@ export default function HistoricoExtrato({
               r.dentista_nome || "Dentista",
               `${dataBR(r.data)} · ${r.hora_inicio}–${r.hora_fim}`,
               valorDe(r),
-              <StatusTag key={r.id} status={r.status} />,
+              <StatusTag key={r.id} status={r.status} pago={r.pagamento_resolvido} />,
             ])}
           />
           <Tabela
@@ -159,7 +159,7 @@ export default function HistoricoExtrato({
               e.sala_titulo ?? "Sala",
               `${dataBR(e.data)} · ${e.hora_inicio}–${e.hora_fim}`,
               valorDe(e),
-              <StatusTag key={e.id} status={e.status} />,
+              <StatusTag key={e.id} status={e.status} pago={e.pagamento_resolvido} />,
             ])}
           />
         </div>
@@ -212,17 +212,19 @@ function Tabela({
   );
 }
 
-function StatusTag({ status }: { status: StatusSolicitacao }) {
+function StatusTag({ status, pago }: { status: StatusSolicitacao; pago?: boolean }) {
+  // Aprovada + pagamento confirmado = reserva CONCLUÍDA (etiqueta própria, navy).
+  const concluida = status === "aprovada" && pago === true;
   const cor: Record<StatusSolicitacao, { bg: string; fg: string }> = {
     pendente: { bg: "rgba(255,149,0,0.14)", fg: "#b56a00" },
     aprovada: { bg: "rgba(52,199,89,0.14)", fg: "#2a8a3e" },
     recusada: { bg: "rgba(255,59,48,0.12)", fg: "#c0392b" },
     cancelada: { bg: "rgba(60,60,67,0.10)", fg: "#6b7280" },
   };
-  const c = cor[status];
+  const c = concluida ? { bg: "rgba(10,42,102,0.10)", fg: "#0a2a66" } : cor[status];
   return (
     <span className="inline-block rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider" style={{ background: c.bg, color: c.fg }}>
-      {LABEL[status]}
+      {concluida ? "Concluída" : LABEL[status]}
     </span>
   );
 }
