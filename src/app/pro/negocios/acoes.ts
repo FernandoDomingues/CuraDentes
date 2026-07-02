@@ -303,6 +303,12 @@ export async function marcarPagamentoResolvido(id: string): Promise<{ ok: boolea
   if (!uid) return { ok: false, erro: "Sessão expirada." };
   const { error } = await supabase.rpc("marcar_pagamento_resolvido", { p_id: id });
   if (error) return { ok: false, erro: error.message || "Não foi possível marcar." };
+  // Avisa o locatário que a clínica confirmou o pagamento (best-effort).
+  try {
+    await supabase.functions.invoke("notificar-reserva-sala", { body: { tipo: "pagamento", solicitacao_id: id } });
+  } catch (e) {
+    console.warn("[marcarPagamentoResolvido] notificação:", e);
+  }
   return { ok: true };
 }
 

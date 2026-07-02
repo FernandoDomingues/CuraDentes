@@ -15,8 +15,9 @@ mas o painel continua funcionando):
 | Evento | Dispara | E-mail |
 |---|---|---|
 | **nova** (locatário solicitou) | `solicitarReserva` | **Anfitrião** recebe "Novo pedido de reserva" (CTA → `/pro/negocios?aba=recebidas`) **e** o **Locatário** recebe a confirmação "Pedido enviado" (CTA → `?aba=enviadas`) |
-| **aprovada** | `decidirSolicitacao` | **Locatário**: "Reserva aprovada 🎉" (CTA → ver contato da clínica no painel) |
+| **aprovada** | `decidirSolicitacao` | **Locatário**: "Reserva aprovada 🎉 — **pagamento pendente**" (reforça: pagar as horas direto com a clínica; CTA → ver contato) |
 | **recusada** | `decidirSolicitacao` | **Locatário**: "Pedido não aprovado" (CTA → `/coworking`) |
+| **pagamento** | `marcarPagamentoResolvido` (anfitrião clica "Confirmar pagamento recebido") | **Locatário**: "Pagamento confirmado pela clínica ✅" |
 
 Sem PII de contato (telefone/e-mail) no corpo — a revelação de contato continua só no painel,
 após a aprovação. O e-mail é HTML na identidade **CuraDentes Pro** (header magenta `#b50048`,

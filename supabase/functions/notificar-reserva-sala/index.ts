@@ -114,7 +114,7 @@ function layout(p: {
 Deno.serve(async (req) => {
   try {
     const { tipo, solicitacao_id } = await req.json();
-    if (!solicitacao_id || !["nova", "aprovada", "recusada"].includes(tipo)) {
+    if (!solicitacao_id || !["nova", "aprovada", "recusada", "pagamento"].includes(tipo)) {
       return new Response("payload invalido", { status: 400 });
     }
 
@@ -174,14 +174,25 @@ Deno.serve(async (req) => {
       }
     } else if (tipo === "aprovada") {
       if (loc?.email) {
-        await enviar(loc.email, `Reserva aprovada — ${titulo}`, layout({
+        await enviar(loc.email, `Reserva aprovada — pagamento pendente — ${titulo}`, layout({
           eyebrow: "Pedido aprovado",
           titulo: "Boa notícia! Seu pedido foi aprovado 🎉",
-          intro: `${clinica ? `A clínica ${clinica}` : "A clínica"} aprovou o seu horário. Veja o contato dela no painel e combine os detalhes.`,
+          intro: `${clinica ? `A clínica ${clinica}` : "A clínica"} aprovou o seu horário. Agora combine e realize o PAGAMENTO das horas contratadas direto com a clínica — o contato dela está no painel. Assim que a clínica confirmar o recebimento, avisamos você.`,
           detalhes: det,
           ctaLabel: "Ver contato da clínica",
           ctaUrl: `${SITE}/pro/negocios?aba=enviadas`,
-          rodapeNota: "O pagamento é combinado direto com a clínica.",
+          rodapeNota: "⏳ Pagamento pendente: o acerto é direto com a clínica, fora da plataforma.",
+        }));
+      }
+    } else if (tipo === "pagamento") {
+      if (loc?.email) {
+        await enviar(loc.email, `Pagamento confirmado — ${titulo}`, layout({
+          eyebrow: "Pagamento confirmado",
+          titulo: "Pagamento confirmado pela clínica ✅",
+          intro: `${clinica ? `A clínica ${clinica}` : "A clínica"} confirmou o recebimento do pagamento da sua reserva. Está tudo certo — bom atendimento!`,
+          detalhes: det,
+          ctaLabel: "Ver minha reserva",
+          ctaUrl: `${SITE}/pro/negocios?aba=enviadas`,
         }));
       }
     } else if (tipo === "recusada") {
