@@ -31,9 +31,10 @@ export default function PainelSalas({
   abaInicial: Aba;
 }) {
   const [aba, setAba] = useState<Aba>(abaInicial);
-  // Painel = só o ATIVO (pendente + aprovada). Recusadas/canceladas vão ao Histórico.
+  // Painel = só o ATIVO. Recusadas/canceladas e CONCLUÍDAS (aprovada + pagamento
+  // confirmado) saem daqui e ficam só no Histórico.
   const recPend = recebidas.filter((r) => r.status === "pendente");
-  const recAprov = recebidas.filter((r) => r.status === "aprovada");
+  const recAprov = recebidas.filter((r) => r.status === "aprovada" && !r.pagamento_resolvido);
   const envAtivas = enviadas.filter((e) => e.status === "pendente" || e.status === "aprovada");
   const aPagar = enviadas.filter((e) => e.status === "aprovada" && !e.pagamento_resolvido).length;
 
